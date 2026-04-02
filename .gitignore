@@ -1,0 +1,27 @@
+# Node
+node_modules/
+dist/
+
+# Cocos Creator
+client/library/
+client/local/
+client/temp/
+client/build/
+client/profiles/
+*.meta
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.local
+
+# 抖音开发者工具
+**/bytedance-mini-game/
