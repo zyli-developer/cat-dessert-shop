@@ -27,3 +27,16 @@ Thumbs.db
 **/bytedance-mini-game/
 # 但保留构建模板
 !client/build-templates/bytedance-mini-game/
+
+# Cocos Creator extensions（第三方插件，通过 git clone 安装）
+client/extensions/cocos-mcp-server/
+
+# Claude Code
+.claude/settings.json
+
+# Skills（通过 npx skills 安装）
+.agents/
+.kiro/
+.trae/
+.windsurf/
+skills-lock.json
