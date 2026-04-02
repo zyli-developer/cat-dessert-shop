@@ -23,5 +23,7 @@ Thumbs.db
 .env
 .env.local
 
-# 抖音开发者工具
+# 抖音开发者工具（构建产物）
 **/bytedance-mini-game/
+# 但保留构建模板
+!client/build-templates/bytedance-mini-game/

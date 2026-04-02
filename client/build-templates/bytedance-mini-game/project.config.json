@@ -1,0 +1,10 @@
+{
+  "setting": {
+    "urlCheck": false,
+    "es6": true,
+    "minified": true
+  },
+  "appid": "tt_test_appid",
+  "projectname": "catbakery",
+  "condition": {}
+}
