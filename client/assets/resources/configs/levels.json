@@ -1,0 +1,85 @@
+[
+  {
+    "round": 1,
+    "customers": [{ "demands": [{ "level": 2, "count": 1 }] }],
+    "dropRange": [1, 2]
+  },
+  {
+    "round": 2,
+    "customers": [
+      { "demands": [{ "level": 2, "count": 1 }] },
+      { "demands": [{ "level": 3, "count": 1 }] }
+    ],
+    "dropRange": [1, 2]
+  },
+  {
+    "round": 3,
+    "customers": [
+      { "demands": [{ "level": 3, "count": 1 }] },
+      { "demands": [{ "level": 3, "count": 1 }] }
+    ],
+    "dropRange": [1, 2]
+  },
+  {
+    "round": 4,
+    "customers": [
+      { "demands": [{ "level": 3, "count": 2 }] },
+      { "demands": [{ "level": 4, "count": 1 }] }
+    ],
+    "dropRange": [1, 3]
+  },
+  {
+    "round": 5,
+    "customers": [
+      { "demands": [{ "level": 4, "count": 1 }] },
+      { "demands": [{ "level": 3, "count": 2 }] },
+      { "demands": [{ "level": 4, "count": 1 }] }
+    ],
+    "dropRange": [1, 3]
+  },
+  {
+    "round": 6,
+    "customers": [
+      { "demands": [{ "level": 4, "count": 2 }] },
+      { "demands": [{ "level": 3, "count": 1 }] }
+    ],
+    "dropRange": [1, 3]
+  },
+  {
+    "round": 7,
+    "customers": [
+      { "demands": [{ "level": 4, "count": 2 }] },
+      { "demands": [{ "level": 4, "count": 1 }] },
+      { "demands": [{ "level": 3, "count": 2 }] }
+    ],
+    "dropRange": [1, 3]
+  },
+  {
+    "round": 8,
+    "customers": [
+      { "demands": [{ "level": 5, "count": 1 }] },
+      { "demands": [{ "level": 4, "count": 2 }] },
+      { "demands": [{ "level": 5, "count": 1 }] }
+    ],
+    "dropRange": [1, 3]
+  },
+  {
+    "round": 9,
+    "customers": [
+      { "demands": [{ "level": 5, "count": 2 }] },
+      { "demands": [{ "level": 4, "count": 3 }] },
+      { "demands": [{ "level": 5, "count": 1 }] }
+    ],
+    "dropRange": [1, 3]
+  },
+  {
+    "round": 10,
+    "customers": [
+      { "demands": [{ "level": 5, "count": 2 }] },
+      { "demands": [{ "level": 5, "count": 1 }] },
+      { "demands": [{ "level": 4, "count": 2 }] },
+      { "demands": [{ "level": 5, "count": 1 }] }
+    ],
+    "dropRange": [1, 3]
+  }
+]
