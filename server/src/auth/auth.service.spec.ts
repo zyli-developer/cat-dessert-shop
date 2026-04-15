@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getModelToken } from '@nestjs/mongoose';
 import { AuthService } from './auth.service';
 import { User } from '../user/schemas/user.schema';
+import { CODE_EXCHANGER, StubCodeExchanger } from './code-exchanger';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -15,6 +16,13 @@ describe('AuthService', () => {
       providers: [
         AuthService,
         { provide: getModelToken(User.name), useValue: mockUserModel },
+        {
+          provide: CODE_EXCHANGER,
+          useValue: new StubCodeExchanger({
+            'test-code': 'test-code',
+            'new-code': 'new-code',
+          }),
+        },
       ],
     }).compile();
 
