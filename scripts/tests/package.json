@@ -1,0 +1,13 @@
+{
+  "name": "@catbakery/scripts-tests",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "test": "jest",
+    "test:ci": "jest --coverage --coverageDirectory=../../coverage/raw/scripts"
+  },
+  "devDependencies": {
+    "jest": "^30.0.0",
+    "@types/jest": "^30.0.0"
+  }
+}
