@@ -1,5 +1,18 @@
 {
+  "name": "catbakery",
+  "version": "0.0.0",
+  "private": true,
+  "workspaces": ["server", "scripts/tests"],
+  "scripts": {
+    "test": "npm run test:all",
+    "test:all": "npm run test:server && npm run test:server:e2e && npm run test:scripts",
+    "test:server": "npm --workspace server run test:ci",
+    "test:server:e2e": "npm --workspace server run test:e2e:ci",
+    "test:scripts": "npm --workspace scripts/tests run test:ci",
+    "coverage:merge": "nyc merge coverage/raw coverage/merged.json && nyc report -t coverage --reporter=lcov --reporter=text-summary"
+  },
   "devDependencies": {
+    "nyc": "^17.0.0",
     "sharp": "^0.34.5"
   }
 }

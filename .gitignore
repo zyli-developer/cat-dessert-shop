@@ -40,3 +40,9 @@ client/extensions/cocos-mcp-server/
 .trae/
 .windsurf/
 skills-lock.json
+
+# Test automation
+coverage/
+playwright-report/
+test-results/
+e2e/dist/
