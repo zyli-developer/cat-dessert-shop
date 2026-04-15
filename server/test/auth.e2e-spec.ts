@@ -32,12 +32,8 @@ describe('Auth (e2e)', () => {
     const res = await request(app.getHttpServer())
       .post('/api/auth/login')
       .send({ code: 'definitely-not-a-real-code' });
-    // StubCodeExchanger throws plain Error('invalid code') for unknown codes,
-    // which Nest serializes as 500. The DouyinCodeExchanger throws UnauthorizedException (401).
-    // Either way, the request must NOT succeed.
-    expect(res.status).toBeGreaterThanOrEqual(400);
-    expect(res.status).not.toBe(200);
-    expect(res.status).not.toBe(201);
+    // StubCodeExchanger now throws UnauthorizedException for parity with DouyinCodeExchanger.
+    expect(res.status).toBe(401);
   });
 
   it('POST /api/auth/login with empty body returns 401 (TC-SEC-001)', async () => {

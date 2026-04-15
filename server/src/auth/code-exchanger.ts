@@ -12,7 +12,7 @@ export class StubCodeExchanger implements CodeExchanger {
   constructor(private readonly table: Record<string, string>) {}
   async exchange(code: string): Promise<CodeExchangeResult> {
     const openid = this.table[code];
-    if (!openid) throw new Error('invalid code');
+    if (!openid) throw new UnauthorizedException('invalid code');
     return { openid };
   }
 }
