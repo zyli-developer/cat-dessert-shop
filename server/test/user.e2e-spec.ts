@@ -1,7 +1,6 @@
-import { Test } from '@nestjs/testing';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { AppModule } from '../src/app.module';
+import { createTestApp, login, authed } from './helpers';
 
 /**
  * Discovered API contract (see Step-1 notes in T1-06 task):
@@ -32,32 +31,20 @@ describe('User Progress (e2e)', () => {
   let openId: string;
 
   beforeAll(async () => {
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
-    app = moduleRef.createNestApplication();
-    app.useGlobalPipes(
-      new ValidationPipe({ transform: true, whitelist: true, forbidNonWhitelisted: true }),
-    );
-    await app.init();
-
+    app = await createTestApp();
     // Login via auth to obtain (and auto-provision) the openId that protects user endpoints.
-    const res = await request(app.getHttpServer())
-      .post('/api/auth/login')
-      .send({ code: 'test-code-1' });
-    expect([200, 201]).toContain(res.status);
-    expect(res.body?.data?.openId).toBe('openid-1');
-    openId = res.body.data.openId;
+    openId = await login(app, 'test-code-1');
+    expect(openId).toBe('openid-1');
   }, 60_000);
 
   afterAll(async () => {
     if (app) await app.close();
   });
 
-  const auth = (req: request.Test) => req.set('X-Open-Id', openId);
-
   const postProgress = (body: Record<string, unknown>) =>
-    auth(request(app.getHttpServer()).post('/api/user/progress').send(body));
+    authed(request(app.getHttpServer()).post('/api/user/progress'), openId).send(body);
 
-  const getProfile = () => auth(request(app.getHttpServer()).get('/api/user/profile'));
+  const getProfile = () => authed(request(app.getHttpServer()).get('/api/user/profile'), openId);
 
   it('TC-USER-001 updates and retrieves progress', async () => {
     const post = await postProgress({ round: 11, stars: 2, score: 450 });

@@ -18,6 +18,9 @@ import { CODE_EXCHANGER, StubCodeExchanger, DouyinCodeExchanger } from './code-e
               'test-code-1': 'openid-1',
               'test-code-2': 'openid-2',
               'test-code-3': 'openid-3',
+              'test-code-4': 'openid-4',
+              'test-code-5': 'openid-5',
+              'test-code-6': 'openid-6',
               'test-code': 'test-code',
               'new-code': 'new-code',
             })
