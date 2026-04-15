@@ -1,4 +1,4 @@
-import { IsNumber, Min, Max } from 'class-validator';
+import { IsNumber, Min, Max, IsOptional } from 'class-validator';
 
 export class ProgressDto {
   @IsNumber()
@@ -11,4 +11,8 @@ export class ProgressDto {
   @Min(1)
   @Max(3)
   stars: number;
+
+  @IsNumber()
+  @IsOptional()
+  catCoinsEarned?: number;
 }

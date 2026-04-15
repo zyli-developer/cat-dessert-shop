@@ -1,10 +1,11 @@
 {
   "setting": {
     "urlCheck": false,
-    "es6": true,
-    "minified": true
+    "es6": false,
+    "postcss": true,
+    "minified": true,
+    "newFeature": true
   },
-  "appid": "tt_test_appid",
-  "projectname": "catbakery",
-  "condition": {}
+  "appid": "tt9cb5ea0802d30fc302",
+  "projectname": "猫猫猫甜品店"
 }

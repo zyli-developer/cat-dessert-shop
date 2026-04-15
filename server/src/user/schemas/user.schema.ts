@@ -23,6 +23,10 @@ export class User extends Document {
 
   @Prop({ type: Map, of: Number, default: {} })
   stars: Map<string, number>;
+
+  /** 每关最高分 Record<round, score> */
+  @Prop({ type: Map, of: Number, default: {} })
+  roundScores: Map<string, number>;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Headers, UnauthorizedException } from '@nestjs/common';
 import { UserService } from './user.service';
 import { ProgressDto } from './dto/progress.dto';
 
@@ -7,17 +7,19 @@ export class UserController {
   constructor(private userService: UserService) {}
 
   @Get('profile')
-  async getProfile(@Query('openId') openId: string) {
+  async getProfile(@Headers('x-open-id') openId: string) {
+    if (!openId) throw new UnauthorizedException('Missing X-Open-Id header');
     const user = await this.userService.getProfile(openId);
-    return { success: true, data: user };
+    return { code: 0, data: user };
   }
 
   @Post('progress')
   async updateProgress(
-    @Query('openId') openId: string,
+    @Headers('x-open-id') openId: string,
     @Body() dto: ProgressDto,
   ) {
-    const user = await this.userService.updateProgress(openId, dto);
-    return { success: true, data: user };
+    if (!openId) throw new UnauthorizedException('Missing X-Open-Id header');
+    const result = await this.userService.updateProgress(openId, dto);
+    return { code: 0, data: result };
   }
 }

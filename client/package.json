@@ -2,6 +2,13 @@
   "name": "cat-shop",
   "uuid": "9622e45c-a66d-49bb-acee-32e0882fbf74",
   "creator": {
-    "version": "3.8.8"
+    "version": "3.8.8",
+    "registry": {
+      "remote": {}
+    },
+    "dependencies": {
+      "localization-editor": "1.0.4",
+      "plugin-import-2x": "1.1.10"
+    }
   }
 }

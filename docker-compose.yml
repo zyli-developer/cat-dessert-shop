@@ -10,9 +10,10 @@ services:
   server:
     build: ./server
     ports:
-      - '3000:3000'
+      - '3333:3333'
     environment:
       MONGODB_URI: mongodb://mongodb:27017/catbakery
+      PORT: '3333'
     depends_on:
       - mongodb
 
