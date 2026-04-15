@@ -2,12 +2,12 @@
 // Surface updated when production code adds new imports; keep this list in sync.
 // Covered surface as of initial write:
 //   _decorator, AudioClip, AudioSource, BlockInputEvents, BoxCollider2D, Button,
-//   Camera, Canvas, CircleCollider2D, Collider, Collider2D, Color, Component,
+//   Camera, Canvas, CircleCollider2D, Collider2D, Color, Component,
 //   Contact2DType, director, ERigidBody2DType, EventKeyboard, EventTarget,
 //   EventTouch, find, Font, game, Graphics, Input, input, instantiate,
 //   IPhysics2DContact, JsonAsset, KeyCode, Label, Layers, Layout, macro, Node,
-//   PhysicsSystem2D, Prefab, RigidBody, RigidBody2D, resources, Size, Sprite,
-//   SpriteFrame, sys, Texture2D, Toggle, tween, UIOpacity, UITransform, Vec2,
+//   PhysicsSystem2D, Prefab, RigidBody2D, resources, Size, Sprite,
+//   SpriteFrame, sys, Toggle, tween, UIOpacity, UITransform, Vec2,
 //   Vec3, view
 
 import { EventEmitter } from 'events';
@@ -77,11 +77,21 @@ export class Node {
   getChildByName(name: string): Node | null {
     return this.children.find(n => n.name === name) ?? null;
   }
+  private _bindings = new Map<Function, Map<any, Function>>();
   on(e: string, fn: (...args: any[]) => void, target?: any) {
-    this._emitter.on(e, target ? fn.bind(target) : fn);
+    let bound: Function = fn;
+    if (target) {
+      let byTarget = this._bindings.get(fn);
+      if (!byTarget) { byTarget = new Map(); this._bindings.set(fn, byTarget); }
+      if (!byTarget.has(target)) byTarget.set(target, fn.bind(target));
+      bound = byTarget.get(target)!;
+    }
+    this._emitter.on(e, bound as any);
   }
-  off(e: string, fn: (...args: any[]) => void) {
-    this._emitter.off(e, fn);
+  off(e: string, fn: (...args: any[]) => void, target?: any) {
+    let bound: Function = fn;
+    if (target) bound = this._bindings.get(fn)?.get(target) ?? fn;
+    this._emitter.off(e, bound as any);
   }
   emit(e: string, ...args: any[]) {
     this._emitter.emit(e, ...args);
@@ -131,7 +141,6 @@ export class Toggle extends Component {
 
 export class Prefab {}
 export class SpriteFrame {}
-export class Texture2D {}
 export class Font {}
 export class JsonAsset { json: any = null; }
 export class AudioClip {}
@@ -144,7 +153,6 @@ export class AudioSource extends Component {
   stop = jest.fn();
   playOneShot = jest.fn();
 }
-export class RigidBody extends Component {}
 export class RigidBody2D extends Component {
   linearVelocity = new Vec2();
   type = 0;
@@ -153,19 +161,27 @@ export class RigidBody2D extends Component {
   applyLinearImpulseToCenter = jest.fn();
   wakeUp = jest.fn();
 }
-export class Collider extends Component {}
 export class Collider2D extends Component {
-  on = jest.fn();
-  off = jest.fn();
+  private _emitter = new EventEmitter();
   tag = 0;
+  on(e: string, fn: (...args: any[]) => void, _target?: any) {
+    this._emitter.on(e, fn);
+    return this;
+  }
+  off(e: string, fn: (...args: any[]) => void, _target?: any) {
+    this._emitter.off(e, fn);
+    return this;
+  }
+  emit(e: string, ...args: any[]) {
+    this._emitter.emit(e, ...args);
+  }
 }
-export class BoxCollider extends Component {}
-export class BoxCollider2D extends Component {
+export class BoxCollider2D extends Collider2D {
   size = new Size();
   offset = new Vec2();
   apply = jest.fn();
 }
-export class CircleCollider2D extends Component {
+export class CircleCollider2D extends Collider2D {
   radius = 0;
   apply = jest.fn();
 }
@@ -187,7 +203,10 @@ export class UIOpacity extends Component {
 }
 export class BlockInputEvents extends Component {}
 export class PhysicsSystem2D {
-  static get instance() { return new PhysicsSystem2D(); }
+  private static _inst: PhysicsSystem2D | null = null;
+  static get instance(): PhysicsSystem2D {
+    return (this._inst ??= new PhysicsSystem2D());
+  }
   gravity = new Vec2(0, -320);
   enable = true;
 }
@@ -328,7 +347,25 @@ export const _decorator = {
 };
 
 export class EventTarget extends EventEmitter {
+  private _bindings = new Map<Function, Map<any, Function>>();
   emit(e: string, ...a: any[]): boolean { super.emit(e, ...a); return true; }
+  on(e: string, fn: (...args: any[]) => void, target?: any): this {
+    let bound: Function = fn;
+    if (target) {
+      let byTarget = this._bindings.get(fn);
+      if (!byTarget) { byTarget = new Map(); this._bindings.set(fn, byTarget); }
+      if (!byTarget.has(target)) byTarget.set(target, fn.bind(target));
+      bound = byTarget.get(target)!;
+    }
+    super.on(e, bound as any);
+    return this;
+  }
+  off(e: string, fn: (...args: any[]) => void, target?: any): this {
+    let bound: Function = fn;
+    if (target) bound = this._bindings.get(fn)?.get(target) ?? fn;
+    super.off(e, bound as any);
+    return this;
+  }
   targetOff = jest.fn();
 }
 

@@ -1,4 +1,4 @@
-import { Vec3, tween, Node, _decorator, Color, Component, EventTarget } from 'cc';
+import { Vec3, tween, Node, _decorator, Color, Component, EventTarget, PhysicsSystem2D, Collider2D } from 'cc';
 
 describe('cc stub smoke', () => {
   beforeEach(() => jest.useFakeTimers());
@@ -47,5 +47,22 @@ describe('cc stub smoke', () => {
     e.on('foo', fn);
     e.emit('foo', 42);
     expect(fn).toHaveBeenCalledWith(42);
+  });
+
+  it('PhysicsSystem2D.instance is a singleton', () => {
+    const a = PhysicsSystem2D.instance;
+    const b = PhysicsSystem2D.instance;
+    expect(a).toBe(b);
+  });
+
+  it('Collider2D.on + emit + off round-trip', () => {
+    const c = new Collider2D();
+    const fn = jest.fn();
+    c.on('begin-contact', fn);
+    c.emit('begin-contact', 'a', 'b');
+    expect(fn).toHaveBeenCalledWith('a', 'b');
+    c.off('begin-contact', fn);
+    c.emit('begin-contact', 'c', 'd');
+    expect(fn).toHaveBeenCalledTimes(1);
   });
 });
