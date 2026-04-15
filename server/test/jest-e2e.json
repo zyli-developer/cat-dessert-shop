@@ -1,9 +1,10 @@
 {
   "moduleFileExtensions": ["js", "json", "ts"],
   "rootDir": ".",
+  "testRegex": ".e2e-spec\\.ts$",
+  "transform": { "^.+\\.(t|j)s$": "ts-jest" },
   "testEnvironment": "node",
-  "testRegex": ".e2e-spec.ts$",
-  "transform": {
-    "^.+\\.(t|j)s$": "ts-jest"
-  }
+  "globalSetup": "<rootDir>/setup-e2e.ts",
+  "globalTeardown": "<rootDir>/teardown-e2e.ts",
+  "collectCoverageFrom": ["../src/**/*.ts", "!../src/main.ts", "!**/*.d.ts"]
 }
