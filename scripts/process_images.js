@@ -77,8 +77,8 @@ const ASSETS = {
  * Remove white/near-white background by replacing with transparency.
  * Pixels with R>240, G>240, B>240 are treated as background.
  */
-async function removeWhiteBackground(inputBuffer) {
-  const { data, info } = await sharp(inputBuffer)
+async function removeWhiteBackground(inputBuffer, sharpLib = sharp) {
+  const { data, info } = await sharpLib(inputBuffer)
     .ensureAlpha()
     .raw()
     .toBuffer({ resolveWithObject: true });
@@ -95,32 +95,56 @@ async function removeWhiteBackground(inputBuffer) {
     }
   }
 
-  return sharp(data, { raw: { width, height, channels } })
+  return sharpLib(data, { raw: { width, height, channels } })
     .png()
     .toBuffer();
 }
 
-async function processImage(filename, config) {
-  const inputPath = path.join(INPUT_DIR, filename);
-  const outputPath = path.join(OUTPUT_DIR, filename);
+/**
+ * Pure helper: build the resize options passed to sharp's .resize().
+ * Transparent background when `removeBg` is true, white otherwise.
+ */
+function buildResizeOptions(config) {
+  return {
+    fit: 'contain',
+    background: config.removeBg
+      ? { r: 0, g: 0, b: 0, alpha: 0 }
+      : { r: 255, g: 255, b: 255, alpha: 1 },
+  };
+}
 
-  if (!fs.existsSync(inputPath)) {
+/**
+ * Pure helper: PNG encoder options used for every output image.
+ */
+function buildPngOptions() {
+  return { quality: 80, compressionLevel: 9 };
+}
+
+async function processImage(filename, config, deps = {}) {
+  const sharpLib = deps.sharp || sharp;
+  const fsLib = deps.fs || fs;
+  const inputDir = deps.inputDir || INPUT_DIR;
+  const outputDir = deps.outputDir || OUTPUT_DIR;
+  const inputPath = path.join(inputDir, filename);
+  const outputPath = path.join(outputDir, filename);
+
+  if (!fsLib.existsSync(inputPath)) {
     console.log(`  SKIP (not found): ${filename}`);
     return false;
   }
 
   try {
-    let buffer = fs.readFileSync(inputPath);
+    let buffer = fsLib.readFileSync(inputPath);
 
     // Step 1: Remove white background if needed
     if (config.removeBg) {
-      buffer = await removeWhiteBackground(buffer);
+      buffer = await removeWhiteBackground(buffer, sharpLib);
     }
 
     // Step 2: Trim transparent/white edges (auto-crop)
     if (config.removeBg) {
       try {
-        buffer = await sharp(buffer)
+        buffer = await sharpLib(buffer)
           .trim({ threshold: 10 })
           .toBuffer();
       } catch (e) {
@@ -129,17 +153,13 @@ async function processImage(filename, config) {
     }
 
     // Step 3: Resize to target dimensions
-    buffer = await sharp(buffer)
-      .resize(config.w, config.h, {
-        fit: 'contain',
-        background: config.removeBg
-          ? { r: 0, g: 0, b: 0, alpha: 0 }  // transparent
-          : { r: 255, g: 255, b: 255, alpha: 1 }, // white
-      })
-      .png({ quality: 80, compressionLevel: 9 })
+    const resizeOpts = buildResizeOptions(config);
+    buffer = await sharpLib(buffer)
+      .resize(config.w, config.h, resizeOpts)
+      .png(buildPngOptions())
       .toBuffer();
 
-    fs.writeFileSync(outputPath, buffer);
+    fsLib.writeFileSync(outputPath, buffer);
     const sizeKB = (buffer.length / 1024).toFixed(1);
     console.log(`  ✓ ${filename} → ${config.w}x${config.h} (${sizeKB} KB)`);
     return true;
@@ -179,4 +199,14 @@ async function main() {
   console.log(`Total output size: ${(totalSize / 1024 / 1024).toFixed(2)} MB`);
 }
 
-main().catch(console.error);
+if (require.main === module) {
+  main().catch(console.error);
+}
+
+module.exports = {
+  ASSETS,
+  buildResizeOptions,
+  buildPngOptions,
+  removeWhiteBackground,
+  processImage,
+};
