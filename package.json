@@ -10,7 +10,7 @@
     "test:server:e2e": "npm --workspace server run test:e2e:ci",
     "test:client": "npm --workspace client/tests run test:ci",
     "test:scripts": "npm --workspace scripts/tests run test:ci",
-    "coverage:merge": "nyc merge coverage/raw/server coverage/server.json && nyc merge coverage/raw/server-e2e coverage/server-e2e.json && nyc merge coverage/raw/scripts coverage/scripts.json && nyc report -t coverage --report-dir coverage --reporter=lcov --reporter=text-summary"
+    "coverage:merge": "nyc merge coverage/raw/server coverage/server.json && nyc merge coverage/raw/server-e2e coverage/server-e2e.json && nyc merge coverage/raw/client coverage/client.json && nyc merge coverage/raw/scripts coverage/scripts.json && nyc report -t coverage --report-dir coverage --reporter=lcov --reporter=text-summary"
   },
   "devDependencies": {
     "nyc": "^17.0.0",
