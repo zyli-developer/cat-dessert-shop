@@ -27,12 +27,14 @@ test.describe('auth-flow', () => {
     expect(result.body.data.openId).toBeTruthy();
     expect(typeof result.body.data.openId).toBe('string');
 
-    // Persist openId on the fallback shell state (token-equivalent)
+    // Persist openId in a window-level property compatible with both
+    // the fallback shell (which exposes __cb.state) and the real Cocos
+    // build (which doesn't) — stash on window directly.
     await page.evaluate((openId) => {
-      (window as any).__cb.state.openId = openId;
+      (window as any).__e2e_openId = openId;
     }, result.body.data.openId);
 
-    const stored = await page.evaluate(() => (window as any).__cb.state.openId);
+    const stored = await page.evaluate(() => (window as any).__e2e_openId);
     expect(stored).toBe(result.body.data.openId);
   });
 

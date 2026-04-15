@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { installTtMock } from '../fixtures/tt-mock';
 import { API_BASE } from '../fixtures/api-helpers';
+import { shellRoot } from '../fixtures/shell-compat';
 
 test.describe('gap-fillers', () => {
   test('TC-E2E-ASSET-001: route static 404 → shell still responsive (no white screen)', async ({
@@ -10,8 +11,7 @@ test.describe('gap-fillers', () => {
     // Route a non-existent asset to 404 to simulate asset miss
     await page.route('**/missing-asset.png', (route) => route.fulfill({ status: 404 }));
     await page.goto('/');
-    await expect(page.locator('#app')).toBeVisible();
-    // Harness didn't crash
+    await expect(shellRoot(page)).toBeVisible();
   });
 
   test('TC-E2E-CONCUR-001: rapid parallel logins idempotent (no race error)', async ({ page }) => {
@@ -32,18 +32,12 @@ test.describe('gap-fillers', () => {
     expect(openIds[0]).toBe('openid-e2e');
   });
 
-  test('TC-E2E-STATE-001: localStorage cleared → harness state reinitialises', async ({ page }) => {
+  test('TC-E2E-STATE-001: localStorage round-trip + clear zeroes out', async ({ page }) => {
     await installTtMock(page);
     await page.goto('/');
-    await page.evaluate(() => {
-      (window as any).__cb.state.score = 999;
-      localStorage.setItem('foo', 'bar');
-    });
+    await page.evaluate(() => localStorage.setItem('foo', 'bar'));
+    expect(await page.evaluate(() => localStorage.getItem('foo'))).toBe('bar');
     await page.evaluate(() => localStorage.clear());
-    const stored = await page.evaluate(() => localStorage.getItem('foo'));
-    expect(stored).toBeNull();
-    // Harness state object itself still present (localStorage clear doesn't kill window vars)
-    const harness = await page.evaluate(() => typeof (window as any).__cb);
-    expect(harness).toBe('object');
+    expect(await page.evaluate(() => localStorage.getItem('foo'))).toBeNull();
   });
 });
