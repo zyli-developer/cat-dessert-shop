@@ -1,39 +1,64 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { generateImages } = require('../generate_images');
+const { PassThrough } = require('stream');
+const { buildRequestOptions, parseImagePart, generateImage } = require('../generate_images');
 
-describe('generateImages', () => {
+describe('buildRequestOptions', () => {
+  it('encodes API key and prompt into Gemini request shape', () => {
+    const { options, body } = buildRequestOptions('KEY', 'gemini-2.5-flash-image', 'a cat');
+    expect(options.method).toBe('POST');
+    expect(options.hostname).toMatch(/googleapis/);
+    expect(options.path).toContain('gemini-2.5-flash-image');
+    expect(options.headers['x-goog-api-key']).toBe('KEY');
+    expect(options.headers['Content-Type']).toBe('application/json');
+    const parsed = JSON.parse(body);
+    expect(parsed.contents?.[0]?.parts?.[0]?.text ?? JSON.stringify(parsed)).toContain('a cat');
+  });
+});
+
+describe('parseImagePart', () => {
+  it('TC-SCR-GEN-001 returns Buffer from a well-formed image response', () => {
+    const fake = {
+      candidates: [{ content: { parts: [{ inlineData: { mimeType: 'image/png', data: Buffer.from('hello').toString('base64') } }] } }],
+    };
+    const buf = parseImagePart(JSON.stringify(fake));
+    expect(Buffer.isBuffer(buf)).toBe(true);
+    expect(buf.toString()).toBe('hello');
+  });
+
+  it('TC-SCR-GEN-002 throws on Gemini API error envelope', () => {
+    expect(() => parseImagePart(JSON.stringify({ error: { code: 400, message: 'API key not valid' } })))
+      .toThrow(/API key not valid|Gemini API error/);
+  });
+
+  it('TC-SCR-GEN-003 throws when response has no image part', () => {
+    expect(() => parseImagePart(JSON.stringify({ candidates: [{ content: { parts: [{ text: 'just text' }] } }] })))
+      .toThrow(/No image in response/);
+  });
+
+  it('throws on invalid JSON', () => {
+    expect(() => parseImagePart('not json')).toThrow(/Invalid JSON response/);
+  });
+});
+
+describe('generateImage (integration with mocked https)', () => {
   let tmp;
   beforeEach(() => { tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'gen-')); });
   afterEach(() => { fs.rmSync(tmp, { recursive: true, force: true }); });
 
-  it('TC-SCR-GEN-001 creates one file per size config', async () => {
-    const sharpMock = () => ({
-      resize: () => sharpMock(),
-      png: () => sharpMock(),
-      toFile: (p) => fs.promises.writeFile(p, Buffer.from('fake')),
+  it('writes decoded image to outputPath when httpsRequest returns success', async () => {
+    const fakeBody = JSON.stringify({
+      candidates: [{ content: { parts: [{ inlineData: { mimeType: 'image/png', data: Buffer.from('PNGBYTES').toString('base64') } }] } }],
     });
-    await generateImages({ sizes: [64, 128], outputDir: tmp, sharp: sharpMock });
-    expect(fs.readdirSync(tmp).sort()).toEqual(['128.png', '64.png']);
-  });
-
-  it('TC-SCR-GEN-002 rejects non-numeric size', async () => {
-    await expect(generateImages({ sizes: ['oops'], outputDir: tmp }))
-      .rejects.toThrow();
-  });
-
-  it('TC-SCR-GEN-003 throws when output path not writable', async () => {
-    // Use a truly unwritable path: nested under an existing file (not a directory)
-    const notADir = path.join(tmp, 'file.txt');
-    fs.writeFileSync(notADir, 'x');
-    const badOutput = path.join(notADir, 'sub');
-    const sharpMock = () => ({
-      resize: () => sharpMock(),
-      png: () => sharpMock(),
-      toFile: (p) => fs.promises.writeFile(p, Buffer.from('fake')),
-    });
-    await expect(generateImages({ sizes: [64], outputDir: badOutput, sharp: sharpMock }))
-      .rejects.toThrow();
+    const httpsRequest = (_options, cb) => {
+      const res = new PassThrough();
+      res.statusCode = 200;
+      process.nextTick(() => { cb(res); res.end(fakeBody); });
+      return { on: () => ({}), write: () => {}, end: () => {} };
+    };
+    const outputPath = path.join(tmp, 'out.png');
+    await generateImage('prompt', outputPath, { httpsRequest, apiKey: 'KEY' });
+    expect(fs.readFileSync(outputPath).toString()).toBe('PNGBYTES');
   });
 });
