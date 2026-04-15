@@ -33,13 +33,19 @@ export class AuthService {
     const openId = openid;
     this.logger.log(`[login] resolved openId=${this.mask(openId)}`);
 
-    let user = await this.userModel.findOne({ openId });
-    if (!user) {
-      this.logger.log(`[login] user not found, creating new user openId=${this.mask(openId)}`);
-      user = await this.userModel.create({ openId });
-    } else {
-      this.logger.log(`[login] existing user found openId=${this.mask(openId)}`);
-    }
+    const user = await this.userModel.findOneAndUpdate(
+      { openId },
+      {
+        $setOnInsert: {
+          openId,
+          catCoins: 0,
+          currentRound: 1,
+          highScore: 0,
+        },
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true },
+    );
+    this.logger.log(`[login] upserted user openId=${this.mask(openId)}`);
     return user;
   }
 
