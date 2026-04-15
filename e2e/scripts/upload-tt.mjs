@@ -1,0 +1,54 @@
+#!/usr/bin/env node
+// Upload the bytedance-mini-game build as a release / test channel version.
+// Usage:
+//   node scripts/upload-tt.mjs <version> "<changelog>"
+// Example:
+//   node scripts/upload-tt.mjs 0.0.1 "auto upload via CI"
+
+import { spawn, spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const DIST = path.resolve(__dirname, '../dist/bytedance-mini-game');
+const QR_OUT = path.resolve(__dirname, '../dist/bytedance-mini-game.upload.png');
+
+const [, , version, changelog] = process.argv;
+if (!version) {
+  console.error('usage: upload-tt.mjs <version> "<changelog>"');
+  console.error('example: upload-tt.mjs 0.0.1 "first automated upload"');
+  process.exit(2);
+}
+
+if (!fs.existsSync(path.join(DIST, 'game.json'))) {
+  console.log('[upload:tt] no build found, running build-bytedance first');
+  const build = spawnSync(process.execPath, [path.join(__dirname, 'build-bytedance.mjs')], {
+    stdio: 'inherit',
+  });
+  if (build.status !== 0) process.exit(build.status ?? 1);
+}
+
+console.log('[upload:tt] running tmg upload');
+console.log('[upload:tt]   entry  :', DIST);
+console.log('[upload:tt]   version:', version);
+console.log('[upload:tt]   log    :', changelog ?? '<none>');
+
+const args = [
+  'upload',
+  '-v',
+  version,
+  '-o',
+  QR_OUT,
+  ...(changelog ? ['-c', changelog] : []),
+  DIST,
+];
+
+const tmgBin = process.platform === 'win32' ? 'tmg.cmd' : 'tmg';
+const p = spawn(tmgBin, args, { stdio: 'inherit', shell: true });
+p.on('exit', (code) => {
+  if (code === 0 && fs.existsSync(QR_OUT)) {
+    console.log(`[upload:tt] upload OK, QR → ${QR_OUT}`);
+  }
+  process.exit(code ?? 1);
+});

@@ -6,7 +6,10 @@
     "test": "playwright test",
     "test:ci": "playwright test --reporter=list,html",
     "test:headed": "playwright test --headed",
-    "build:client": "node scripts/build-web-mobile.mjs"
+    "build:client": "node scripts/build-web-mobile.mjs",
+    "build:tt": "node scripts/build-bytedance.mjs",
+    "preview:tt": "node scripts/preview-tt.mjs",
+    "upload:tt": "node scripts/upload-tt.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.48.0",
