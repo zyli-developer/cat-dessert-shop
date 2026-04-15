@@ -1,3 +1,5 @@
+import { UnauthorizedException } from '@nestjs/common';
+
 export interface CodeExchangeResult { openid: string; }
 
 export interface CodeExchanger {
@@ -17,8 +19,10 @@ export class StubCodeExchanger implements CodeExchanger {
 
 export class DouyinCodeExchanger implements CodeExchanger {
   async exchange(_code: string): Promise<CodeExchangeResult> {
-    // Production implementation: HTTP call to https://developer.toutiao.com/api/apps/v2/jscode2session
-    // Reads APPID/SECRET from env. Currently stubbed to match existing project state.
-    throw new Error('DouyinCodeExchanger not yet implemented');
+    // TODO(restore-douyin-code2session): port the jscode2session HTTP flow back from git history (see pre-7a3bbd6 auth.service.ts).
+    // Until then, production login intentionally fails fast with a 401 so ops notices immediately.
+    throw new UnauthorizedException(
+      'Login service not configured: DouyinCodeExchanger pending implementation',
+    );
   }
 }

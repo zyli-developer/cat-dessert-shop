@@ -34,7 +34,7 @@ describe('AuthService', () => {
     const existingUser = { openId: 'test-code', catCoins: 10 };
     mockUserModel.findOne.mockResolvedValue(existingUser);
 
-    const result = await service.login('test-code');
+    const result = await service.login({ code: 'test-code' });
     expect(result).toEqual(existingUser);
     expect(mockUserModel.findOne).toHaveBeenCalledWith({ openId: 'test-code' });
     expect(mockUserModel.create).not.toHaveBeenCalled();
@@ -45,7 +45,7 @@ describe('AuthService', () => {
     mockUserModel.findOne.mockResolvedValue(null);
     mockUserModel.create.mockResolvedValue(newUser);
 
-    const result = await service.login('new-code');
+    const result = await service.login({ code: 'new-code' });
     expect(result).toEqual(newUser);
     expect(mockUserModel.create).toHaveBeenCalledWith({ openId: 'new-code' });
   });

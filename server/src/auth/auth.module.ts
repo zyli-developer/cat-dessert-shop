@@ -13,11 +13,13 @@ import { CODE_EXCHANGER, StubCodeExchanger, DouyinCodeExchanger } from './code-e
     {
       provide: CODE_EXCHANGER,
       useFactory: () =>
-        process.env.NODE_ENV === 'test'
+        process.env.AUTH_CODE_EXCHANGER === 'stub'
           ? new StubCodeExchanger({
               'test-code-1': 'openid-1',
               'test-code-2': 'openid-2',
               'test-code-3': 'openid-3',
+              'test-code': 'test-code',
+              'new-code': 'new-code',
             })
           : new DouyinCodeExchanger(),
     },

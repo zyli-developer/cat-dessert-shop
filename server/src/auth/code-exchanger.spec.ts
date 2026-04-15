@@ -1,4 +1,4 @@
-import { StubCodeExchanger } from './code-exchanger';
+import { DouyinCodeExchanger, StubCodeExchanger } from './code-exchanger';
 
 describe('StubCodeExchanger', () => {
   it('returns deterministic openid for test code', async () => {
@@ -9,5 +9,10 @@ describe('StubCodeExchanger', () => {
   it('throws on unknown code', async () => {
     const ex = new StubCodeExchanger({});
     await expect(ex.exchange('UNKNOWN')).rejects.toThrow(/invalid code/i);
+  });
+
+  it('DouyinCodeExchanger fails with UnauthorizedException until restored', async () => {
+    await expect(new DouyinCodeExchanger().exchange('anything'))
+      .rejects.toMatchObject({ status: 401 });
   });
 });
