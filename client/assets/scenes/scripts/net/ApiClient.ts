@@ -4,6 +4,13 @@ import { API_BASE_URL } from './ApiConfig';
 
 const TIMEOUT = 8000;
 
+/**
+ * Injectable fetch seam (test-only). Defaults to a thin wrapper over the global fetch to
+ * preserve existing behavior. Tests may override via `setFetchImpl`.
+ */
+let fetchImpl: typeof fetch = (input: RequestInfo, init?: RequestInit) => fetch(input as any, init);
+export function setFetchImpl(fn: typeof fetch): void { fetchImpl = fn; }
+
 interface ApiResponse<T> {
   code: number;
   data: T;
@@ -94,7 +101,7 @@ function request<T>(path: string, method: string = 'GET', body?: unknown): Promi
           }
         }, TIMEOUT);
 
-        fetch(url, {
+        fetchImpl(url, {
           method,
           headers,
           body: body ? JSON.stringify(body) : undefined,
@@ -161,6 +168,11 @@ export class ApiClient {
 
   static setOpenId(id: string): void {
     this._openId = id;
+  }
+
+  /** Injectable fetch seam (test-only). Forwards to module-level `setFetchImpl`. */
+  static setFetch(fn: typeof fetch): void {
+    setFetchImpl(fn);
   }
 
   static getOpenId(): string {

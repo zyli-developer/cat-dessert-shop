@@ -38,6 +38,10 @@ export class DropController extends Component {
     private canDrop: boolean = true;
     private containerTransform: UITransform | null = null;
 
+    /** Injectable RNG seam (test-only). Defaults to Math.random to preserve behavior. */
+    private rng: () => number = Math.random;
+    public setRng(fn: () => number): void { this.rng = fn; }
+
     onLoad(): void {
         this.syncBoundsFromContainer();
         this.generateNext();
@@ -119,7 +123,7 @@ export class DropController extends Component {
         const dropRange = levelConfig?.dropRange || [1, 2];
         const min = dropRange[0];
         const max = dropRange[1];
-        this.nextLevel = min + Math.floor(Math.random() * (max - min + 1));
+        this.nextLevel = min + Math.floor(this.rng() * (max - min + 1));
     }
 
     private updatePreviewDisplay(): void {

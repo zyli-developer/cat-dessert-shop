@@ -30,6 +30,10 @@ export class CustomerManager extends Component {
     private fulfilledDemands: Map<number, number> = new Map();
     private lastCatType: string = '';
 
+    /** Injectable RNG seam (test-only). Defaults to Math.random to preserve behavior. */
+    private rng: () => number = Math.random;
+    public setRng(fn: () => number): void { this.rng = fn; }
+
     onRoundComplete: (() => void) | null = null;
     onCustomerServed: (() => void) | null = null;
     /** 最后一位顾客满足时立即触发（动画播放前），用于提前禁用溢出检测 */
@@ -169,7 +173,7 @@ export class CustomerManager extends Component {
 
     private pickCatType(): string {
         const available = CAT_TYPES.filter(t => t !== this.lastCatType);
-        return available[Math.floor(Math.random() * available.length)];
+        return available[Math.floor(this.rng() * available.length)];
     }
 
     private loadCatExpression(expression: string, catType?: string): void {
