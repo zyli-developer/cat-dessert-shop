@@ -52,9 +52,28 @@ jobs:
           path: coverage/raw/
           if-no-files-found: warn
 
+  client-unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run test:client
+      - name: Upload client coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-client-raw
+          path: coverage/raw/
+          if-no-files-found: warn
+
   coverage:
     runs-on: ubuntu-latest
-    needs: [server, scripts-unit]
+    needs: [server, scripts-unit, client-unit]
     if: always()
     timeout-minutes: 15
     steps:
