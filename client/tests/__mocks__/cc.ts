@@ -20,6 +20,12 @@ export class Vec3 {
   length() { return Math.hypot(this.x, this.y, this.z); }
   set(x = 0, y = 0, z = 0) { this.x = x; this.y = y; this.z = z; return this; }
   equals(v: Vec3) { return this.x === v.x && this.y === v.y && this.z === v.z; }
+  static lerp(out: Vec3, a: Vec3, b: Vec3, t: number): Vec3 {
+    out.x = a.x + (b.x - a.x) * t;
+    out.y = a.y + (b.y - a.y) * t;
+    out.z = a.z + (b.z - a.z) * t;
+    return out;
+  }
 }
 
 export class Vec2 {
@@ -95,6 +101,10 @@ export class Node {
   }
   emit(e: string, ...args: any[]) {
     this._emitter.emit(e, ...args);
+  }
+  setScale(x: number | Vec3, y?: number, z?: number) {
+    if (x instanceof Vec3) { this.scale = x.clone(); }
+    else { this.scale.set(x, y ?? x, z ?? 1); }
   }
   setPosition(x: number | Vec3, y?: number, z?: number) {
     if (x instanceof Vec3) { this.position = x.clone(); }
