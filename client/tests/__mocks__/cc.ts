@@ -47,25 +47,41 @@ export class Size {
 }
 
 export class Node {
+  static EventType = {
+    TOUCH_START: 'touch-start',
+    TOUCH_MOVE: 'touch-move',
+    TOUCH_END: 'touch-end',
+    TOUCH_CANCEL: 'touch-cancel',
+    MOUSE_DOWN: 'mouse-down',
+    MOUSE_UP: 'mouse-up',
+    MOUSE_MOVE: 'mouse-move',
+    TRANSFORM_CHANGED: 'transform-changed',
+    ACTIVE_IN_HIERARCHY_CHANGED: 'active-in-hierarchy-changed',
+  };
   name = '';
+  constructor(name = '') { this.name = name; }
   active = true;
   position = new Vec3();
   scale = new Vec3(1, 1, 1);
-  parent: Node | null = null;
+  private _parent: Node | null = null;
+  get parent(): Node | null { return this._parent; }
+  set parent(p: Node | null) {
+    if (this._parent === p) return;
+    if (this._parent) {
+      this._parent.children = this._parent.children.filter(n => n !== this);
+    }
+    this._parent = p;
+    if (p) p.children.push(this);
+  }
   children: Node[] = [];
   private _components: Component[] = [];
   private _emitter = new EventEmitter();
 
   addChild(c: Node) {
-    if (c.parent) c.removeFromParent();
-    c.parent = this;
-    this.children.push(c);
+    c.parent = this; // setter handles children array
   }
   removeFromParent() {
-    if (this.parent) {
-      this.parent.children = this.parent.children.filter(n => n !== this);
-      this.parent = null;
-    }
+    this.parent = null;
   }
   destroy() { this.removeFromParent(); }
   destroyAllChildren() {
@@ -74,12 +90,24 @@ export class Node {
   getComponent<T>(ctor: new () => T): T | null {
     return (this._components.find(c => c instanceof (ctor as any)) as any) ?? null;
   }
+  getComponentsInChildren<T>(ctor: new () => T): T[] {
+    const out: T[] = [];
+    const walk = (n: Node) => {
+      for (const c of n._components) {
+        if (c instanceof (ctor as any)) out.push(c as any);
+      }
+      for (const child of n.children) walk(child);
+    };
+    walk(this);
+    return out;
+  }
   addComponent<T extends Component>(ctor: new () => T): T {
     const c = new ctor();
     (c as any).node = this;
     this._components.push(c);
     return c;
   }
+  isValid = true;
   getChildByName(name: string): Node | null {
     return this.children.find(n => n.name === name) ?? null;
   }
@@ -138,7 +166,8 @@ export class UITransform extends Component {
     if (w instanceof Size) { this.contentSize = w; this.width = w.width; this.height = w.height; }
     else { this.contentSize.width = w; this.contentSize.height = h ?? 0; this.width = w; this.height = h ?? 0; }
   }
-  convertToNodeSpaceAR(_v: Vec3) { return new Vec3(); }
+  convertToNodeSpaceAR(v: Vec3) { return new Vec3(v.x, v.y, v.z); }
+  convertToWorldSpaceAR(v: Vec3) { return new Vec3(v.x, v.y, v.z); }
 }
 export class Layout extends Component {}
 export class Button extends Component {
@@ -404,10 +433,12 @@ export const input = {
 };
 
 export class EventTouch {
-  getLocation() { return new Vec2(); }
-  getLocationX() { return 0; }
-  getLocationY() { return 0; }
-  getUILocation() { return new Vec2(); }
+  _uiLocation = new Vec2();
+  constructor(x = 0, y = 0) { this._uiLocation = new Vec2(x, y); }
+  getLocation() { return this._uiLocation.clone(); }
+  getLocationX() { return this._uiLocation.x; }
+  getLocationY() { return this._uiLocation.y; }
+  getUILocation() { return this._uiLocation.clone(); }
 }
 export class EventKeyboard { keyCode = 0; }
 
