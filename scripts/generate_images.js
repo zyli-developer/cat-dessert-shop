@@ -114,6 +114,42 @@ function generateImage(prompt, outputPath) {
   });
 }
 
+/**
+ * Produce one resized PNG per entry in `sizes`, written as `<size>.png` to
+ * `outputDir`. The `sharp` dependency is injectable for testing.
+ *
+ * @param {object} opts
+ * @param {number[]} opts.sizes    Target pixel sizes (square).
+ * @param {string}   opts.outputDir Destination directory (created if missing).
+ * @param {Function} [opts.sharp]  Factory returning a sharp-like chainable
+ *                                 object with `.resize().png().toFile(path)`.
+ * @param {Buffer|string} [opts.input] Optional source buffer / path. When
+ *                                     omitted, callers relying on real sharp
+ *                                     must supply a source via their mock.
+ */
+async function generateImages({ sizes, outputDir, sharp, input } = {}) {
+  if (!Array.isArray(sizes)) {
+    throw new TypeError('sizes must be an array of numbers');
+  }
+  for (const s of sizes) {
+    if (typeof s !== 'number' || !Number.isFinite(s) || s <= 0) {
+      throw new TypeError(`invalid size: ${String(s)} (expected positive number)`);
+    }
+  }
+  if (typeof outputDir !== 'string' || outputDir.length === 0) {
+    throw new TypeError('outputDir is required');
+  }
+  const sharpFactory = sharp || require('sharp');
+
+  fs.mkdirSync(outputDir, { recursive: true });
+
+  for (const size of sizes) {
+    const outputPath = path.join(outputDir, `${size}.png`);
+    const pipeline = input !== undefined ? sharpFactory(input) : sharpFactory();
+    await pipeline.resize(size, size).png().toFile(outputPath);
+  }
+}
+
 async function main() {
   // Filter out already generated files
   const toGenerate = ASSETS.filter(a => {
@@ -152,4 +188,8 @@ async function main() {
   console.log(`\nDone! Success: ${success}, Failed: ${fail}`);
 }
 
-main().catch(console.error);
+module.exports = { generateImages };
+
+if (require.main === module) {
+  main().catch((e) => { console.error(e); process.exit(1); });
+}
