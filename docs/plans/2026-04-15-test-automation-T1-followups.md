@@ -69,3 +69,25 @@
 
 - The above FU-T1-XX items may be pulled into T2 planning if they block client-side test strategy.
 - Phase T2's generic `cc` stub will need updating if `progress.dto.ts` bounds change (client `ApiClient` validation may want to match server).
+
+---
+
+# Phase T2 Follow-ups
+
+### FU-T2-01: Implement GameState persistence (unblocks TC-STATE-001)
+The `setStorage` / `KVStorage` scaffolding was added in T2-03 but production code never calls `this.storage`. Choose: either wire persistence across game sessions, or remove the dead scaffolding.
+
+### FU-T2-02: Implement offline score queue (unblocks TC-STATE-002)
+ApiClient has no queuing mechanism for failed uploads. Design and add `queueForLater(endpoint, payload)` + `flushQueue()` if the design doc requires offline-tolerant score upload.
+
+### FU-T2-03: ApiClient 401 auto-clear-token (unblocks TC-API-CLIENT-004)
+On 401 response, currently token is preserved. If spec requires auto-clear, implement; otherwise remove the TC.
+
+### FU-T2-04: CustomerManager timeout mechanism (unblocks TC-CUST-004)
+Current manager has no per-order timeout. Add `onCustomerTimeout` callback if timeout-based fail is a gameplay requirement.
+
+### FU-T2-05: Raise client coverage to design target
+Current honest floor: 70% lines. Design doc target: 85% lines / 90% funcs. Blocked by ItemManager (0% coverage), Dessert (24%), ApiClient (51%). Add specs for ItemManager and the remaining ApiClient error paths.
+
+### FU-T2-06: cc stub maintenance
+As client/assets/scenes/scripts/* gets new `cc` imports, they'll fail at spec load unless added to `client/tests/__mocks__/cc.ts`. Document the "add to stub" step in a README under `client/tests/__mocks__/`.
