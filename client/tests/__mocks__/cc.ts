@@ -87,6 +87,9 @@ export class Node {
   destroyAllChildren() {
     for (const child of [...this.children]) child.destroy();
   }
+  removeAllChildren() {
+    for (const child of [...this.children]) child.removeFromParent();
+  }
   getComponent<T>(ctor: new () => T): T | null {
     return (this._components.find(c => c instanceof (ctor as any)) as any) ?? null;
   }
@@ -351,8 +354,16 @@ export const director = {
 
 export const resources = {
   load: jest.fn((_p: string, _typeOrCb?: any, cb?: Function) => {
-    if (typeof _typeOrCb === 'function') _typeOrCb(null, {});
-    else if (cb) cb(null, {});
+    // Cocos `resources.load` has two overloads:
+    //   load(path, cb)
+    //   load(path, type, cb)
+    // `type` is a class constructor (typeof === 'function' too), so naive
+    // typeof detection misfires. Distinguish by whether the arg looks like a
+    // plain callback (has .prototype without .prototype.constructor === arg,
+    // i.e. not a class). Simplest reliable check: call the 3-arg form when
+    // a third arg is present; otherwise the 2-arg form.
+    if (typeof cb === 'function') cb(null, {});
+    else if (typeof _typeOrCb === 'function') _typeOrCb(null, {});
   }),
   loadDir: jest.fn((_p: string, cb?: Function) => cb?.(null, [])),
   release: jest.fn(),
