@@ -23,6 +23,7 @@ import { CODE_EXCHANGER, StubCodeExchanger, DouyinCodeExchanger } from './code-e
               'test-code-6': 'openid-6',
               'test-code': 'test-code',
               'new-code': 'new-code',
+              'test-code-e2e': 'openid-e2e',
             })
           : new DouyinCodeExchanger(),
     },

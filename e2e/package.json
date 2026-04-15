@@ -1,0 +1,17 @@
+{
+  "name": "@catbakery/e2e",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "test:ci": "playwright test --reporter=list,html",
+    "test:headed": "playwright test --headed",
+    "build:client": "node scripts/build-web-mobile.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0",
+    "typescript": "^5.7.3",
+    "esbuild": "^0.24.0",
+    "@types/node": "^24.0.0"
+  }
+}
