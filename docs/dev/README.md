@@ -22,7 +22,7 @@
 | UI 与弹窗 | ⬜ 待开始 | 结算页 + 5 个 Prefab 弹窗 |
 | 后端更新 | ⬜ 待开始 | roundScores + 本关排名 + 错误处理 |
 | 变现与社交 | ⬜ 待开始 | 4 个广告位 + 分享 |
-| 集成测试 | ⬜ 待开始 | 全流程 + 抖音 IDE + 包体优化 |
+| 集成测试 | 🟢 自动化就绪 | server/client/scripts 单元 + e2e Playwright；真机提审由 `e2e/smoke-douyin-cli.md` 人工 |
 
 ---
 
