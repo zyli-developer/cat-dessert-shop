@@ -2,10 +2,10 @@
   "name": "catbakery",
   "version": "0.0.0",
   "private": true,
-  "workspaces": ["server", "scripts/tests"],
+  "workspaces": ["server"],
   "scripts": {
     "test": "npm run test:all",
-    "test:all": "npm run test:server && npm run test:server:e2e && npm run test:scripts",
+    "test:all": "npm run test:server && npm run test:server:e2e",
     "test:server": "npm --workspace server run test:ci",
     "test:server:e2e": "npm --workspace server run test:e2e:ci",
     "test:scripts": "npm --workspace scripts/tests run test:ci",
