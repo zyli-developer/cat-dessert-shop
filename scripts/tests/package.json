@@ -3,8 +3,8 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "test": "jest",
-    "test:ci": "jest --coverage --coverageDirectory=../../coverage/raw/scripts"
+    "test": "node --experimental-vm-modules ../../node_modules/jest/bin/jest.js",
+    "test:ci": "node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --coverage --coverageDirectory=../../coverage/raw/scripts"
   },
   "devDependencies": {
     "jest": "^30.0.0",
