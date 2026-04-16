@@ -11,4 +11,4 @@
  *
  * 修改后需重新构建小游戏并导入开发者工具。
  */
-export const API_BASE_URL = 'http://192.168.77.240:3333';
+export const API_BASE_URL = 'http://192.168.77.17:3333';

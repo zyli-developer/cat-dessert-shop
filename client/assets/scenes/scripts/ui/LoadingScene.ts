@@ -15,20 +15,19 @@ export class LoadingScene extends Component {
     @property(Sprite)
     progressBar: Sprite | null = null;
 
+    private loginBtn: Node | null = null;
     private offlineBtn: Node | null = null;
     private offlineRequested = false;
     private navigated = false;
     private destroyed = false;
+    private loginInProgress = false;
 
     onLoad(): void {
-        // 必须在任何场景/纹理加载之前禁用图片缓存清理
-        // 否则纹理像素数据会在 GPU 上传之前被释放，导致图片显示为纯色
         macro.CLEANUP_IMAGE_CACHE = false;
         console.log('[LoadingScene] CLEANUP_IMAGE_CACHE disabled');
     }
 
     start(): void {
-        // 确保 Background 在最底层渲染
         const bg = this.node.getChildByName('Background');
         if (bg) bg.setSiblingIndex(0);
 
@@ -37,19 +36,68 @@ export class LoadingScene extends Component {
 
     onDestroy(): void {
         this.destroyed = true;
+        if (this.loginBtn?.isValid) {
+            this.loginBtn.off(Node.EventType.TOUCH_END, this.onLoginClicked, this);
+        }
         if (this.offlineBtn?.isValid) {
             this.offlineBtn.off(Node.EventType.TOUCH_END, this.onOfflineClicked, this);
         }
     }
 
+    /**
+     * Phase 1: load resources only (font + level configs). No login.
+     * When done, show the login button and wait for user tap.
+     */
     private async doLoad(): Promise<void> {
         if (this.destroyed || this.navigated) return;
         try {
-            // Step 1: tt.login
-            this.setStatus('[1/4] tt.login...');
+            this.setStatus('[1/3] 加载字体...');
             this.setProgress(0.1);
 
             const fontPromise = GlobalFontManager.loadFont();
+
+            this.setStatus('[2/3] 加载关卡配置...');
+            this.setProgress(0.3);
+            await this.loadLevelConfigs();
+            this.setProgress(0.5);
+
+            this.setStatus('[3/3] 等待字体...');
+            await fontPromise;
+            if (this.destroyed || this.navigated) return;
+            GlobalFontManager.applyFont(this.node);
+
+            this.setProgress(0.7);
+            this.setStatus('资源加载完成，请登录');
+
+            // Show login button
+            this.createLoginButton();
+
+        } catch (e) {
+            if (this.destroyed || !this.node?.isValid || this.navigated) return;
+            const errMsg = e instanceof Error ? e.message : String(e);
+            console.error('Loading failed:', errMsg, e);
+            this.setStatus(errMsg + '\n\n点击屏幕重试');
+            this.setProgress(0);
+            this.node.once(Node.EventType.TOUCH_END, () => {
+                if (this.destroyed || this.navigated || !this.node?.isValid) return;
+                this.doLoad();
+            });
+        }
+    }
+
+    /**
+     * Phase 2: user tapped "登录" — run tt.login + backend auth, then go Home.
+     */
+    private async doLogin(): Promise<void> {
+        if (this.destroyed || this.navigated || this.loginInProgress) return;
+        this.loginInProgress = true;
+
+        // Hide login button, show progress
+        if (this.loginBtn) this.loginBtn.active = false;
+
+        try {
+            this.setStatus('正在登录...');
+            this.setProgress(0.75);
 
             let loginResult: { code?: string; anonymousCode?: string; isLogin?: boolean };
             try {
@@ -59,15 +107,14 @@ export class LoadingScene extends Component {
                 throw new Error(`[tt.login失败] ${msg}`);
             }
 
-            this.setStatus('[2/4] 正在向后端验证...');
-            this.setProgress(0.2);
+            this.setStatus('正在验证...');
+            this.setProgress(0.85);
             console.log('[LoadingScene] tt.login result:', {
                 hasCode: !!loginResult.code,
                 hasAnonymousCode: !!loginResult.anonymousCode,
                 isLogin: loginResult.isLogin,
             });
 
-            // Step 2: 后端登录
             let user;
             try {
                 user = await ApiClient.login({
@@ -83,39 +130,64 @@ export class LoadingScene extends Component {
             GameState.instance.userProfile = user;
             GameState.instance.currentRound = user.currentRound;
 
-            this.setProgress(0.4);
-
-            // Step 3: 字体
-            this.setStatus('[3/4] 加载字体...');
-            await fontPromise;
-            if (this.offlineRequested) return;
-            GlobalFontManager.applyFont(this.node);
-
-            this.setProgress(0.5);
-
-            // Step 4: 关卡配置
-            this.setStatus('[4/4] 加载关卡配置...');
-            await this.loadLevelConfigs();
-            this.setProgress(0.8);
-
-            this.setStatus('加载完成!');
+            this.setStatus('登录成功!');
             this.setProgress(1.0);
             this.scheduleOnce(() => this.gotoHome(), 0.3);
+
         } catch (e) {
+            this.loginInProgress = false;
             if (this.destroyed || !this.node?.isValid || this.navigated) return;
             const errMsg = e instanceof Error ? e.message : String(e);
-            console.error('Loading failed:', errMsg, e);
-            this.setStatus(errMsg + '\n\n点击屏幕重试');
-            this.setProgress(0);
-            this.node.once(Node.EventType.TOUCH_END, () => {
-                if (this.destroyed || this.navigated || !this.node?.isValid) return;
-                this.doLoad();
-            });
+            console.error('Login failed:', errMsg, e);
+            this.setStatus(errMsg + '\n\n点击"登录"重试');
+            this.setProgress(0.7);
+
+            // Re-show login button for retry
+            if (this.loginBtn) this.loginBtn.active = true;
+
+            // Show offline button as fallback
+            this.createOfflineButton();
         }
     }
 
+    private createLoginButton(): void {
+        if (this.loginBtn) {
+            this.loginBtn.active = true;
+            return;
+        }
+        const btn = new Node('LoginButton');
+        btn.parent = this.node;
+        const btnUt = btn.addComponent(UITransform);
+        btnUt.setContentSize(280, 72);
+        btn.setPosition(0, -440, 0);
+
+        const label = btn.addComponent(Label);
+        label.string = '登  录';
+        label.fontSize = 36;
+        label.lineHeight = 42;
+        label.horizontalAlign = Label.HorizontalAlign.CENTER;
+        label.verticalAlign = Label.VerticalAlign.CENTER;
+        label.color = new Color(255, 255, 255, 255);
+        label.enableOutline = true;
+        label.outlineColor = new Color(80, 60, 40, 220);
+        label.outlineWidth = 3;
+
+        GlobalFontManager.applyFont(btn);
+
+        btn.on(Node.EventType.TOUCH_END, this.onLoginClicked, this);
+        this.loginBtn = btn;
+    }
+
+    private onLoginClicked(): void {
+        if (this.loginInProgress) return;
+        void this.doLogin();
+    }
+
     private createOfflineButton(): void {
-        if (this.offlineBtn) return;
+        if (this.offlineBtn) {
+            this.offlineBtn.active = true;
+            return;
+        }
         const btn = new Node('OfflineModeButton');
         btn.parent = this.node;
         const btnUt = btn.addComponent(UITransform);
@@ -142,6 +214,7 @@ export class LoadingScene extends Component {
         this.offlineRequested = true;
         this.setStatus('正在进入离线模式...');
         this.setProgress(0.3);
+        if (this.loginBtn) this.loginBtn.active = false;
         if (this.offlineBtn) this.offlineBtn.active = false;
         void this.enterOfflineMode();
     }
@@ -160,10 +233,6 @@ export class LoadingScene extends Component {
         };
         GameState.instance.currentRound = 1;
 
-        await GlobalFontManager.loadFont().catch(() => undefined);
-        GlobalFontManager.applyFont(this.node);
-
-        await this.loadLevelConfigs();
         this.setStatus('离线模式已启动');
         this.setProgress(1);
         this.scheduleOnce(() => this.gotoHome(), 0.2);
