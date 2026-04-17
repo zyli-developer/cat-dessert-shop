@@ -16,6 +16,28 @@
 
 **Task 8 (delete fallback shell) depends on Task 6 (build:e2e-bundle) producing a real Cocos product.** If no machine with Cocos Creator 3.8.8 is available during X1, stop after Task 7 and flag Task 8 as blocked in the baseline doc — `main` must stay CI-green, so fallback shell deletion cannot proceed until the real bundle exists in repo.
 
+### Cocos Creator 3.8.8 location (this host)
+
+Confirmed: `C:\ProgramData\cocos\editors\Creator\3.8.8\CocosCreator.exe`
+(Electron 31.3.1 packaging).
+
+Before running Task 6, export the path so the build script finds the binary
+without touching PATH. Either shell works:
+
+```bash
+# Git Bash
+export COCOS_CREATOR_PATH="/c/ProgramData/cocos/editors/Creator/3.8.8/CocosCreator.exe"
+```
+
+```powershell
+# PowerShell
+$env:COCOS_CREATOR_PATH = "C:\ProgramData\cocos\editors\Creator\3.8.8\CocosCreator.exe"
+```
+
+`scripts/build-e2e-bundle.mjs` reads `process.env.COCOS_CREATOR_PATH` and
+falls back to the literal string `CocosCreator` (PATH lookup) only when
+the env var is unset.
+
 ---
 
 ## Task 1: Baseline diagnostic report
@@ -364,13 +386,20 @@ git commit -m "test(harness): add gameHarness entry scaffold for X2 expansion"
 - Modify: `package.json` (root) — add `build:e2e-bundle` script
 - Create: `e2e/dist/web-mobile/__asset-hash` (auto-generated)
 
-**Pre-req check:** Confirm Cocos Creator 3.8.8 is installed and `CocosCreator` CLI is on PATH, OR the human has a known path:
+**Pre-req check:** Confirm Cocos Creator 3.8.8 binary is reachable. The
+build script reads `$COCOS_CREATOR_PATH` first, then falls back to a bare
+`CocosCreator` on PATH. On this host the confirmed path is
+`C:\ProgramData\cocos\editors\Creator\3.8.8\CocosCreator.exe` — set the
+env var before running Task 6 (see top-of-plan "Cocos Creator 3.8.8
+location" block for the exact export).
 
 ```bash
-CocosCreator --version 2>/dev/null || echo "NOT FOUND — need Cocos Creator 3.8.8 to proceed"
+# Sanity: binary exists and is executable
+[ -x "$COCOS_CREATOR_PATH" ] && echo OK || echo "set COCOS_CREATOR_PATH first"
 ```
 
-If NOT FOUND, **stop here and flag in baseline doc**: X1 will end at Task 7 with Task 8 pending.
+If the binary is NOT present on this machine, **stop here and flag in
+baseline doc**: X1 will end at Task 7 with Task 8 pending.
 
 **Step 1: Write the script**
 
