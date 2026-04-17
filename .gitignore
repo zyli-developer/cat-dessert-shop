@@ -45,4 +45,10 @@ skills-lock.json
 coverage/
 playwright-report/
 test-results/
-e2e/dist/
+# Re-include e2e/dist/ so we can selectively track the web-mobile bundle.
+# The bare `dist/` above would otherwise hide the whole e2e/dist tree.
+!e2e/dist/
+e2e/dist/*
+# Cocos web-mobile bundle is built by `npm run build:e2e-bundle` and
+# committed so CI e2e tests can run without a Cocos Creator install.
+!e2e/dist/web-mobile/
