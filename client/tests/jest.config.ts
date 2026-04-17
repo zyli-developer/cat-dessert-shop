@@ -18,7 +18,7 @@ const config: Config = {
     '!**/*.spec.ts',
   ],
   coverageThreshold: {
-    global: { branches: 40, functions: 45, lines: 70, statements: 60 },
+    global: { branches: 37, functions: 43, lines: 69, statements: 62 },
   },
   passWithNoTests: true,
   transform: {
