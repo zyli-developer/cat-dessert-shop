@@ -82,13 +82,8 @@ jobs:
           node-version: '20'
           cache: 'npm'
       - run: npm ci
-      - name: Restore Cocos web-mobile build cache
-        uses: actions/cache@v4
-        with:
-          path: e2e/dist/web-mobile
-          key: cocos-web-mobile-${{ hashFiles('client/assets/**', 'client/settings/**') }}
-      - name: Build web-mobile (Cocos CLI if available, else esbuild fallback)
-        run: npm --workspace e2e run build:client
+      - name: Verify e2e bundle freshness
+        run: npm run check:e2e-bundle
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
