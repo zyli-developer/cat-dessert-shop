@@ -1,3 +1,9 @@
+> **[ARCHIVED 2026-04-17]** — Superseded by
+> [2026-04-17-testing-strategy-design.md](./2026-04-17-testing-strategy-design.md).
+> Kept for historical decision context; do NOT execute from this document.
+
+---
+
 # 测试自动化落地设计
 
 > 日期：2026-04-15

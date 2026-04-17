@@ -1,3 +1,9 @@
+> **[ARCHIVED 2026-04-17]** — Superseded by
+> [2026-04-17-testing-strategy-design.md](./2026-04-17-testing-strategy-design.md).
+> Kept for historical decision context; do NOT execute from this document.
+
+---
+
 # Test Automation Phase T3: End-to-End (Playwright + Douyin CLI smoke) Implementation Plan
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.

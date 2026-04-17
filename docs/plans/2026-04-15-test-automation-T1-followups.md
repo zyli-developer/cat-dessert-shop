@@ -1,3 +1,9 @@
+> **[ARCHIVED 2026-04-17]** — Superseded by
+> [2026-04-17-testing-strategy-design.md](./2026-04-17-testing-strategy-design.md).
+> Kept for historical decision context; do NOT execute from this document.
+
+---
+
 # Phase T1 Follow-ups
 
 > Tracked work deferred from T1 tasks. Each item includes the source task and blocking status for later phases.
