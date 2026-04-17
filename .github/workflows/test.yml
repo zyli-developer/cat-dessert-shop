@@ -62,6 +62,7 @@ jobs:
           node-version: '20'
           cache: 'npm'
       - run: npm ci
+      - run: npm run lint:skips
       - run: npm run test:client
       - name: Upload client coverage
         if: always()
