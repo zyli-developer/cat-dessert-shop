@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "test": "jest",
-    "test:ci": "jest --coverage --coverageDirectory=../../coverage/raw/client"
+    "test:ci": "jest --coverage --coverageDirectory=../coverage/raw/client"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",
