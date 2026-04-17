@@ -2,6 +2,32 @@ import { test, expect } from '@playwright/test';
 import { installTtMock } from '../fixtures/tt-mock';
 import { API_BASE, loginViaApi, submitProgress } from '../fixtures/api-helpers';
 
+// TC-API-RANK-003 anchor: empty rank result. Uses a round number no other
+// spec seeds (9999) so the server-side roundScores.$exists filter returns 0
+// rows deterministically, regardless of test order.
+test('TC-API-RANK-003: empty rank returns {list: [], myRank: 1} without error', async ({ page }) => {
+  await installTtMock(page);
+  await page.goto('/');
+  const openId = await loginViaApi('test-code-e2e');
+
+  const result = await page.evaluate(
+    async ({ base, openId }) => {
+      const res = await fetch(`${base}/rank/friends?round=9999`, {
+        headers: { 'X-Open-Id': openId },
+      });
+      return { status: res.status, body: await res.json() };
+    },
+    { base: API_BASE, openId },
+  );
+
+  expect(result.status).toBe(200);
+  expect(result.body.code).toBe(0);
+  expect(Array.isArray(result.body.data.list)).toBe(true);
+  expect(result.body.data.list).toEqual([]);
+  // With an empty list, service semantics: myRank = list.length + 1 = 1.
+  expect(result.body.data.myRank).toBe(1);
+});
+
 // TC-E2E-003: rank visible after seeding. Fallback-shell adaptation — we
 // seed three users via the API, then GET /api/rank/friends?round=50 and
 // assert DESC score ordering. Round 50 avoids collision with other specs.
