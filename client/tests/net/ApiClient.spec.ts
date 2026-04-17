@@ -138,6 +138,7 @@ describe('ApiClient (T2-12)', () => {
   });
 
   // ----- TC-API-CLIENT-004 -----
+  // SKIP-REASON: FU-T2-03 — ApiClient has no 401 auto-clear branch yet.
   it.skip('TC-API-CLIENT-004 401 auto-clears token (product gap: not implemented)', () => {
     // ApiClient has no 401-handling branch today. Unskip once implemented.
   });

@@ -31,12 +31,15 @@ test.skip('y', () => {});
     expect(r.exit).toBe(0);
   });
 
+  // SKIP-REASON: fixture literal — the `test.skip(...)` text below is input
+  // to the lint rule under test, not an actual skipped case in this suite.
   it('fails on naked test.skip', () => {
     const r = runLint(`test.skip('z', () => {});`);
     expect(r.exit).toBe(1);
     expect(r.stderr).toMatch(/naked skip/i);
   });
 
+  // SKIP-REASON: fixture literal — same rationale as above.
   it('fails on describe.skip without reason', () => {
     const r = runLint(`describe.skip('w', () => {});`);
     expect(r.exit).toBe(1);

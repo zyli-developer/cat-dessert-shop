@@ -5,7 +5,7 @@ import { test } from '@playwright/test';
 // doesn't yet expose for e2e. Deferred to X3 (gameHarness expansion + test
 // hook for forced overflow). See
 // docs/plans/2026-04-17-testing-strategy-design.md §3.2.
+// SKIP-REASON: awaiting X3 — need a Cocos-side hook to force overflow.
 test.describe.skip('fail-retry (pending X3)', () => {
-  // SKIP-REASON: awaiting X3 — need a Cocos-side hook to force overflow.
   test('placeholder', () => {});
 });

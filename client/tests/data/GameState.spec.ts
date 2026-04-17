@@ -66,12 +66,17 @@ describe('GameState (T2-10)', () => {
     gs.currentRound = 1;
   });
 
+  // SKIP-REASON: FU-T2-01 — GameState.storage seam wired but no production
+  // code path writes to it yet. Unskip once GameState persists userProfile
+  // or currentRound on mutation.
   it.skip('TC-STATE-001 persistence round-trip (product gap: GameState.storage currently unused)', () => {
     // Scaffolding verification — seam is wired, but no production code path
     // currently writes to `this.storage`. Unskip once GameState persists,
     // e.g. saves `userProfile` or `currentRound` on mutation.
   });
 
+  // SKIP-REASON: FU-T2-02 — GameState has no queueOfflineScore / retryUploadQueue
+  // surface yet. Unskip once that API lands.
   it.skip('TC-STATE-002 offline score queue (product gap: no queueOfflineScore/retryUploadQueue)', () => {
     // Unskip once GameState grows an offline queue API.
   });

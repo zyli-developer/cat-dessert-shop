@@ -105,6 +105,7 @@ describe('User Progress (e2e)', () => {
   // so the server accepts arbitrary round numbers. This is a server-side gap to
   // be addressed in a separate ticket — T1 is test-authoring only, not fixing
   // server logic. Skipping per task instruction.
+  // SKIP-REASON: FU-T1-06/07 — ProgressDto.round bounds not yet enforced.
   it.skip('TC-USER-004 rejects invalid level (server gap: ProgressDto.round has no @Min/@Max)', async () => {
     const res = await postProgress({ round: 99, stars: 1, score: 10 });
     expect(res.status).toBe(400);

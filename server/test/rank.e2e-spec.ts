@@ -100,6 +100,7 @@ describe('Rank (e2e)', () => {
   // system, but it currently has just @IsNumber — no @Min(0). The server therefore
   // accepts negative scores. Skipped (server-side gap), mirroring how TC-USER-004
   // was skipped in T1-06.
+  // SKIP-REASON: FU-T1-06/07 — ProgressDto.score bounds not yet enforced.
   it.skip('TC-RANK-006 rejects negative score via DTO (server gap: ProgressDto.score has no @Min(0))', async () => {
     const oid = await login(app, 'test-code-4');
     const res = await authed(
