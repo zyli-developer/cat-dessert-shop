@@ -1,27 +1,11 @@
-import { test, expect } from '@playwright/test';
-import { installTtMock } from '../fixtures/tt-mock';
-import { shellRoot, isFallbackShell } from '../fixtures/shell-compat';
+import { test } from '@playwright/test';
 
-// TC-E2E-002: overflow -> fail popup -> retry. Requires Cocos game loop for
-// the real failure/retry flow. Harness-level proxy test runs only against
-// the fallback shell; skipped transparently on real Cocos builds.
-test.describe('fail-retry', () => {
-  test('harness: state transitions through Game -> Result (fallback only)', async ({ page }) => {
-    await installTtMock(page);
-    await page.goto('/');
-    await expect(shellRoot(page)).toBeVisible();
-
-    if (!(await isFallbackShell(page))) {
-      test.skip(true, 'Real Cocos build does not expose __cb.state.setScene harness');
-    }
-
-    await page.evaluate(() => (window as any).__cb.state.setScene('Game'));
-    await expect(page.locator('#app')).toHaveAttribute('data-scene', 'Game');
-    await page.evaluate(() => (window as any).__cb.state.setScene('Result'));
-    await expect(page.locator('#app')).toHaveAttribute('data-scene', 'Result');
-  });
-
-  test.skip('TC-E2E-002 overflow triggers fail popup (Cocos runtime required)', () => {
-    // Requires driving the real Cocos container/overflow detector.
-  });
+// TC-E2E-002: overflow → fail popup → retry. Requires programmatic access to
+// the Cocos container/overflow detector, which the real web-mobile bundle
+// doesn't yet expose for e2e. Deferred to X3 (gameHarness expansion + test
+// hook for forced overflow). See
+// docs/plans/2026-04-17-testing-strategy-design.md §3.2.
+test.describe.skip('fail-retry (pending X3)', () => {
+  // SKIP-REASON: awaiting X3 — need a Cocos-side hook to force overflow.
+  test('placeholder', () => {});
 });

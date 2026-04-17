@@ -1,7 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { installTtMock } from '../fixtures/tt-mock';
 import { API_BASE } from '../fixtures/api-helpers';
-import { shellRoot } from '../fixtures/shell-compat';
 
 test.describe('gap-fillers', () => {
   test('TC-E2E-ASSET-001: route static 404 → shell still responsive (no white screen)', async ({
@@ -11,7 +10,7 @@ test.describe('gap-fillers', () => {
     // Route a non-existent asset to 404 to simulate asset miss
     await page.route('**/missing-asset.png', (route) => route.fulfill({ status: 404 }));
     await page.goto('/');
-    await expect(shellRoot(page)).toBeVisible();
+    await expect(page.locator('#GameCanvas')).toBeVisible();
   });
 
   test('TC-E2E-CONCUR-001: rapid parallel logins idempotent (no race error)', async ({ page }) => {

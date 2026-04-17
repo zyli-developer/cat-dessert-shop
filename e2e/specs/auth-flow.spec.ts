@@ -3,9 +3,10 @@ import { installTtMock } from '../fixtures/tt-mock';
 import { API_BASE } from '../fixtures/api-helpers';
 
 // TC-API-AUTH-001, TC-API-AUTH-002
-// Fallback-shell context: exercise /api/auth/login directly from the page
-// rather than asserting the real client's cached-token flow (not available
-// without the Cocos build).
+// Exercise /api/auth/login directly from the page rather than asserting the
+// real client's cached-token flow — the Cocos bundle boots but doesn't yet
+// expose its cache getter for e2e. Cached-token assertions land in X3 once
+// the Cocos harness exports them.
 
 test.describe('auth-flow', () => {
   test('TC-API-AUTH-001: first login returns openId and 201', async ({ page }) => {
@@ -27,9 +28,8 @@ test.describe('auth-flow', () => {
     expect(result.body.data.openId).toBeTruthy();
     expect(typeof result.body.data.openId).toBe('string');
 
-    // Persist openId in a window-level property compatible with both
-    // the fallback shell (which exposes __cb.state) and the real Cocos
-    // build (which doesn't) — stash on window directly.
+    // Stash openId on window for the idempotency assertion below. The
+    // Cocos bundle doesn't expose a token cache for e2e yet (X3).
     await page.evaluate((openId) => {
       (window as any).__e2e_openId = openId;
     }, result.body.data.openId);
