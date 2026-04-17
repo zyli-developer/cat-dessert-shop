@@ -114,6 +114,8 @@ Frozen "before" snapshot taken at X1 start. Used as the reference for
 - `CustomerManager` per-order timeout — absent (FU-T2-04)
 - `ValidationPipe` — not strict (FU-T1-05)
 - `progress.dto` round/score bounds — absent (FU-T1-06/07)
+- `test:client` coverage escapes to parent-of-repo (Task 3.5) — caused merged
+  lcov to silently skip client data; unrelated to FU-T1-01/02
 
 ## Blockers for X1 completion
 - [ ] Cocos Creator 3.8.8 availability for Task 6 build
@@ -233,6 +235,86 @@ Expected: non-zero lines/functions/statements for the .mjs file.
 ```bash
 git add scripts/tests/jest.config.js
 git commit -m "fix(test): enable v8 coverage provider for scripts ESM (FU-T1-02)"
+```
+
+---
+
+## Task 3.5: Fix client coverage output escape-to-parent-of-repo bug
+
+**Files:**
+- Modify: `client/tests/package.json`
+
+**Background:** Empirically verified on 2026-04-17 — `npm run test:client`
+writes its coverage to `D:\workspace\tiktok\coverage\raw\client\` (one level
+**above the repo root**), not to `<repo>/coverage/raw/client/`. Root cause:
+`client/tests/jest.config.ts` has `rootDir: '..'` (→ `client/`), so Jest
+resolves the CLI flag `--coverageDirectory=../../coverage/raw/client`
+relative to `client/` and climbs one level too many. Result:
+`nyc merge coverage/raw/client ...` in the root `coverage:merge` script
+silently ignores the missing input → merged lcov is incomplete → Codecov
+numbers are wrong even after Tasks 2 and 3 are done.
+
+**Step 1: Verify the bug is still present after a fresh install**
+
+```bash
+cd D:/workspace/tiktok/mini-game
+rm -rf coverage/ ../coverage/ 2>/dev/null
+npm run test:client
+ls coverage/raw/ 2>&1
+ls ../coverage/raw/ 2>&1
+```
+
+Expected: `../coverage/raw/` (outside repo) has a `client` subdir; local
+`coverage/raw/` does not. Confirms the bug.
+
+**Step 2: Fix `client/tests/package.json`**
+
+Change the `test:ci` line by adding one more `../` — from `../../coverage/raw/client`
+to `../../../coverage/raw/client`. The path now climbs: `client/` → repo root
+→ `coverage/raw/client`. Wait — that's three ups from `client/`, which
+overshoots. The correct path from rootDir=`client/` to repo-root is
+**one** `../`, not three. The original `--coverageDirectory=../../...`
+overshot by one because whoever wrote it assumed Jest resolves CLI flags
+from `client/tests/` (the package.json dir), not from `rootDir=client/`.
+
+Correct fix: `../coverage/raw/client`.
+
+Edit `client/tests/package.json`:
+
+```json
+"test:ci": "jest --coverage --coverageDirectory=../coverage/raw/client"
+```
+
+**Step 3: Re-run and verify the coverage now lands inside the repo**
+
+```bash
+cd D:/workspace/tiktok/mini-game
+rm -rf coverage/ ../coverage/ 2>/dev/null
+npm run test:client
+ls coverage/raw/client/ 2>&1 | head
+ls ../coverage/raw/ 2>&1
+```
+
+Expected:
+- `coverage/raw/client/` contains `coverage-final.json` and friends (inside repo ✅)
+- `../coverage/raw/` does not exist (no more leak ✅)
+
+**Step 4: Verify `coverage:merge` now consumes client raw data**
+
+```bash
+npm run test:all
+npm run coverage:merge 2>&1 | tail -10
+cat coverage/client.json | head -c 100
+```
+
+Expected: `coverage/client.json` is non-empty JSON; `coverage:merge` does
+not skip any input.
+
+**Step 5: Commit**
+
+```bash
+git add client/tests/package.json
+git commit -m "fix(test): client coverage was writing outside repo (rootDir double-climb)"
 ```
 
 ---
@@ -1043,6 +1125,7 @@ Before declaring X1 done, verify all of:
 - [ ] `docs/test/2026-04-17-baseline.md` committed with real coverage numbers
 - [ ] `npm run test:server:e2e` produces non-empty coverage-final.json
 - [ ] `npm run test:scripts` produces non-zero coverage for .mjs files
+- [ ] `npm run test:client` writes coverage inside the repo (Task 3.5 fix verified; no `../coverage/` leak)
 - [ ] `client/tests/harness/gameHarness.ts` + its spec committed and green
 - [ ] `e2e/dist/web-mobile/index.html` + `__asset-hash` committed (OR baseline doc flags Task 6 blocked)
 - [ ] `npm run check:e2e-bundle` returns 0 on fresh, 1 on stale
