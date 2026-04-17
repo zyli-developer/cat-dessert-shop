@@ -55,6 +55,10 @@ function request<T>(path: string, method: string = 'GET', body?: unknown): Promi
           timeout: TIMEOUT,
           success: (res: { data: ApiResponse<T>; statusCode: number }) => {
             if (res.statusCode >= 200 && res.statusCode < 300 && res.data.code === 0) {
+              if (res.data.data === undefined || res.data.data === null) {
+                reject(new Error(`API malformed response: code=0 but data is missing`));
+                return;
+              }
               resolve(res.data.data);
             } else {
               reject(
@@ -112,6 +116,10 @@ function request<T>(path: string, method: string = 'GET', body?: unknown): Promi
             if (finished) return;
             finished = true;
             if (json.code === 0) {
+              if (json.data === undefined || json.data === null) {
+                reject(new Error(`API malformed response: code=0 but data is missing`));
+                return;
+              }
               resolve(json.data);
             } else {
               reject(new Error(`API error: code=${json.code}, message=${json.message ?? ''}`));
@@ -137,6 +145,10 @@ function request<T>(path: string, method: string = 'GET', body?: unknown): Promi
           try {
             const json = JSON.parse(xhr.responseText) as ApiResponse<T>;
             if (xhr.status >= 200 && xhr.status < 300 && json.code === 0) {
+              if (json.data === undefined || json.data === null) {
+                reject(new Error(`API malformed response: code=0 but data is missing`));
+                return;
+              }
               resolve(json.data);
             } else {
               reject(new Error(`API error: status=${xhr.status}, code=${json?.code}`));

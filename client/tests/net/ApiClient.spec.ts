@@ -155,6 +155,25 @@ describe('ApiClient (T2-12)', () => {
     expect(ApiClient.getOpenId()).toBe('will-stay');
   });
 
+  // ----- TC-API-ERR-003 (integration-api.md §错误路径) -----
+  // Malformed server response must NOT leak undefined/null into callers.
+  it('TC-API-ERR-003a empty {} body rejects (no undefined leaks into caller)', async () => {
+    ApiClient.setFetch(jest.fn().mockResolvedValue(jsonResponse({})) as unknown as typeof fetch);
+    await expect(ApiClient.getGlobalRank(10)).rejects.toThrow();
+  });
+
+  it('TC-API-ERR-003b {code:0} with missing data field rejects (no undefined leaks)', async () => {
+    ApiClient.setFetch(jest.fn().mockResolvedValue(jsonResponse({ code: 0 })) as unknown as typeof fetch);
+    await expect(ApiClient.getGlobalRank(10)).rejects.toThrow();
+  });
+
+  it('TC-API-ERR-003c {code:0, data:null} rejects (explicit null is not a valid payload)', async () => {
+    ApiClient.setFetch(
+      jest.fn().mockResolvedValue(jsonResponse({ code: 0, data: null })) as unknown as typeof fetch,
+    );
+    await expect(ApiClient.getGlobalRank(10)).rejects.toThrow();
+  });
+
   // ----- Offline mode shortcircuits (bonus coverage) -----
   it('offline mode: getProfile returns canned dev-offline profile without fetch', async () => {
     ApiClient.setOpenId('dev-offline');
