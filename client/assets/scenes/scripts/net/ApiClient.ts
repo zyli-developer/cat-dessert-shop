@@ -29,7 +29,17 @@ function request<T>(path: string, method: string = 'GET', body?: unknown): Promi
   const base = API_BASE_URL.replace(/\/$/, '');
   const isHttp = /^http:\/\//i.test(base);
   const url = `${base}${path}`;
-  return new Promise((resolve, reject) => {
+
+  const reqId = Math.random().toString(36).slice(2, 8);
+  const startedAt = Date.now();
+  // body 可能含 code/anonymousCode 等敏感串，截断展示防止 console 刷屏
+  const bodyPreview = body === undefined ? '<none>' : JSON.stringify(body).slice(0, 200);
+  console.log(
+    `[ApiClient][${reqId}] → ${method} ${url}` +
+    `  openId=${openId || '<none>'}  body=${bodyPreview}`
+  );
+
+  return new Promise<T>((resolve, reject) => {
     // 抖音小游戏：
     // - https 走 tt.request（官方链路）
     // - http（局域网联调）直接走 fetch/XHR，避免 tt.request 的域名/协议校验拦截
@@ -47,6 +57,7 @@ function request<T>(path: string, method: string = 'GET', body?: unknown): Promi
       }
       const ttApi = DouyinSDK.getTT();
       if (ttApi?.request) {
+        console.log(`[ApiClient][${reqId}] transport=tt.request`);
         ttApi.request({
           url,
           method: method as 'GET' | 'POST',
@@ -92,6 +103,7 @@ function request<T>(path: string, method: string = 'GET', body?: unknown): Promi
     const doFetchOrXhr = (): void => {
       const canFetch = typeof fetch === 'function';
       if (canFetch) {
+        console.log(`[ApiClient][${reqId}] transport=fetch`);
         const canAbort = typeof AbortController === 'function';
         const controller = canAbort ? new AbortController() : null;
         let finished = false;
@@ -136,6 +148,7 @@ function request<T>(path: string, method: string = 'GET', body?: unknown): Promi
 
       // 抖音小游戏部分运行时没有 fetch，回退到 XHR（开发期 http 联调）
       if (typeof XMLHttpRequest !== 'undefined') {
+        console.log(`[ApiClient][${reqId}] transport=xhr (fetch unavailable)`);
         const xhr = new XMLHttpRequest();
         xhr.open(method, url, true);
         xhr.timeout = TIMEOUT;
@@ -171,7 +184,20 @@ function request<T>(path: string, method: string = 'GET', body?: unknown): Promi
     };
 
     doFetchOrXhr();
-  });
+  }).then(
+    (data) => {
+      const dur = Date.now() - startedAt;
+      const dataKeys = data && typeof data === 'object' ? Object.keys(data as object) : [];
+      console.log(`[ApiClient][${reqId}] ✓ ${method} ${path} ${dur}ms  dataKeys=[${dataKeys.join(', ')}]`);
+      return data;
+    },
+    (err) => {
+      const dur = Date.now() - startedAt;
+      const msg = err instanceof Error ? err.message : String((err as any)?.errMsg ?? err);
+      console.warn(`[ApiClient][${reqId}] ✗ ${method} ${path} ${dur}ms: ${msg}`);
+      throw err;
+    }
+  );
 }
 
 export class ApiClient {

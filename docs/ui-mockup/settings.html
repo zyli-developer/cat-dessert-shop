@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>猫咪甜品店 · 设置</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css">
+<style>
+  .srow{ display:flex; align-items:center; gap:22px; padding:30px 30px; }
+  .srow + .srow{ border-top:2px solid var(--line); }
+  .srow .ico{ width:64px; height:64px; flex:none; display:grid; place-items:center; border-radius:20px; background:var(--sand); }
+  .srow .ico svg{ width:36px; height:36px; }
+  .srow .label{ font-family:var(--font-display); font-weight:800; font-size:36px; color:var(--ink); }
+  .srow .sub{ font-size:24px; color:var(--ink-mute); font-weight:600; margin-top:2px; }
+  /* 开关 */
+  .sw{ width:118px; height:64px; border-radius:var(--r-pill); border:none; cursor:pointer; position:relative;
+    background:var(--sand-2); box-shadow:inset 0 2px 6px rgba(120,80,40,.18); transition:background .2s; }
+  .sw::after{ content:''; position:absolute; top:6px; left:6px; width:52px; height:52px; border-radius:50%;
+    background:#fff; box-shadow:0 4px 8px rgba(120,80,40,.25); transition:transform .2s; }
+  .sw.on{ background:linear-gradient(180deg,var(--mint-hi),var(--mint)); }
+  .sw.on::after{ transform:translateX(54px); }
+  .chev{ width:18px; height:30px; flex:none; }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-home" viewBox="0 0 24 24"><path class="ic" d="M4 11l8-6 8 6"/><path class="ic" d="M6 10.5v8.5h12v-8.5"/><path class="ic" d="M10 19v-5h4v5"/></symbol>
+<symbol id="i-music" viewBox="0 0 24 24"><path class="ic" d="M9 18V6l10-2v12"/><circle class="ic" cx="6.2" cy="18" r="2.6"/><circle class="ic" cx="16.2" cy="16" r="2.6"/></symbol>
+<symbol id="i-sound" viewBox="0 0 24 24"><path class="ic" d="M4 9.5v5h4l5 4V5.5l-5 4z"/><path class="ic" d="M16 9.5a4 4 0 0 1 0 5"/><path class="ic" d="M18.6 7a7 7 0 0 1 0 10"/></symbol>
+<symbol id="i-vibe" viewBox="0 0 24 24"><rect class="ic" x="8" y="4" width="8" height="16" rx="2.4"/><path class="ic" d="M11 17h2"/></symbol>
+<symbol id="i-bell" viewBox="0 0 24 24"><path class="ic" d="M6 16.5V11a6 6 0 0 1 12 0v5.5l2 2H4z"/><path class="ic" d="M10 19a2 2 0 0 0 4 0"/></symbol>
+<symbol id="i-chat" viewBox="0 0 24 24"><path class="ic" d="M4 5h16v11H9l-4 4v-4H4z"/><path class="ic" d="M8.5 10.5h.01"/><path class="ic" d="M12 10.5h.01"/><path class="ic" d="M15.5 10.5h.01"/></symbol>
+<symbol id="i-info" viewBox="0 0 24 24"><circle class="ic" cx="12" cy="12" r="9"/><path class="ic" d="M12 11.2v5"/><path class="ic" d="M12 7.8h.01"/></symbol>
+<symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3.2l2.6 5.4 5.9.8-4.3 4.1 1.1 5.9L12 16.7 6.7 19.4l1.1-5.9L3.5 9.4l5.9-.8z" fill="currentColor"/></symbol>
+<symbol id="i-chevR" viewBox="0 0 24 24"><path class="ic" stroke-width="3" d="M9 5l7 7-7 7"/></symbol>
+</defs></svg>
+
+<div class="stage" style="background:radial-gradient(120% 80% at 50% 0%,#FFF1DC,#FFF7EC 60%)">
+  <img class="float" src="assets/desserts/dessert_lv1_cookie.png" style="left:40px;top:150px;width:80px;--rot:-10deg;opacity:.5" alt="">
+
+  <!-- 顶栏 -->
+  <div class="safe-top">
+    <div class="row between">
+      <button class="iconbtn" aria-label="返回" onclick="location.href='home.html'"><svg><use href="#i-home"/></svg></button>
+      <div class="title-lg" style="font-size:48px">设置</div>
+      <div style="width:66px"></div>
+    </div>
+  </div>
+
+  <!-- 探头猫 -->
+  <img src="assets/character/cat_orange_idle.png" style="position:absolute;right:48px;top:118px;width:170px;filter:drop-shadow(0 8px 10px rgba(120,80,40,.2))" alt="">
+
+  <!-- 声音设置 -->
+  <div class="panel" style="position:absolute;left:56px;right:56px;top:330px;padding:8px 4px">
+    <div class="srow">
+      <div class="ico"><svg class="ic"><use href="#i-music"/></svg></div>
+      <div style="flex:1"><div class="label">背景音乐</div><div class="sub">店内的治愈轻音乐</div></div>
+      <button class="sw on" onclick="this.classList.toggle('on')" aria-label="背景音乐"></button>
+    </div>
+    <div class="srow">
+      <div class="ico"><svg class="ic"><use href="#i-sound"/></svg></div>
+      <div style="flex:1"><div class="label">音效</div><div class="sub">合成 / 完成订单音效</div></div>
+      <button class="sw on" onclick="this.classList.toggle('on')" aria-label="音效"></button>
+    </div>
+    <div class="srow">
+      <div class="ico"><svg class="ic"><use href="#i-vibe"/></svg></div>
+      <div style="flex:1"><div class="label">震动反馈</div><div class="sub">合成时轻轻一震</div></div>
+      <button class="sw" onclick="this.classList.toggle('on')" aria-label="震动"></button>
+    </div>
+    <div class="srow">
+      <div class="ico"><svg class="ic"><use href="#i-bell"/></svg></div>
+      <div style="flex:1"><div class="label">营业提醒</div><div class="sub">体力回满时通知我</div></div>
+      <button class="sw on" onclick="this.classList.toggle('on')" aria-label="提醒"></button>
+    </div>
+  </div>
+
+  <!-- 功能行 -->
+  <div class="panel" style="position:absolute;left:56px;right:56px;top:790px;padding:8px 4px">
+    <div class="srow" style="cursor:pointer">
+      <div class="ico"><svg class="ic"><use href="#i-chat"/></svg></div>
+      <div style="flex:1"><div class="label">联系客服</div></div>
+      <svg class="chev ic"><use href="#i-chevR"/></svg>
+    </div>
+    <div class="srow" style="cursor:pointer">
+      <div class="ico"><svg style="color:var(--star)"><use href="#i-star"/></svg></div>
+      <div style="flex:1"><div class="label">给个好评</div><div class="sub">喜欢的话鼓励一下~</div></div>
+      <svg class="chev ic"><use href="#i-chevR"/></svg>
+    </div>
+    <div class="srow" style="cursor:pointer">
+      <div class="ico"><svg class="ic"><use href="#i-info"/></svg></div>
+      <div style="flex:1"><div class="label">隐私政策</div></div>
+      <svg class="chev ic"><use href="#i-chevR"/></svg>
+    </div>
+  </div>
+
+  <div class="mute2" style="position:absolute;left:0;right:0;bottom:42px;text-align:center;font-size:24px;font-weight:600">猫咪甜品店 · v1.0.0</div>
+</div>
+
+<script src="js/stage.js"></script>
+</body>
+</html>

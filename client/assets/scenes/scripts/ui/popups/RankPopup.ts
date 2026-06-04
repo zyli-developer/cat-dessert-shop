@@ -49,9 +49,11 @@ export class RankPopup extends Component {
                     label.string = `${i + 1}. ${item.nickname || '玩家'} - 第${item.currentRound || 1}关`;
                     label.fontSize = 22;
                     label.lineHeight = 36;
-                    
-                    // 为动态创建的 Label 应用字体
-                    GlobalFontManager.applyFont(node);
+
+                    // 排行项含动态昵称（其他玩家的名字），可能是任意汉字。
+                    // 自定义字体已子集化为静态 UI 用字，渲染动态昵称会出现豆腐块，
+                    // 故这些项强制走系统字体保证名字可见。
+                    label.isSystemFontUsed = true;
                 }
             }
         } catch (e) {

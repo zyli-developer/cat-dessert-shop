@@ -25,6 +25,8 @@ export class LoadingScene extends Component {
     onLoad(): void {
         macro.CLEANUP_IMAGE_CACHE = false;
         console.log('[LoadingScene] CLEANUP_IMAGE_CACHE disabled');
+        // 进游戏第一时间 dump，提前暴露 IDE 加载到的 AppID / SDK / Host 信息
+        DouyinSDK.dumpEnvironment('boot');
     }
 
     start(): void {
@@ -95,44 +97,62 @@ export class LoadingScene extends Component {
         // Hide login button, show progress
         if (this.loginBtn) this.loginBtn.active = false;
 
+        console.log('[LoadingScene] ===== 登录流程开始 =====');
+
         try {
             this.setStatus('正在登录...');
             this.setProgress(0.75);
 
+            console.log('[LoadingScene] [Step 1/4] 调用 DouyinSDK.login() → tt.login');
             let loginResult: { code?: string; anonymousCode?: string; isLogin?: boolean };
             try {
                 loginResult = await DouyinSDK.login();
+                console.log('[LoadingScene] [Step 1/4] ✓ DouyinSDK.login 返回:', {
+                    hasCode: !!loginResult.code,
+                    codePreview: loginResult.code?.slice(0, 8) + '...',
+                    hasAnonymousCode: !!loginResult.anonymousCode,
+                    anonymousCodePreview: loginResult.anonymousCode?.slice(0, 8) + '...',
+                    isLogin: loginResult.isLogin,
+                });
             } catch (loginErr) {
                 const msg = loginErr instanceof Error ? loginErr.message : String(loginErr);
+                console.error('[LoadingScene] [Step 1/4] ✗ tt.login 失败:', msg, loginErr);
                 throw new Error(`[tt.login失败] ${msg}`);
             }
 
             this.setStatus('正在验证...');
             this.setProgress(0.85);
-            console.log('[LoadingScene] tt.login result:', {
-                hasCode: !!loginResult.code,
-                hasAnonymousCode: !!loginResult.anonymousCode,
-                isLogin: loginResult.isLogin,
-            });
 
+            console.log('[LoadingScene] [Step 2/4] 调用 ApiClient.login() → POST /api/auth/login');
             let user;
             try {
                 user = await ApiClient.login({
                     code: loginResult.code,
                     anonymousCode: loginResult.anonymousCode,
                 });
+                console.log('[LoadingScene] [Step 2/4] ✓ 后端返回 user:', {
+                    openId: user.openId,
+                    nickname: user.nickname,
+                    currentRound: user.currentRound,
+                    catCoins: user.catCoins,
+                });
             } catch (apiErr) {
                 const msg = apiErr instanceof Error ? apiErr.message : String(apiErr);
+                console.error('[LoadingScene] [Step 2/4] ✗ 后端登录失败:', msg, apiErr);
                 throw new Error(`[后端登录失败] ${msg}`);
             }
 
+            console.log('[LoadingScene] [Step 3/4] 写入 GameState（openId / userProfile / currentRound）');
             ApiClient.setOpenId(user.openId);
             GameState.instance.userProfile = user;
             GameState.instance.currentRound = user.currentRound;
 
+            console.log('[LoadingScene] [Step 4/4] 跳转 Home 场景');
             this.setStatus('登录成功!');
             this.setProgress(1.0);
             this.scheduleOnce(() => this.gotoHome(), 0.3);
+
+            console.log('[LoadingScene] ===== 登录流程结束（成功） =====');
 
         } catch (e) {
             this.loginInProgress = false;
