@@ -24,6 +24,7 @@ export class HomeScene extends Component {
     private btnRank: Node | null = null;
     private btnSettings: Node | null = null;
     private btnAdCatCoin: Node | null = null;
+    private btnShare: Node | null = null;
 
     onLoad(): void {
         console.log('[HomeScene] === onLoad ===');
@@ -42,13 +43,13 @@ export class HomeScene extends Component {
         this.btnRank = this.findNode('BtnRank');
         this.btnSettings = this.findNode('BtnSettings');
         this.btnAdCatCoin = this.findNode('BtnAdCatCoin');
+        this.btnShare = this.findNode('BtnShare');
 
         console.log(`[HomeScene] found: btnStart=${!!this.btnStart}, btnPrev=${!!this.btnPrev}, btnNext=${!!this.btnNext}`);
 
-        // 为开始按钮添加文字（场景中只有图片）
-        this.addButtonLabel(this.btnStart, '开始游戏', 28);
+        // 为开始按钮添加文字（场景中只有果冻底图）
+        this.addButtonLabel(this.btnStart, '开始营业', 34);
         this.ensureAdCatCoinHint();
-        this.createSidebarButton();
 
         const state = GameState.instance;
         this.viewingRound = state.currentRound;
@@ -70,6 +71,7 @@ export class HomeScene extends Component {
             this.bindBtn(this.btnRank, this.onRankClicked);
             this.bindBtn(this.btnSettings, this.onSettingsClicked);
             this.bindBtn(this.btnAdCatCoin, this.onAdCatCoinClicked);
+            this.bindBtn(this.btnShare, this.onSidebarClicked);
             this._ready = true;
             console.log('[HomeScene] Touch events bound, ready=true');
         }, 0.3);
@@ -260,7 +262,7 @@ export class HomeScene extends Component {
             const labelNode = this.btnStart.getChildByName('BtnLabel');
             const label = labelNode?.getComponent(Label);
             if (label) {
-                label.string = unlocked ? '开始游戏' : '🔒 未解锁';
+                label.string = unlocked ? '开始营业' : '🔒 未解锁';
                 label.color = unlocked
                     ? new Color(255, 255, 255, 255)
                     : new Color(180, 180, 180, 255);
@@ -287,7 +289,7 @@ export class HomeScene extends Component {
 
     private formatCatCoinsLine(profile: UserProfile | null | undefined): string {
         const n = profile?.catCoins ?? 0;
-        return `猫币 ${n}`;
+        return `${n}`;
     }
 
     onDestroy(): void {

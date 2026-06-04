@@ -1,8 +1,37 @@
-import { Node, UITransform, Graphics, Color, Label, Layers } from 'cc';
+import { Node, UITransform, Graphics, Color, Label, Layers, Sprite, SpriteFrame, resources } from 'cc';
 import { GlobalFontManager } from '../GlobalFontManager';
 import {
     TOKENS, JELLY_VARIANTS, JellyVariantName, applyInkOutline,
 } from '../DesignTokens';
+
+/**
+ * 果冻按钮贴图缓存 —— 用烘焙好的九宫格 PNG（含渐变面 + 顶高光 + 厚底）替代 Graphics 平涂，
+ * 一处加载、所有弹窗按钮共享。未就绪时 buildJelly 自动回退到 Graphics（不阻塞）。
+ */
+const JELLY_FRAME_PATH: Record<JellyVariantName, string> = {
+    primary: 'textures/ui/jelly_primary/spriteFrame',
+    butter: 'textures/ui/jelly_butter/spriteFrame',
+    mint: 'textures/ui/jelly_mint/spriteFrame',
+    ghost: 'textures/ui/jelly_ghost/spriteFrame',
+};
+const JELLY_FRAMES: Partial<Record<JellyVariantName, SpriteFrame>> = {};
+let _kitLoading: Promise<void> | null = null;
+
+/** 预加载果冻贴图（PopupManager 在 init 前 await）。重复调用复用同一 Promise。 */
+export function ensurePopupKit(): Promise<void> {
+    if (_kitLoading) return _kitLoading;
+    _kitLoading = Promise.all(
+        (Object.keys(JELLY_FRAME_PATH) as JellyVariantName[]).map(
+            (v) => new Promise<void>((resolve) => {
+                resources.load(JELLY_FRAME_PATH[v], SpriteFrame, (err, frame) => {
+                    if (!err && frame) JELLY_FRAMES[v] = frame;
+                    resolve();
+                });
+            }),
+        ),
+    ).then(() => undefined);
+    return _kitLoading;
+}
 
 /**
  * 弹窗配色 —— 治愈手绘烘焙风（纸感暖色）。
@@ -73,33 +102,42 @@ function buildJelly(btn: Node, text: string, variant: JellyVariantName, w: numbe
     if (!ut) ut = btn.addComponent(UITransform);
     ut.setContentSize(w, h);
 
-    // ① Shadow —— 厚底深色，下沉 8px
-    const shadow = new Node('Shadow');
-    shadow.layer = Layers.Enum.UI_2D;
-    shadow.parent = btn;
-    shadow.setPosition(0, -8, 0);
-    shadow.addComponent(UITransform).setContentSize(w, h);
-    drawRoundedRect(shadow, w, h, v.shadow, undefined, 0, radius);
-
-    // ② Face —— 面主色
+    const frame = JELLY_FRAMES[variant];
     const face = new Node('Face');
     face.layer = Layers.Enum.UI_2D;
     face.parent = btn;
     face.setPosition(0, 0, 0);
     face.addComponent(UITransform).setContentSize(w, h);
-    drawRoundedRect(face, w, h, v.face, undefined, 0, radius);
 
-    // ③ TopHi —— 顶部内高光（受光面）
-    const hiH = Math.max(6, h * 0.42);
-    const hi = new Node('TopHi');
-    hi.layer = Layers.Enum.UI_2D;
-    hi.parent = face;
-    hi.addComponent(UITransform).setContentSize(w - 12, hiH);
-    hi.setPosition(0, h / 2 - hiH / 2 - 4, 0);
-    const hiColor = new Color(v.faceHi.r, v.faceHi.g, v.faceHi.b, 150);
-    drawRoundedRect(hi, w - 12, hiH, hiColor, undefined, 0, hiH / 2);
+    if (frame) {
+        // 烘焙贴图：单层九宫格已含渐变面 + 顶高光 + 厚底，无需 Shadow/TopHi
+        const sp = face.addComponent(Sprite);
+        sp.spriteFrame = frame;
+        sp.type = Sprite.Type.SLICED;
+        sp.sizeMode = Sprite.SizeMode.CUSTOM;
+    } else {
+        // 回退：Graphics 平涂（厚底 + 面 + 顶高光）
+        const shadow = new Node('Shadow');
+        shadow.layer = Layers.Enum.UI_2D;
+        shadow.parent = btn;
+        shadow.setPosition(0, -8, 0);
+        shadow.setSiblingIndex(0);
+        shadow.addComponent(UITransform).setContentSize(w, h);
+        drawRoundedRect(shadow, w, h, v.shadow, undefined, 0, radius);
 
-    // ④ Label —— 文字（渲染在最上层）
+        drawRoundedRect(face, w, h, v.face, undefined, 0, radius);
+
+        const hiH = Math.max(6, h * 0.42);
+        const hi = new Node('TopHi');
+        hi.layer = Layers.Enum.UI_2D;
+        hi.parent = face;
+        hi.addComponent(UITransform).setContentSize(w - 12, hiH);
+        hi.setPosition(0, h / 2 - hiH / 2 - 4, 0);
+        const hiColor = new Color(v.faceHi.r, v.faceHi.g, v.faceHi.b, 150);
+        drawRoundedRect(hi, w - 12, hiH, hiColor, undefined, 0, hiH / 2);
+    }
+
+    // Label —— 文字（渲染在最上层）
     const labelNode = new Node('BtnLabel');
     labelNode.layer = Layers.Enum.UI_2D;
     labelNode.parent = face;

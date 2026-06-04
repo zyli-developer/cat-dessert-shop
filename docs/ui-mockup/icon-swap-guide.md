@@ -1,14 +1,55 @@
-# 图标替换指南（编辑器手动步骤）
+# 图标替换指南
 
-> 配套脚本：`scripts/rasterize_icons.js` 已把 `icons-export/svg/` 的 26 枚统一线条图标
-> 栅格化为 PNG，输出到 **`client/assets/textures/ui/icons-v2/`**（144²，暖棕 `#5A4636` 线条，透明底）。
->
-> 这些 PNG 不会自动替换场景里的贴图——SpriteFrame 的指定必须在 Cocos 编辑器手动完成。
-> 故意放到 `icons-v2/` 新目录而非覆盖旧 `icon_*.png`，**便于回退**。
+## ✅ 本次已执行：buttons-sheet 那套扁平图标 → 统一线条风（原地替换）
+
+通过 `scripts/swap_button_icons.js`，已把 buttons-sheet 涉及的 **17 个旧扁平单图原地覆盖**
+为统一线条图标，并 **重建了 `buttons-sheet.png` 本身**（1536×838，4×2，统一暖棕线条）：
+
+| 已覆盖（`textures/ui/`） | 来源图标 | 备注 |
+|---|---|---|
+| `pause.png` `icon_pause.png` | icon_pause | |
+| `hammer.png` `icon_hammer.png` | icon_hammer | |
+| `shuffle.png` `icon_shuffle.png` | icon_shuffle | |
+| `settings.png` `icon_settings.png` | icon_settings | |
+| `home.png` | icon_home | **被 Home/Loading 场景引用，刷新后立即生效** |
+| `icon_next.png` `btn_next.png` | icon_next | |
+| `icon_prev.png` `btn_prev.png` | icon_prev | |
+| `star_on.png` `icon_star_full.png` | icon_star（金 `#F2B53B`） | 实心金星 |
+| `star_off.png` `icon_star_empty.png` | icon_star（灰 `#CBB89E`） | 实心灰星 |
+| `buttons-sheet.png` | 8 图标重组 | 4×2 图集整体重建为统一线条风 |
+
+### 第二批：剩余非 buttons-sheet 的扁平图标（同次脚本一并原地覆盖）
+
+| 已覆盖（`textures/ui/`） | 来源图标 | 备注 |
+|---|---|---|
+| `ad.png` `icon_ad.png` | icon_ad | 看广告 |
+| `icon_close.png` | icon_close | 弹窗关闭 / 锤子模式 ✕ |
+| `icon_rank.png` | icon_rank | 排行入口 |
+| `icon_share.png` | icon_share | 分享 |
+| `icon_coin.png` `icon_catcoin.png` | icon_coin（金色爪印币，多色不染色） | HUD 金币 / 猫币 |
+| `icon_home_locked.png` | icon_lock | 锁定关卡 → 统一锁图标 |
+
+> 这 8 个目前在工程里均**无场景/prefab 引用**（与 `buttons-sheet` 同属孤立资源），已就地统一为备用；
+> 后续在编辑器里指定到对应节点即可，无需再找新文件。
+
+**只改像素、不动 `.png.meta`/UUID** —— 所以场景/prefab 的所有引用不断链，Cocos 下次 Refresh
+会按同 UUID 重新导入新图。两批共 **25 个单图 + 1 张图集**原件已全部备份到
+**`backup/buttons-sheet-swap-2026-06-04/`**，可随时回退。
+
+**程序侧只需两步：**
+1. Cocos 编辑器 Assets 面板右键 `textures/ui` → **Refresh**，确认图标变为统一线条风。
+2. `buttons-sheet.png` 在工程里已是孤立资源（无任何场景/prefab/脚本引用），已重建为统一风格备用；
+   若确认用不到，可在编辑器搜索引用为空后删除。
+
+> 重跑：`node scripts/swap_button_icons.js`（幂等，会再次从备份外的当前 SVG 渲染并覆盖）。
 
 ---
 
-## 0. 生成 / 刷新 PNG
+## 附：另一套 26 枚图标（icons-v2/，按需在编辑器手动替换其余图标）
+
+> `scripts/rasterize_icons.js` 已把 `icons-export/svg/` 全部 26 枚图标栅格化到
+> **`client/assets/textures/ui/icons-v2/`**（144²，暖棕 `#5A4636` 线条，透明底），用于替换
+> buttons-sheet 之外的其余图标（金币/分享/关闭/客服/音乐…）。这批是非破坏式新目录，需在编辑器手动指定 SpriteFrame。
 
 ```bash
 node scripts/rasterize_icons.js
@@ -32,6 +73,10 @@ ICON_SIZE=192 node scripts/rasterize_icons.js
 
 ## 2. 旧贴图 → 新图标 对照表
 
+> 注：下表中 `pause/hammer/shuffle/settings/home/next/prev/star/ad/close/rank/share/coin/catcoin/home_locked`
+> 这些**已由 `swap_button_icons.js` 原地替换完成**（见顶部 ✅ 两批清单），无需再手动指定；
+> 本表保留作语义对照与「出现位置」参考。其余未列入脚本的节点仍可按本表手动替换。
+
 | 旧贴图（`textures/ui/`） | 新图标（`icons-v2/`） | 出现位置 |
 |---|---|---|
 | `icon_hammer.png` / `hammer.png` | `icon_hammer.png` | GameScene 道具栏 锤子 |
@@ -50,7 +95,7 @@ ICON_SIZE=192 node scripts/rasterize_icons.js
 | `home.png` | `icon_home.png` | 弹窗「返回主页」 |
 | `icon_star_full.png` | `icon_star.png` | Win 三星（亮：`color` 用 `#FFC53D`） |
 | `icon_star_empty.png` / `star_off.png` | `icon_star.png` | Win 三星（暗：`color` 用 `#DCC197`） |
-| `buttons-sheet.png`（图集） | 拆成上面各 `icon_*` | 该扁平图集整体弃用，逐个换成线条图标 |
+| `buttons-sheet.png`（图集） | 已重建为统一线条风（见顶部 ✅ 节） | 孤立资源，已就地统一；确认无引用后可删 |
 
 ---
 

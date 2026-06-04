@@ -1,5 +1,6 @@
 import { _decorator, Component, Node, Prefab, instantiate, Color, UITransform,
          UIOpacity, BlockInputEvents, Sprite, SpriteFrame, tween, Vec3, resources, director, Layers } from 'cc';
+import { ensurePopupKit } from './popups/PopupUIHelper';
 const { ccclass } = _decorator;
 
 @ccclass('PopupManager')
@@ -26,6 +27,18 @@ export class PopupManager {
                 }
                 console.log(`[PopupManager] Prefab loaded: ${popupName}`);
 
+                // 果冻贴图就绪后再 init（弹窗按钮内部同步构建，需贴图先到位）
+                void ensurePopupKit().then(() => this._build(popupName, prefab, data, resolve));
+            });
+        });
+    }
+
+    /** 实例化弹窗 + 传数据 + 弹出动画（贴图就绪后调用）。 */
+    private static _build(
+        popupName: string, prefab: Prefab, data: any,
+        resolve: (n: Node | null) => void,
+    ): void {
+        {
                 const scene = director.getScene();
                 if (!scene) {
                     resolve(null);
@@ -64,8 +77,7 @@ export class PopupManager {
                     .start();
 
                 resolve(popup);
-            });
-        });
+        }
     }
 
     /** 关闭当前弹窗 */

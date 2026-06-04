@@ -121,8 +121,12 @@ export class ItemManager extends Component {
     private decorateToolButton(btn: Node | null, cost: number, afford: boolean): void {
         if (!btn) return;
 
-        // 图标去色/还原（按钮自身或子节点上的 Sprite）
-        const icon = btn.getComponent(Sprite) ?? btn.getComponentsInChildren(Sprite)[0];
+        // 图标去色/还原。注意：按钮底图 Base 也是 Sprite，必须按名字精确取 Icon，
+        // 否则会把砂色底座染灰而非图标。
+        const iconNode = btn.getChildByName('Icon');
+        const icon = iconNode?.getComponent(Sprite)
+            ?? btn.getComponentsInChildren(Sprite).find(s => s.node.name === 'Icon')
+            ?? null;
         if (icon) {
             icon.color = afford ? TOKENS.white : TOKENS.inkMute;
         }

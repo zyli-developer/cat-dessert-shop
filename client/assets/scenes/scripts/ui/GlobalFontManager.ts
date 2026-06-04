@@ -1,5 +1,24 @@
-import { _decorator, Component, Node, Label, Font, resources, director, find } from 'cc';
+import { _decorator, Component, Node, Label, Font, Color, resources, director, find } from 'cc';
 const { ccclass, property } = _decorator;
+
+/** 暖棕描边色（替换所有黑描边/黑阴影，cocos-mapping.md §0 灵魂法则）。 */
+const INK = new Color(90, 70, 54, 255);
+
+/** 近黑判定：baked 场景里很多 Label 开了纯黑描边/阴影，统一矫正为暖棕。 */
+function isNearBlack(c: Color): boolean {
+    return c.r < 40 && c.g < 40 && c.b < 40;
+}
+
+/** 把单个 Label 的黑描边/黑阴影矫正为暖棕（治愈手绘风的统一关键）。 */
+function normalizeInk(label: Label): void {
+    if (label.enableOutline && isNearBlack(label.outlineColor)) {
+        label.outlineColor = new Color(INK.r, INK.g, INK.b, label.outlineColor.a);
+    }
+    if (label.enableShadow && isNearBlack(label.shadowColor)) {
+        // 柔化刺眼黑阴影为低透明暖棕
+        label.shadowColor = new Color(INK.r, INK.g, INK.b, 70);
+    }
+}
 
 @ccclass('GlobalFontManager')
 export class GlobalFontManager extends Component {
@@ -45,6 +64,8 @@ export class GlobalFontManager extends Component {
             label.font = this._font;
             // 确保使用 TTF 渲染模式
             label.isSystemFontUsed = false;
+            // 全局矫正：黑描边/黑阴影 → 暖棕（零纯黑，验收 §6.1）
+            normalizeInk(label);
         });
         console.log(`[GlobalFontManager] Applied font to ${labels.length} labels in ${rootNode.name}`);
     }

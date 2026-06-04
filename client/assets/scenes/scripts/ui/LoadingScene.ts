@@ -180,7 +180,7 @@ export class LoadingScene extends Component {
         btn.parent = this.node;
         const btnUt = btn.addComponent(UITransform);
         btnUt.setContentSize(280, 72);
-        btn.setPosition(0, -440, 0);
+        btn.setPosition(0, -300, 0);
 
         const label = btn.addComponent(Label);
         label.string = '登  录';
@@ -211,7 +211,7 @@ export class LoadingScene extends Component {
         btn.parent = this.node;
         const btnUt = btn.addComponent(UITransform);
         btnUt.setContentSize(220, 64);
-        btn.setPosition(0, -520, 0);
+        btn.setPosition(0, -380, 0);
 
         const label = btn.addComponent(Label);
         label.string = '离线模式';
@@ -280,8 +280,11 @@ export class LoadingScene extends Component {
     private setProgress(ratio: number): void {
         if (this.progressBar) {
             const ut = this.progressBar.getComponent(UITransform);
+            // 槽宽取自父级 ProgressBg（设计稿 566），fill 锚点在左侧从左向右生长。
+            const trackUt = this.progressBar.node.parent?.getComponent(UITransform);
+            const full = trackUt && trackUt.width > 0 ? trackUt.width : 400;
             if (ut) {
-                ut.width = 400 * Math.min(ratio, 1);
+                ut.width = full * Math.min(ratio, 1);
             }
         }
     }

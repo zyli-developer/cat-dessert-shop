@@ -1167,8 +1167,8 @@
     "__prefab": null,
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 340,
-      "height": 520
+      "width": 400,
+      "height": 600
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -1187,8 +1187,8 @@
     },
     "_enabled": true,
     "__prefab": null,
-    "containerWidth": 340,
-    "containerHeight": 520,
+    "containerWidth": 400,
+    "containerHeight": 600,
     "wallThickness": 20,
     "_id": "95Ak/ZGDNHZpdZ5Kw+OGQe"
   },
@@ -1355,7 +1355,7 @@
     "warningLineNode": {
       "__id__": 24
     },
-    "warningLineY": 208,
+    "warningLineY": 240,
     "countdownTime": 5,
     "_id": "72aVWeirtBirNpyvNm5jJI"
   },

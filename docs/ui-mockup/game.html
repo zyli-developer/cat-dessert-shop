@@ -58,37 +58,36 @@
       <div class="panel" style="flex:1;margin:0 16px;padding:14px 24px 16px;border-radius:24px">
         <div class="row between" style="margin-bottom:10px">
           <span class="mute2" style="font-weight:700;font-size:24px;letter-spacing:1px">第 7 关 · 订单</span>
-          <span class="h-display" style="font-size:30px;color:var(--mint-dp)">3 / 5</span>
+          <span class="h-display" style="font-size:30px;color:var(--mint-dp)">1 / 4</span>
         </div>
         <div class="bar"><i style="width:60%"></i></div>
       </div>
 
-      <div class="chip" id="coinChip" style="height:64px"><svg class="coin"><use href="#i-coin"/></svg><span id="coinVal">20</span></div>
+      <div class="chip" id="coinChip" style="height:64px"><svg class="coin"><use href="#i-coin"/></svg><span id="coinVal">15</span></div>
     </div>
     <!-- 分数 -->
     <div class="row" style="justify-content:center;margin-top:14px;gap:10px">
       <svg style="width:34px;height:34px;color:var(--star)"><use href="#i-star"/></svg>
-      <span class="h-display" style="font-size:52px;color:var(--ink);text-shadow:0 2px 0 #fff">12,640</span>
+      <span class="h-display" style="font-size:52px;color:var(--ink);text-shadow:0 2px 0 #fff">980</span>
     </div>
   </div>
 
-  <!-- 顾客订单（合成即飞的收餐方）—— 紧凑横排 -->
+  <!-- 顾客订单（合成即飞的收餐方）—— 紧凑横排
+       M2：已删除「顾客耐心环」。PRD §2 失败条件仅容器溢出，无顾客超时离开；
+       耐心值机制为 v2.1 规划，定稿前 UI 不暗示不存在的规则。气泡里的 x/y 是订单完成进度，保留。 -->
   <div style="position:absolute;top:250px;left:34px;right:34px;display:flex;justify-content:space-around;align-items:flex-start">
     <!-- 顾客 1 -->
     <div class="order">
-      <div class="ring"><svg viewBox="0 0 100 100" style="width:100%;height:100%;transform:rotate(-90deg)"><circle cx="50" cy="50" r="46" fill="none" stroke="#EAD9BE" stroke-width="6"/><circle cx="50" cy="50" r="46" fill="none" stroke="#8AD2AE" stroke-width="6" stroke-linecap="round" stroke-dasharray="289" stroke-dashoffset="58"/></svg></div>
       <div class="order__bubble" style="margin-bottom:4px"><img class="order__item" style="width:62px;height:62px" src="assets/desserts/dessert_lv4_dorayaki.png" alt=""><span class="order__need" style="font-size:28px">1/2</span></div>
       <img class="order__cat" style="width:96px" src="assets/character/cat_white_idle.png" alt="">
     </div>
-    <!-- 顾客 2（耐心快用完 → 粉色环）-->
+    <!-- 顾客 2 -->
     <div class="order" style="margin-top:4px">
-      <div class="ring"><svg viewBox="0 0 100 100" style="width:100%;height:100%;transform:rotate(-90deg)"><circle cx="50" cy="50" r="46" fill="none" stroke="#EAD9BE" stroke-width="6"/><circle cx="50" cy="50" r="46" fill="none" stroke="#F5879B" stroke-width="6" stroke-linecap="round" stroke-dasharray="289" stroke-dashoffset="205"/></svg></div>
       <div class="order__bubble" style="margin-bottom:4px"><img class="order__item" style="width:62px;height:62px" src="assets/desserts/dessert_lv6_swissroll.png" alt=""><span class="order__need" style="font-size:28px">0/1</span></div>
       <img class="order__cat" style="width:96px" src="assets/character/cat_orange_idle.png" alt="">
     </div>
     <!-- 顾客 3 -->
     <div class="order">
-      <div class="ring"><svg viewBox="0 0 100 100" style="width:100%;height:100%;transform:rotate(-90deg)"><circle cx="50" cy="50" r="46" fill="none" stroke="#EAD9BE" stroke-width="6"/><circle cx="50" cy="50" r="46" fill="none" stroke="#8AD2AE" stroke-width="6" stroke-linecap="round" stroke-dasharray="289" stroke-dashoffset="120"/></svg></div>
       <div class="order__bubble" style="margin-bottom:4px"><img class="order__item" style="width:62px;height:62px" src="assets/desserts/dessert_lv2_cookie2.png" alt=""><span class="order__need" style="font-size:28px">2/3</span></div>
       <img class="order__cat" style="width:96px" src="assets/character/cat_blue_idle.png" alt="">
     </div>
@@ -178,8 +177,8 @@
 <script>
 /* ===== 局内状态机：金币 / 道具可用性 / 锤子选择 / 暂停 / Toast =====
    PRD §2：道具为金币购买制（锤子15 / 洗牌15，无次数），金币不足以使用即为「不可用」。
-   每回合金币偏紧（此处起手 20），用一次道具即逼近不足 → 看广告 +10 恢复。 */
-var COST = 15, coins = 20;
+   B1：每回合起手金币锁定 15（PRD 04-economy）——用一次道具即归零 → 看广告 +10 恢复。 */
+var COST = 15, coins = 15;
 
 function $(id){ return document.getElementById(id); }
 
