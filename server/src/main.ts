@@ -11,6 +11,8 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
   app.useGlobalFilters(new HttpExceptionFilter());
   app.useGlobalInterceptors(new ResponseInterceptor());
+  // Lightweight liveness probe for E2E harness (before interceptors wrap it).
+  app.getHttpAdapter().get('/health', (_req: any, res: any) => res.send({ status: 'ok' }));
   const port = Number(process.env.PORT ?? 3333);
   const host = process.env.HOST ?? '0.0.0.0';
   await app.listen(port, host);

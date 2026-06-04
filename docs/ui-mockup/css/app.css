@@ -1,0 +1,311 @@
+/* ============================================================
+   猫咪甜品店 — 统一设计系统 (治愈手绘烘焙风 · 精致化)
+   只做 UI 外壳：复用现有插画，替换玻璃按钮 / 扁平描边图标
+   ============================================================ */
+
+:root{
+  /* —— 纸底 & 表面 —— */
+  --paper:    #FFF7EC;   /* 页面暖奶油 */
+  --paper-2:  #FFFDF8;   /* 卡片象牙白 */
+  --sand:     #F6E8D0;   /* 面板砂色 */
+  --sand-2:   #F0DBBB;   /* 深一点的砂 */
+
+  /* —— 文字 / 描边：全部暖棕，绝不用纯黑 —— */
+  --ink:      #5A4636;
+  --ink-soft: #8A7259;
+  --ink-mute: #B59C80;
+  --line:     #ECDABF;   /* 细分隔线 */
+  --line-2:   #DCC197;   /* 卡片柔描边 */
+
+  /* —— 一个主色 + 两个辅助（呼应插画里的遮阳棚 / 焦糖 / 薄荷）—— */
+  --pink:      #F5879B;  --pink-hi:#FF9DB0;  --pink-dp:#D9596F;  --pink-sf:#FFE6EB;
+  --butter:    #F7C156;  --butter-hi:#FCD37E; --butter-dp:#DA9B30; --butter-sf:#FFF1D2;
+  --mint:      #8AD2AE;  --mint-hi:#A6E2C6;  --mint-dp:#56AE88;  --mint-sf:#E2F6EC;
+  --berry:     #C98BC4;  --sky:#9FD3E8;
+  --star:      #FFC53D;
+
+  --shadow:    0 12px 28px rgba(120,80,40,.16);
+  --shadow-sm: 0 5px 14px rgba(120,80,40,.12);
+  --shadow-lg: 0 22px 50px rgba(110,70,35,.26);
+
+  --r-xl:34px; --r-lg:28px; --r-md:22px; --r-sm:16px; --r-pill:999px;
+
+  --font-display:'Baloo 2','Fredoka','PingFang SC','Hiragino Sans GB',
+                 'Microsoft YaHei UI','Microsoft YaHei',system-ui,sans-serif;
+  --font-body:'PingFang SC','Hiragino Sans GB','Microsoft YaHei UI',
+              'Microsoft YaHei','Baloo 2',system-ui,sans-serif;
+}
+
+*{ box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+html,body{ height:100%; }
+body{
+  font-family:var(--font-body); color:var(--ink);
+  background:#E9D9C3; overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ============================================================
+   舞台：固定 750×1334，等比缩放铺满当前视口
+   （独立打开铺满屏幕；在画廊 iframe 里 scale=1 正好填满）
+   ============================================================ */
+.stage{
+  position:fixed; left:50%; top:50%;
+  width:750px; height:1334px;
+  transform-origin:center center;
+  background:var(--paper);
+  overflow:hidden;
+  border-radius:2px;
+}
+.stage__bg{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+/* 背景之上压一层暖色柔光，让 UI 浮起、文字更稳 */
+.stage__veil{
+  position:absolute; inset:0;
+  background:
+    radial-gradient(120% 70% at 50% -10%, rgba(255,247,236,0) 40%, rgba(255,247,236,.55) 100%),
+    linear-gradient(180deg, rgba(255,247,236,.10) 0%, rgba(255,247,236,.60) 78%, rgba(255,247,236,.85) 100%);
+}
+
+/* ============================================================
+   HUD 通用：顶部安全区、芯片、图标按钮
+   ============================================================ */
+.safe-top{ position:absolute; top:0; left:0; right:0; padding:28px 30px 0; }
+.row{ display:flex; align-items:center; gap:16px; }
+.between{ justify-content:space-between; }
+.spacer{ flex:1; }
+
+/* 数值芯片（猫币 / 关卡）—— 白底暖棕字，软投影，替掉黑描边 */
+.chip{
+  display:inline-flex; align-items:center; gap:10px;
+  height:64px; padding:0 22px 0 14px;
+  background:var(--paper-2); border-radius:var(--r-pill);
+  box-shadow:var(--shadow-sm), inset 0 0 0 2px rgba(255,255,255,.9), 0 0 0 2px var(--line-2);
+  font-family:var(--font-display); font-weight:800; font-size:32px; color:var(--ink);
+  font-variant-numeric:tabular-nums;
+}
+.chip .coin{ width:44px; height:44px; flex:none; }
+.chip .plus{
+  width:38px; height:38px; margin-left:4px; flex:none;
+  display:grid; place-items:center; border-radius:50%;
+  background:linear-gradient(var(--mint-hi),var(--mint)); color:#256048;
+  font-weight:900; font-size:30px; box-shadow:0 3px 0 var(--mint-dp); line-height:1;
+}
+
+/* 圆形图标按钮（暂停 / 设置 / 关闭）—— 统一暖棕线条 SVG */
+.iconbtn{
+  width:66px; height:66px; flex:none; display:grid; place-items:center;
+  background:var(--paper-2); border:none; border-radius:50%; cursor:pointer;
+  box-shadow:var(--shadow-sm), inset 0 0 0 2px rgba(255,255,255,.9), 0 0 0 2px var(--line-2);
+}
+.iconbtn:active{ transform:translateY(2px); }
+.iconbtn svg{ width:34px; height:34px; }
+.ic{ fill:none; stroke:var(--ink); stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; }
+
+/* ============================================================
+   果冻按钮（替代玻璃糖果贴图）
+   厚底投影 + 顶部内高光，按下时下沉
+   ============================================================ */
+.btn{
+  position:relative; border:none; cursor:pointer; display:inline-flex;
+  align-items:center; justify-content:center; gap:14px;
+  font-family:var(--font-display); font-weight:800; color:#fff;
+  border-radius:var(--r-pill); padding:0 38px; height:96px; font-size:36px;
+  letter-spacing:.5px; text-shadow:0 2px 0 rgba(0,0,0,.10);
+  box-shadow:
+    inset 0 4px 0 rgba(255,255,255,.5),
+    inset 0 -5px 0 rgba(0,0,0,.07),
+    0 8px 0 var(--btn-dp),
+    0 16px 22px rgba(120,80,40,.24);
+  transition:transform .08s ease, box-shadow .08s ease;
+  -webkit-user-select:none; user-select:none;
+}
+.btn:active{
+  transform:translateY(6px);
+  box-shadow:
+    inset 0 4px 0 rgba(255,255,255,.45),
+    0 2px 0 var(--btn-dp),
+    0 6px 12px rgba(120,80,40,.22);
+}
+.btn--lg{ height:118px; font-size:44px; padding:0 50px; }
+.btn--block{ width:100%; }
+.btn--primary{ background:linear-gradient(180deg,var(--pink-hi),var(--pink)); --btn-dp:var(--pink-dp); }
+.btn--butter { background:linear-gradient(180deg,var(--butter-hi),var(--butter)); --btn-dp:var(--butter-dp); color:#7A4E16; text-shadow:0 1px 0 rgba(255,255,255,.5); }
+.btn--mint   { background:linear-gradient(180deg,var(--mint-hi),var(--mint)); --btn-dp:var(--mint-dp); color:#1F5B41; text-shadow:0 1px 0 rgba(255,255,255,.45); }
+.btn--ghost  { background:var(--paper-2); color:var(--ink); --btn-dp:#E4D2B5;
+  box-shadow: inset 0 0 0 2px var(--line-2), 0 6px 0 var(--btn-dp), 0 12px 18px rgba(120,80,40,.18); }
+.btn .badge-ad{
+  display:inline-flex; align-items:center; gap:7px; height:42px; padding:0 14px;
+  margin-left:2px; border-radius:var(--r-pill); background:rgba(255,255,255,.32);
+  font-size:24px; font-weight:800;
+}
+.btn .badge-ad svg{ width:24px; height:24px; }
+
+/* ============================================================
+   卡片 / 面板：大圆角 + 白内圈 + 暖棕柔描边
+   ============================================================ */
+.panel{
+  background:var(--paper-2); border-radius:var(--r-xl);
+  box-shadow:var(--shadow), inset 0 0 0 3px #fff, 0 0 0 3px var(--line-2);
+}
+.panel--sand{ background:var(--sand); }
+
+/* 弹窗骨架 */
+.overlay{ position:absolute; inset:0; display:grid; place-items:center;
+  background:rgba(74,55,40,.42); backdrop-filter:blur(3px); padding:0 56px; }
+.dialog{ position:relative; width:100%; max-width:600px; padding:84px 46px 46px;
+  border-radius:38px; text-align:center;
+  background:linear-gradient(180deg,#FFFDF8,#FFF6E9);
+  box-shadow:var(--shadow-lg), inset 0 0 0 4px #fff, 0 0 0 4px var(--line-2); }
+.dialog__cat{ position:absolute; left:50%; top:-118px; transform:translateX(-50%);
+  width:210px; filter:drop-shadow(0 10px 12px rgba(120,80,40,.22)); }
+.dialog__close{ position:absolute; top:-8px; right:-8px; }
+
+/* 标题 */
+.h-display{ font-family:var(--font-display); font-weight:800; line-height:1.05; color:var(--ink); }
+.title-xl{ font-family:var(--font-display); font-weight:800; font-size:64px; color:var(--ink); }
+.title-lg{ font-family:var(--font-display); font-weight:800; font-size:48px; color:var(--ink); }
+.muted{ color:var(--ink-soft); }
+.mute2{ color:var(--ink-mute); }
+
+/* 星级 */
+.stars{ display:inline-flex; gap:14px; }
+.stars svg{ width:74px; height:74px; }
+.star-on{ fill:var(--star); stroke:#E59A12; stroke-width:2; }
+.star-off{ fill:#EAD9BE; stroke:#D9C2A0; stroke-width:2; }
+
+/* 奖励行 / 通用条 */
+.reward{ display:inline-flex; align-items:center; gap:14px; height:78px; padding:0 30px;
+  background:var(--butter-sf); border-radius:var(--r-pill);
+  box-shadow:inset 0 0 0 2px #fff, 0 0 0 2px var(--butter); }
+.reward .coin{ width:52px; height:52px; }
+.reward b{ font-family:var(--font-display); font-size:42px; color:#7A4E16; font-variant-numeric:tabular-nums; }
+
+/* 进度条 */
+.bar{ height:26px; border-radius:var(--r-pill); background:var(--sand-2);
+  box-shadow:inset 0 2px 4px rgba(120,80,40,.18); overflow:hidden; }
+.bar > i{ display:block; height:100%; border-radius:var(--r-pill);
+  background:linear-gradient(180deg,var(--mint-hi),var(--mint));
+  box-shadow:inset 0 3px 0 rgba(255,255,255,.5); }
+
+/* 顾客订单气泡 */
+.order{ position:relative; display:inline-grid; place-items:center; }
+.order__bubble{ position:relative; background:var(--paper-2); border-radius:24px;
+  padding:14px 18px; box-shadow:var(--shadow-sm), inset 0 0 0 2px #fff, 0 0 0 2px var(--line-2);
+  display:flex; align-items:center; gap:10px; }
+.order__bubble::after{ content:''; position:absolute; bottom:-12px; left:50%; transform:translateX(-50%);
+  border:12px solid transparent; border-top-color:var(--paper-2); filter:drop-shadow(0 2px 0 var(--line-2)); }
+.order__item{ width:78px; height:78px; }
+.order__need{ font-family:var(--font-display); font-weight:800; font-size:34px; color:var(--ink); }
+.order__cat{ width:120px; margin-top:8px; filter:drop-shadow(0 8px 8px rgba(120,80,40,.18)); }
+.ring{ position:absolute; inset:-8px; }
+
+/* 工具按钮（锤子 / 换一换）带数量角标 */
+.tool{ position:relative; width:108px; height:108px; border-radius:26px; border:none; cursor:pointer;
+  background:var(--paper-2); display:grid; place-items:center;
+  box-shadow:var(--shadow-sm), inset 0 0 0 3px #fff, 0 0 0 3px var(--line-2); }
+.tool:active{ transform:translateY(3px); }
+.tool svg{ width:54px; height:54px; }
+.tool__count{ position:absolute; top:-10px; right:-10px; min-width:42px; height:42px; padding:0 8px;
+  border-radius:var(--r-pill); background:linear-gradient(var(--pink-hi),var(--pink));
+  color:#fff; font-family:var(--font-display); font-weight:800; font-size:26px;
+  display:grid; place-items:center; box-shadow:0 4px 0 var(--pink-dp); }
+.tool__count.is-ad{ background:linear-gradient(var(--butter-hi),var(--butter)); color:#7A4E16; box-shadow:0 4px 0 var(--butter-dp); }
+
+/* 漂浮甜点装饰 */
+.float{ position:absolute; pointer-events:none; opacity:.9;
+  filter:drop-shadow(0 8px 10px rgba(120,80,40,.16)); animation:bob 4s ease-in-out infinite; }
+@keyframes bob{ 0%,100%{ transform:translateY(0) rotate(var(--rot,0deg)); } 50%{ transform:translateY(-16px) rotate(var(--rot,0deg)); } }
+
+/* 进入动画 */
+@keyframes pop{ 0%{ transform:scale(.7); opacity:0; } 60%{ transform:scale(1.05); } 100%{ transform:scale(1); opacity:1; } }
+.pop{ animation:pop .5s cubic-bezier(.2,1.3,.4,1) both; }
+@keyframes risein{ from{ transform:translateY(40px); opacity:0; } to{ transform:translateY(0); opacity:1; } }
+
+/* ============================================================
+   状态补充 (State UIs) — 道具 PRD 模型为「金币购买」：
+   锤子 15 / 洗牌 15 / 看广告+10。「没有可用数量」= 金币不足以使用。
+   下列样式既用于 states.html 总览，也可直接落回 game.html / Cocos
+   ============================================================ */
+
+/* —— 工具栏价格币（PRD：图标下方挂价格，而非次数角标）—— */
+.tool__price{ position:absolute; bottom:-15px; left:50%; transform:translateX(-50%);
+  display:inline-flex; align-items:center; gap:5px; height:40px; padding:0 13px 0 8px;
+  border-radius:var(--r-pill); background:var(--butter-sf);
+  box-shadow:inset 0 0 0 2px #fff, 0 0 0 2px var(--butter);
+  font-family:var(--font-display); font-weight:800; font-size:25px; color:#7A4E16;
+  font-variant-numeric:tabular-nums; white-space:nowrap; }
+.tool__price .coin{ width:30px; height:30px; }
+
+/* —— 不可用态（金币不足）：去色、压暗、价格转红、加锁 —— */
+.tool.is-disabled{ filter:grayscale(.92); opacity:.8; }
+.tool.is-disabled svg{ color:var(--ink-mute) !important; }
+.tool.is-disabled .tool__price{ background:var(--pink-sf);
+  box-shadow:inset 0 0 0 2px #fff, 0 0 0 2px var(--pink); color:var(--pink-dp); }
+.tool__lock{ position:absolute; top:-12px; right:-12px; width:44px; height:44px; border-radius:50%;
+  background:var(--paper-2); display:grid; place-items:center;
+  box-shadow:inset 0 0 0 2px #fff, 0 0 0 2px var(--line-2); }
+.tool__lock svg{ width:24px; height:24px; }
+
+/* —— 看广告工具按钮（焦糖填充，+10 金币）—— */
+.tool--ad{ background:linear-gradient(180deg,var(--butter-hi),var(--butter));
+  box-shadow: inset 0 4px 0 rgba(255,255,255,.55), 0 6px 0 var(--butter-dp), 0 12px 18px rgba(120,80,40,.2); }
+.tool--ad svg{ color:#7A4E16; }
+.tool--ad .tool__price{ background:#fff; color:#7A4E16;
+  box-shadow:inset 0 0 0 2px var(--butter), 0 2px 0 var(--butter-dp); }
+
+/* —— 引导气泡（金币不足 → 看广告）—— */
+.hint{ position:relative; max-width:430px; background:var(--ink); color:#FFF6E9;
+  font-family:var(--font-display); font-weight:700; font-size:27px; line-height:1.32;
+  padding:18px 26px; border-radius:22px; box-shadow:var(--shadow); }
+.hint b{ color:var(--butter-hi); }
+.hint--down::after{ content:''; position:absolute; bottom:-13px; left:50%; transform:translateX(-50%);
+  border:13px solid transparent; border-top-color:var(--ink); }
+
+/* —— 引导脉冲 —— */
+@keyframes pulse{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.07); } }
+.pulse{ animation:pulse 1.1s ease-in-out infinite; }
+
+/* —— 锤子「选择要消除的元素」模式 —— */
+.selmask{ position:absolute; inset:0; background:rgba(74,55,40,.42); backdrop-filter:blur(1px); }
+.selbar{ position:absolute; left:50%; transform:translateX(-50%); top:30px;
+  display:inline-flex; align-items:center; gap:14px; padding:16px 30px; border-radius:var(--r-pill);
+  background:var(--paper-2); box-shadow:var(--shadow), inset 0 0 0 3px #fff, 0 0 0 3px var(--line-2);
+  font-family:var(--font-display); font-weight:800; font-size:30px; color:var(--ink); white-space:nowrap; }
+.selbar svg{ width:40px; height:40px; }
+.aim{ position:absolute; width:160px; height:160px; border-radius:50%;
+  box-shadow:0 0 0 4px var(--pink), 0 0 0 11px rgba(245,135,155,.30); }
+.aim::before,.aim::after{ content:''; position:absolute; left:50%; top:50%; background:var(--pink); }
+.aim::before{ width:3px; height:42px; transform:translate(-50%,-50%); }
+.aim::after{ width:42px; height:3px; transform:translate(-50%,-50%); }
+.aim__hammer{ position:absolute; right:-34px; bottom:-30px; width:104px;
+  filter:drop-shadow(0 8px 8px rgba(120,80,40,.3)); }
+
+/* —— 警戒线超线倒计时（PRD §6）—— */
+.countdown{ position:absolute; left:50%; top:38%; transform:translate(-50%,-50%);
+  font-family:var(--font-display); font-weight:800; font-size:240px; color:#fff;
+  text-shadow:0 8px 0 var(--pink-dp), 0 0 70px rgba(217,89,111,.7); }
+@keyframes dangerflash{ 0%,100%{ opacity:.35; } 50%{ opacity:.95; } }
+.danger-vignette{ position:absolute; inset:0; pointer-events:none;
+  box-shadow:inset 0 0 130px 36px rgba(217,89,111,.5); animation:dangerflash .7s ease-in-out infinite; }
+
+/* —— Toast 反馈 —— */
+.toast{ position:absolute; left:50%; transform:translateX(-50%);
+  display:inline-flex; align-items:center; gap:14px; padding:20px 36px; border-radius:var(--r-pill);
+  background:var(--ink); color:#FFF6E9; font-family:var(--font-display); font-weight:800; font-size:32px;
+  box-shadow:var(--shadow-lg); white-space:nowrap; }
+.toast .coin{ width:46px; height:46px; }
+.toast--warn{ background:#A8632E; }
+.toast--warn svg{ width:40px; height:40px; }
+
+/* —— 空状态 —— */
+.empty{ display:grid; justify-items:center; text-align:center; gap:8px; padding:40px 30px; }
+.empty img{ width:230px; filter:drop-shadow(0 10px 12px rgba(120,80,40,.2)); }
+.empty h3{ font-family:var(--font-display); font-weight:800; font-size:42px; color:var(--ink); margin-top:8px; }
+.empty p{ font-size:28px; color:var(--ink-soft); line-height:1.4; max-width:480px; }
+
+/* —— 设置/暂停里的小开关 —— */
+.switch{ width:98px; height:56px; border-radius:var(--r-pill); background:var(--sand-2);
+  position:relative; box-shadow:inset 0 2px 5px rgba(120,80,40,.22); transition:background .2s; flex:none; }
+.switch.on{ background:linear-gradient(var(--mint-hi),var(--mint)); }
+.switch i{ position:absolute; top:5px; left:5px; width:46px; height:46px; border-radius:50%;
+  background:#fff; box-shadow:var(--shadow-sm); transition:left .2s; }
+.switch.on i{ left:47px; }

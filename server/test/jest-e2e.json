@@ -1,9 +1,12 @@
 {
   "moduleFileExtensions": ["js", "json", "ts"],
-  "rootDir": ".",
+  "rootDir": "..",
+  "testRegex": "test/.*\\.e2e-spec\\.ts$",
+  "transform": { "^.+\\.(t|j)s$": ["ts-jest", { "tsconfig": { "inlineSourceMap": true, "sourceMap": false } }] },
   "testEnvironment": "node",
-  "testRegex": ".e2e-spec.ts$",
-  "transform": {
-    "^.+\\.(t|j)s$": "ts-jest"
-  }
+  "globalSetup": "<rootDir>/test/setup-e2e.ts",
+  "globalTeardown": "<rootDir>/test/teardown-e2e.ts",
+  "collectCoverageFrom": ["src/**/*.ts", "!src/main.ts", "!**/*.d.ts", "!**/*.spec.ts"],
+  "coverageDirectory": "<rootDir>/../coverage/raw/server-e2e",
+  "coverageProvider": "v8"
 }

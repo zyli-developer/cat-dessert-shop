@@ -4,6 +4,13 @@ import { API_BASE_URL } from './ApiConfig';
 
 const TIMEOUT = 8000;
 
+/**
+ * Injectable fetch seam (test-only). Defaults to a thin wrapper over the global fetch to
+ * preserve existing behavior. Tests may override via `setFetchImpl`.
+ */
+let fetchImpl: typeof fetch = (input: RequestInfo, init?: RequestInit) => fetch(input as any, init);
+export function setFetchImpl(fn: typeof fetch): void { fetchImpl = fn; }
+
 interface ApiResponse<T> {
   code: number;
   data: T;
@@ -22,7 +29,17 @@ function request<T>(path: string, method: string = 'GET', body?: unknown): Promi
   const base = API_BASE_URL.replace(/\/$/, '');
   const isHttp = /^http:\/\//i.test(base);
   const url = `${base}${path}`;
-  return new Promise((resolve, reject) => {
+
+  const reqId = Math.random().toString(36).slice(2, 8);
+  const startedAt = Date.now();
+  // body 可能含 code/anonymousCode 等敏感串，截断展示防止 console 刷屏
+  const bodyPreview = body === undefined ? '<none>' : JSON.stringify(body).slice(0, 200);
+  console.log(
+    `[ApiClient][${reqId}] → ${method} ${url}` +
+    `  openId=${openId || '<none>'}  body=${bodyPreview}`
+  );
+
+  return new Promise<T>((resolve, reject) => {
     // 抖音小游戏：
     // - https 走 tt.request（官方链路）
     // - http（局域网联调）直接走 fetch/XHR，避免 tt.request 的域名/协议校验拦截
@@ -40,6 +57,7 @@ function request<T>(path: string, method: string = 'GET', body?: unknown): Promi
       }
       const ttApi = DouyinSDK.getTT();
       if (ttApi?.request) {
+        console.log(`[ApiClient][${reqId}] transport=tt.request`);
         ttApi.request({
           url,
           method: method as 'GET' | 'POST',
@@ -48,6 +66,10 @@ function request<T>(path: string, method: string = 'GET', body?: unknown): Promi
           timeout: TIMEOUT,
           success: (res: { data: ApiResponse<T>; statusCode: number }) => {
             if (res.statusCode >= 200 && res.statusCode < 300 && res.data.code === 0) {
+              if (res.data.data === undefined || res.data.data === null) {
+                reject(new Error(`API malformed response: code=0 but data is missing`));
+                return;
+              }
               resolve(res.data.data);
             } else {
               reject(
@@ -81,6 +103,7 @@ function request<T>(path: string, method: string = 'GET', body?: unknown): Promi
     const doFetchOrXhr = (): void => {
       const canFetch = typeof fetch === 'function';
       if (canFetch) {
+        console.log(`[ApiClient][${reqId}] transport=fetch`);
         const canAbort = typeof AbortController === 'function';
         const controller = canAbort ? new AbortController() : null;
         let finished = false;
@@ -94,7 +117,7 @@ function request<T>(path: string, method: string = 'GET', body?: unknown): Promi
           }
         }, TIMEOUT);
 
-        fetch(url, {
+        fetchImpl(url, {
           method,
           headers,
           body: body ? JSON.stringify(body) : undefined,
@@ -105,6 +128,10 @@ function request<T>(path: string, method: string = 'GET', body?: unknown): Promi
             if (finished) return;
             finished = true;
             if (json.code === 0) {
+              if (json.data === undefined || json.data === null) {
+                reject(new Error(`API malformed response: code=0 but data is missing`));
+                return;
+              }
               resolve(json.data);
             } else {
               reject(new Error(`API error: code=${json.code}, message=${json.message ?? ''}`));
@@ -121,6 +148,7 @@ function request<T>(path: string, method: string = 'GET', body?: unknown): Promi
 
       // 抖音小游戏部分运行时没有 fetch，回退到 XHR（开发期 http 联调）
       if (typeof XMLHttpRequest !== 'undefined') {
+        console.log(`[ApiClient][${reqId}] transport=xhr (fetch unavailable)`);
         const xhr = new XMLHttpRequest();
         xhr.open(method, url, true);
         xhr.timeout = TIMEOUT;
@@ -130,6 +158,10 @@ function request<T>(path: string, method: string = 'GET', body?: unknown): Promi
           try {
             const json = JSON.parse(xhr.responseText) as ApiResponse<T>;
             if (xhr.status >= 200 && xhr.status < 300 && json.code === 0) {
+              if (json.data === undefined || json.data === null) {
+                reject(new Error(`API malformed response: code=0 but data is missing`));
+                return;
+              }
               resolve(json.data);
             } else {
               reject(new Error(`API error: status=${xhr.status}, code=${json?.code}`));
@@ -152,7 +184,20 @@ function request<T>(path: string, method: string = 'GET', body?: unknown): Promi
     };
 
     doFetchOrXhr();
-  });
+  }).then(
+    (data) => {
+      const dur = Date.now() - startedAt;
+      const dataKeys = data && typeof data === 'object' ? Object.keys(data as object) : [];
+      console.log(`[ApiClient][${reqId}] ✓ ${method} ${path} ${dur}ms  dataKeys=[${dataKeys.join(', ')}]`);
+      return data;
+    },
+    (err) => {
+      const dur = Date.now() - startedAt;
+      const msg = err instanceof Error ? err.message : String((err as any)?.errMsg ?? err);
+      console.warn(`[ApiClient][${reqId}] ✗ ${method} ${path} ${dur}ms: ${msg}`);
+      throw err;
+    }
+  );
 }
 
 export class ApiClient {
@@ -161,6 +206,11 @@ export class ApiClient {
 
   static setOpenId(id: string): void {
     this._openId = id;
+  }
+
+  /** Injectable fetch seam (test-only). Forwards to module-level `setFetchImpl`. */
+  static setFetch(fn: typeof fetch): void {
+    setFetchImpl(fn);
   }
 
   static getOpenId(): string {

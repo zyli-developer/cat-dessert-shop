@@ -11,4 +11,7 @@
  *
  * 修改后需重新构建小游戏并导入开发者工具。
  */
-export const API_BASE_URL = 'http://192.168.77.240:3333';
+// 真机调试用 cloudflared 临时隧道(HTTPS),指向本机 localhost:3333。
+// ⚠️ 这是 trycloudflare 临时地址,每次重启 cloudflared 都会变,变了要回来改这里并重新构建。
+// 本机/浏览器预览仍可临时改回 http://192.168.3.8:3333。
+export const API_BASE_URL = 'https://privileges-queens-manually-erik.trycloudflare.com';

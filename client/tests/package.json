@@ -1,0 +1,18 @@
+{
+  "name": "@catbakery/client-tests",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "test": "jest",
+    "test:ci": "jest --coverage --coverageDirectory=../coverage/raw/client"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.0.0",
+    "jest": "^30.0.0",
+    "jest-environment-jsdom": "^30.0.0",
+    "ts-jest": "^29.2.5",
+    "typescript": "^5.7.3",
+    "zod": "^3.23.0"
+  }
+}

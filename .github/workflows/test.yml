@@ -1,0 +1,129 @@
+name: test
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, feat/test-automation]
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  server:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run test:server
+      - run: npm run test:server:e2e
+      - name: Upload server coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-server-raw
+          path: coverage/raw/
+          if-no-files-found: warn
+
+  scripts-unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run test:scripts
+      - name: Upload scripts coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-scripts-raw
+          path: coverage/raw/
+          if-no-files-found: warn
+
+  client-unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run lint:skips
+      - run: npm run test:client
+      - name: Upload client coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-client-raw
+          path: coverage/raw/
+          if-no-files-found: warn
+
+  e2e:
+    runs-on: ubuntu-latest
+    needs: [server, client-unit]
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - name: Verify e2e bundle freshness
+        run: npm run check:e2e-bundle
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            e2e/playwright-report/
+            e2e/test-results/
+          if-no-files-found: warn
+
+  coverage:
+    runs-on: ubuntu-latest
+    needs: [server, scripts-unit, client-unit]
+    if: always()
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - name: Download all coverage artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-*-raw
+          path: coverage/raw
+          merge-multiple: true
+      - name: Merge coverage
+        run: npm run coverage:merge
+      - name: Upload merged coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-merged
+          path: |
+            coverage/*.json
+            coverage/lcov.info
+            coverage/lcov-report/
+          if-no-files-found: warn

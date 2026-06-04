@@ -6,6 +6,13 @@
       "env": {
         "COCOS_MCP_URL": "http://127.0.0.1:3334/mcp"
       }
+    },
+    "catbakery-douyin": {
+      "command": "node",
+      "args": ["scripts/douyin-mcp-server.mjs"],
+      "env": {
+        "COCOS_CREATOR_PATH": "C:/ProgramData/cocos/editors/Creator/3.8.8/CocosCreator.exe"
+      }
     }
   }
 }

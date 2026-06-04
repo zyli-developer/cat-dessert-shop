@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>猫咪甜品店 · 游戏中</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css">
+<style>
+  /* —— 游戏内状态显隐（仅本页用，复用 app.css 的视觉类）—— */
+  .gstate{ display:none; }
+  .gstate.show{ display:block; }
+  #pauseOverlay.show{ display:grid; }
+  /* Toast 滑入（保持 translateX(-50%) 居中不被覆盖） */
+  .toast{ top:188px; z-index:60; animation:toastIn .26s cubic-bezier(.2,.9,.3,1.4) both; }
+  @keyframes toastIn{ from{ opacity:0; transform:translate(-50%,-22px); } to{ opacity:1; transform:translateX(-50%); } }
+  /* 金币芯片到账弹跳 */
+  @keyframes coinBump{ 0%,100%{ transform:scale(1);} 40%{ transform:scale(1.18);} }
+  .coin-bump{ animation:coinBump .4s ease; }
+  /* 锤子选择模式：容器与甜点浮到遮罩之上、可点、悬停高亮 */
+  .selmask{ z-index:30; pointer-events:none; }
+  .selbar,#hammerClose{ z-index:40; }
+  body.hammer-mode #jar{ z-index:31; }
+  body.hammer-mode #stack img{ cursor:pointer; transition:transform .12s, filter .12s; }
+  body.hammer-mode #stack img:hover{ transform:scale(1.08);
+    filter:drop-shadow(0 0 0 5px #fff) drop-shadow(0 8px 12px rgba(120,80,40,.35)); }
+  @keyframes popOut{ to{ transform:scale(0); opacity:0; } }
+  .pop-out{ animation:popOut .22s ease-in forwards; pointer-events:none; }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-pause" viewBox="0 0 24 24"><g class="ic" stroke-width="3"><path d="M9 5.5v13"/><path d="M15 5.5v13"/></g></symbol>
+<symbol id="i-hammer" viewBox="0 0 24 24"><path class="ic" d="M13.5 4.2l6.3 6.3-2.6 2.6-6.3-6.3z"/><path class="ic" d="M11.2 6.5l-7 7 4 4 7-7"/></symbol>
+<symbol id="i-shuffle" viewBox="0 0 24 24"><path class="ic" d="M4 7h4l9 10h3"/><path class="ic" d="M4 17h4l3-3.4"/><path class="ic" d="M14 8.4L17 5h3"/><path class="ic" d="M18 3l2 2-2 2"/><path class="ic" d="M18 15l2 2-2 2"/></symbol>
+<symbol id="i-coin" viewBox="0 0 48 48"><circle cx="24" cy="24" r="21" fill="#F7C156"/><circle cx="24" cy="24" r="21" fill="none" stroke="#DA9B30" stroke-width="3"/><circle cx="24" cy="24" r="15" fill="none" stroke="#FFE7B0" stroke-width="2.5"/><g fill="#fff"><ellipse cx="24" cy="27.5" rx="6.2" ry="5"/><circle cx="18.3" cy="20.5" r="2.5"/><circle cx="24" cy="18.5" r="2.5"/><circle cx="29.7" cy="20.5" r="2.5"/></g></symbol>
+<symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3.2l2.6 5.4 5.9.8-4.3 4.1 1.1 5.9L12 16.7 6.7 19.4l1.1-5.9L3.5 9.4l5.9-.8z" fill="currentColor"/></symbol>
+<symbol id="i-ad" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="13" rx="2.4" class="ic"/><path class="ic" d="M10 9.5l4.5 2.5L10 14.5z" fill="currentColor"/></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="9.5" rx="2.4" class="ic"/><path class="ic" d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></symbol>
+<symbol id="i-close" viewBox="0 0 24 24"><g class="ic" stroke-width="2.8"><path d="M6 6l12 12"/><path d="M18 6L6 18"/></g></symbol>
+<symbol id="i-music" viewBox="0 0 24 24"><path class="ic" d="M9 18V6l10-2v11"/><circle cx="6.5" cy="18" r="2.6" class="ic"/><circle cx="16.5" cy="15" r="2.6" class="ic"/></symbol>
+<symbol id="i-sound" viewBox="0 0 24 24"><path class="ic" d="M4 9.5h3l4.5-3.5v12L7 14.5H4z"/><path class="ic" d="M16 9.2a4 4 0 0 1 0 5.6"/><path class="ic" d="M18.5 7a7 7 0 0 1 0 10"/></symbol>
+<symbol id="i-restart" viewBox="0 0 24 24"><path class="ic" d="M19 12a7 7 0 1 1-2.3-5.2"/><path class="ic" d="M17.5 3.5v3.6h-3.6"/></symbol>
+<symbol id="i-home" viewBox="0 0 24 24"><path class="ic" d="M4 11l8-6.5 8 6.5"/><path class="ic" d="M6 10v9h12v-9"/></symbol>
+</defs></svg>
+
+<div class="stage">
+  <img class="stage__bg" src="assets/bg/bg_game.png" alt="">
+  <div class="stage__veil" style="background:linear-gradient(180deg,rgba(255,247,236,.30),rgba(255,247,236,.10) 30%,rgba(255,247,236,.55) 100%)"></div>
+
+  <!-- 顶部 HUD -->
+  <div class="safe-top">
+    <div class="row between" style="align-items:flex-start">
+      <button class="iconbtn" aria-label="暂停" onclick="openPause()"><svg><use href="#i-pause"/></svg></button>
+
+      <div class="panel" style="flex:1;margin:0 16px;padding:14px 24px 16px;border-radius:24px">
+        <div class="row between" style="margin-bottom:10px">
+          <span class="mute2" style="font-weight:700;font-size:24px;letter-spacing:1px">第 7 关 · 订单</span>
+          <span class="h-display" style="font-size:30px;color:var(--mint-dp)">3 / 5</span>
+        </div>
+        <div class="bar"><i style="width:60%"></i></div>
+      </div>
+
+      <div class="chip" id="coinChip" style="height:64px"><svg class="coin"><use href="#i-coin"/></svg><span id="coinVal">20</span></div>
+    </div>
+    <!-- 分数 -->
+    <div class="row" style="justify-content:center;margin-top:14px;gap:10px">
+      <svg style="width:34px;height:34px;color:var(--star)"><use href="#i-star"/></svg>
+      <span class="h-display" style="font-size:52px;color:var(--ink);text-shadow:0 2px 0 #fff">12,640</span>
+    </div>
+  </div>
+
+  <!-- 顾客订单（合成即飞的收餐方）—— 紧凑横排 -->
+  <div style="position:absolute;top:250px;left:34px;right:34px;display:flex;justify-content:space-around;align-items:flex-start">
+    <!-- 顾客 1 -->
+    <div class="order">
+      <div class="ring"><svg viewBox="0 0 100 100" style="width:100%;height:100%;transform:rotate(-90deg)"><circle cx="50" cy="50" r="46" fill="none" stroke="#EAD9BE" stroke-width="6"/><circle cx="50" cy="50" r="46" fill="none" stroke="#8AD2AE" stroke-width="6" stroke-linecap="round" stroke-dasharray="289" stroke-dashoffset="58"/></svg></div>
+      <div class="order__bubble" style="margin-bottom:4px"><img class="order__item" style="width:62px;height:62px" src="assets/desserts/dessert_lv4_dorayaki.png" alt=""><span class="order__need" style="font-size:28px">1/2</span></div>
+      <img class="order__cat" style="width:96px" src="assets/character/cat_white_idle.png" alt="">
+    </div>
+    <!-- 顾客 2（耐心快用完 → 粉色环）-->
+    <div class="order" style="margin-top:4px">
+      <div class="ring"><svg viewBox="0 0 100 100" style="width:100%;height:100%;transform:rotate(-90deg)"><circle cx="50" cy="50" r="46" fill="none" stroke="#EAD9BE" stroke-width="6"/><circle cx="50" cy="50" r="46" fill="none" stroke="#F5879B" stroke-width="6" stroke-linecap="round" stroke-dasharray="289" stroke-dashoffset="205"/></svg></div>
+      <div class="order__bubble" style="margin-bottom:4px"><img class="order__item" style="width:62px;height:62px" src="assets/desserts/dessert_lv6_swissroll.png" alt=""><span class="order__need" style="font-size:28px">0/1</span></div>
+      <img class="order__cat" style="width:96px" src="assets/character/cat_orange_idle.png" alt="">
+    </div>
+    <!-- 顾客 3 -->
+    <div class="order">
+      <div class="ring"><svg viewBox="0 0 100 100" style="width:100%;height:100%;transform:rotate(-90deg)"><circle cx="50" cy="50" r="46" fill="none" stroke="#EAD9BE" stroke-width="6"/><circle cx="50" cy="50" r="46" fill="none" stroke="#8AD2AE" stroke-width="6" stroke-linecap="round" stroke-dasharray="289" stroke-dashoffset="120"/></svg></div>
+      <div class="order__bubble" style="margin-bottom:4px"><img class="order__item" style="width:62px;height:62px" src="assets/desserts/dessert_lv2_cookie2.png" alt=""><span class="order__need" style="font-size:28px">2/3</span></div>
+      <img class="order__cat" style="width:96px" src="assets/character/cat_blue_idle.png" alt="">
+    </div>
+  </div>
+
+  <!-- ============================================================
+       合成容器 —— 严格按 PRD：400×600(2:3) → 此处 416×624
+       左右滑动投放 · 同级圆形刚体碰撞合成 · 警戒线 5 秒倒计时
+       甜点尺寸按 PRD 尺寸表(占容器宽 10%→47%)等比，自然沉底堆叠
+       ============================================================ -->
+  <!-- NEXT 预览（PRD §2：右上角）-->
+  <div class="panel" style="position:absolute;right:30px;top:452px;width:120px;padding:12px 0 14px;border-radius:24px;text-align:center;z-index:4">
+    <div class="mute2" style="font-weight:800;font-size:22px;letter-spacing:2px">NEXT</div>
+    <img src="assets/desserts/dessert_lv2_cookie2.png" style="width:64px;margin-top:4px" alt="">
+  </div>
+
+  <div id="jar" style="position:absolute;left:167px;width:416px;top:446px;height:700px">
+    <!-- 当前元素（PRD §2：顶部居中）+ 落点引导线 -->
+    <div style="position:absolute;left:50%;top:-6px;transform:translateX(-50%);z-index:3">
+      <img class="float" style="width:75px;--rot:0deg" src="assets/desserts/dessert_lv3_puff.png" alt="">
+    </div>
+    <div style="position:absolute;left:50%;top:82px;height:618px;width:3px;transform:translateX(-1.5px);
+      background:repeating-linear-gradient(rgba(90,70,54,.30) 0 9px,transparent 9px 20px);z-index:1"></div>
+
+    <!-- 罐体：竖高 2:3，开口杯型 -->
+    <div style="position:absolute;left:0;right:0;top:76px;height:624px;border-radius:30px 30px 44px 44px;
+      background:linear-gradient(180deg,rgba(255,255,255,.50),rgba(255,247,236,.26));
+      box-shadow:inset 0 0 0 4px rgba(255,255,255,.85), inset 0 -22px 46px rgba(120,80,40,.10), 0 18px 40px rgba(120,80,40,.18), 0 0 0 4px var(--line-2);
+      overflow:hidden">
+      <!-- 杯口高光 -->
+      <div style="position:absolute;left:0;right:0;top:0;height:46px;background:linear-gradient(rgba(255,255,255,.7),rgba(255,255,255,0))"></div>
+
+      <!-- 警戒线（PRD §6：顶部下方约 10%，超线 5 秒倒计时）-->
+      <div style="position:absolute;left:0;right:0;top:62px;height:2px;background:repeating-linear-gradient(90deg,var(--pink-dp) 0 14px,transparent 14px 26px);opacity:.7"></div>
+      <span style="position:absolute;right:16px;top:40px;font-family:var(--font-display);font-weight:800;font-size:20px;color:var(--pink-dp);background:var(--pink-sf);padding:2px 12px;border-radius:999px;box-shadow:0 0 0 2px #fff">警戒线</span>
+
+      <!-- 自然沉底的甜点堆（尺寸严格按 PRD：Lv6≈141 Lv5≈116 Lv4≈96 Lv3≈75 Lv2≈58 Lv1≈42）-->
+      <div id="stack">
+        <img src="assets/desserts/dessert_lv6_swissroll.png" style="position:absolute;left:12px;bottom:8px;width:141px" alt="">
+        <img src="assets/desserts/dessert_lv5_taiyaki.png"  style="position:absolute;left:152px;bottom:8px;width:116px" alt="">
+        <img src="assets/desserts/dessert_lv4_dorayaki.png" style="position:absolute;right:14px;bottom:8px;width:96px" alt="">
+        <img src="assets/desserts/dessert_lv3_puff.png"     style="position:absolute;left:96px;bottom:118px;width:75px" alt="">
+        <img src="assets/desserts/dessert_lv2_cookie2.png"  style="position:absolute;left:210px;bottom:104px;width:58px" alt="">
+        <img src="assets/desserts/dessert_lv2_cookie2.png"  style="position:absolute;left:40px;bottom:150px;width:58px" alt="">
+        <img src="assets/desserts/dessert_lv1_cookie.png"   style="position:absolute;left:150px;bottom:182px;width:42px" alt="">
+        <img src="assets/desserts/dessert_lv1_cookie.png"   style="position:absolute;right:54px;bottom:104px;width:42px" alt="">
+      </div>
+    </div>
+  </div>
+
+  <!-- 道具不足引导气泡（金币 < 15 时显示，指向看广告按钮）-->
+  <div id="hintWrap" class="gstate" style="position:absolute;left:40px;right:40px;bottom:188px;display:flex;justify-content:center;z-index:20"></div>
+
+  <!-- 底部道具栏（PRD §2：锤子 15 / 洗牌 15 / 看广告 +10 金币，金币购买、无次数）-->
+  <div id="toolbar" style="position:absolute;left:40px;right:40px;bottom:52px;display:flex;align-items:flex-end;justify-content:center;gap:46px"></div>
+
+  <!-- ===== 锤子选择模式（默认隐藏）===== -->
+  <div id="hammerSel" class="gstate">
+    <div class="selmask"></div>
+    <div class="selbar"><svg style="color:var(--ink)"><use href="#i-hammer"/></svg>点选一个甜品消除它</div>
+    <button id="hammerClose" class="iconbtn" style="position:absolute;right:34px;top:34px" onclick="cancelHammer()"><svg><use href="#i-close"/></svg></button>
+  </div>
+
+  <!-- ===== 暂停弹窗（默认隐藏）===== -->
+  <div id="pauseOverlay" class="overlay gstate" style="background:rgba(74,55,40,.46);backdrop-filter:blur(3px)">
+    <div class="dialog pop" style="max-width:560px">
+      <img class="dialog__cat" src="assets/character/cat_white_idle.png" alt="">
+      <div class="title-lg" style="margin-bottom:26px">休息一下～</div>
+      <div class="row between" style="background:var(--paper);border-radius:20px;padding:16px 24px;margin-bottom:14px;box-shadow:inset 0 0 0 2px var(--line)">
+        <span class="row" style="gap:14px;font-size:30px;font-weight:700"><svg style="width:38px;height:38px;color:var(--ink)"><use href="#i-music"/></svg>音乐</span>
+        <span class="switch on" onclick="this.classList.toggle('on')"><i></i></span>
+      </div>
+      <div class="row between" style="background:var(--paper);border-radius:20px;padding:16px 24px;margin-bottom:30px;box-shadow:inset 0 0 0 2px var(--line)">
+        <span class="row" style="gap:14px;font-size:30px;font-weight:700"><svg style="width:38px;height:38px;color:var(--ink)"><use href="#i-sound"/></svg>音效</span>
+        <span class="switch on" onclick="this.classList.toggle('on')"><i></i></span>
+      </div>
+      <button class="btn btn--primary btn--lg btn--block" style="margin-bottom:18px" onclick="closePause()">继续游戏</button>
+      <div class="row" style="gap:18px">
+        <button class="btn btn--ghost btn--block" style="height:96px;font-size:30px" onclick="location.reload()"><svg style="width:38px;height:38px;color:var(--ink)"><use href="#i-restart"/></svg>重新开始</button>
+        <button class="btn btn--ghost btn--block" style="height:96px;font-size:30px" onclick="location.href='home.html'"><svg style="width:38px;height:38px;color:var(--ink)"><use href="#i-home"/></svg>主页</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/stage.js"></script>
+<script>
+/* ===== 局内状态机：金币 / 道具可用性 / 锤子选择 / 暂停 / Toast =====
+   PRD §2：道具为金币购买制（锤子15 / 洗牌15，无次数），金币不足以使用即为「不可用」。
+   每回合金币偏紧（此处起手 20），用一次道具即逼近不足 → 看广告 +10 恢复。 */
+var COST = 15, coins = 20;
+
+function $(id){ return document.getElementById(id); }
+
+function renderTools(){
+  var afford = coins >= COST;
+  var dis  = afford ? '' : ' is-disabled';
+  var lock = afford ? '' : '<span class="tool__lock"><svg><use href="#i-lock"/></svg></span>';
+  $('toolbar').innerHTML =
+    '<button class="tool'+dis+'" onclick="useTool(\'hammer\')"><svg style="color:var(--ink)"><use href="#i-hammer"/></svg>'+
+      '<span class="tool__price"><svg class="coin"><use href="#i-coin"/></svg>'+COST+'</span>'+lock+'</button>'+
+    '<button class="tool'+dis+'" onclick="useTool(\'shuffle\')"><svg style="color:var(--ink)"><use href="#i-shuffle"/></svg>'+
+      '<span class="tool__price"><svg class="coin"><use href="#i-coin"/></svg>'+COST+'</span>'+lock+'</button>'+
+    '<button class="tool tool--ad'+(afford?'':' pulse')+'" onclick="watchAd()"><svg><use href="#i-ad"/></svg>'+
+      '<span class="tool__price">+10</span></button>';
+  // 不足时弹引导气泡，指向看广告
+  $('hintWrap').classList.toggle('show', !afford);
+  $('hintWrap').innerHTML = afford ? '' :
+    '<div class="hint hint--down">金币不足 '+coins+' / '+COST+' · <b>看广告 +10</b> 即可使用道具 →</div>';
+}
+
+function setCoins(n){
+  coins = Math.max(0, n);
+  var el = $('coinVal'); el.textContent = coins;
+  var chip = $('coinChip'); chip.classList.remove('coin-bump'); void chip.offsetWidth; chip.classList.add('coin-bump');
+  renderTools();
+}
+
+/* ----- Toast ----- */
+function toast(html, warn){
+  var t = document.createElement('div');
+  t.className = 'toast' + (warn ? ' toast--warn' : '');
+  t.innerHTML = html;
+  document.querySelector('.stage').appendChild(t);
+  setTimeout(function(){ t.style.transition='opacity .3s'; t.style.opacity='0'; setTimeout(function(){ t.remove(); }, 320); }, 1300);
+}
+
+/* ----- 道具使用 ----- */
+function useTool(kind){
+  if(coins < COST){ toast('金币不足，先看广告补充吧', true); return; }
+  if(kind === 'hammer'){ setCoins(coins - COST); enterHammer(); }
+  else { setCoins(coins - COST); toast('<svg style="width:40px;height:40px;color:#fff"><use href="#i-shuffle"/></svg>已重新摆放～'); }
+}
+
+/* ----- 锤子选择模式 ----- */
+var hammerArmed = false;
+function enterHammer(){
+  hammerArmed = true;
+  document.body.classList.add('hammer-mode');
+  $('hammerSel').classList.add('show');
+}
+function exitHammer(){
+  hammerArmed = false;
+  document.body.classList.remove('hammer-mode');
+  $('hammerSel').classList.remove('show');
+}
+function cancelHammer(){ if(!hammerArmed) return; exitHammer(); setCoins(coins + COST); toast('已取消 · 退还 15 金币'); }
+
+document.getElementById('stack').addEventListener('click', function(e){
+  if(!hammerArmed) return;
+  var img = e.target.closest('img');
+  if(!img) return;
+  img.classList.add('pop-out');
+  exitHammer();
+  setTimeout(function(){ if(img.parentNode) img.parentNode.removeChild(img); }, 220);
+  toast('<svg style="width:40px;height:40px;color:#fff"><use href="#i-hammer"/></svg>已消除一个甜品');
+});
+
+/* ----- 看广告 +10 ----- */
+function watchAd(){ setCoins(coins + 10); toast('<svg class="coin"><use href="#i-coin"/></svg>+10 金币'); }
+
+/* ----- 暂停 ----- */
+function openPause(){ $('pauseOverlay').classList.add('show'); }
+function closePause(){ $('pauseOverlay').classList.remove('show'); }
+
+renderTools();
+</script>
+</body>
+</html>

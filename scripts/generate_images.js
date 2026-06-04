@@ -59,55 +59,88 @@ const ASSETS = [
   { name: 'next_preview_bg.png', prompt: 'Generate an image: Cute cartoon flat design, a small square frame with rounded corners, light cream beige fill with thin pink dashed border, empty inside, game UI preview box element, isolated on pure white background' },
 ];
 
-function generateImage(prompt, outputPath) {
+/**
+ * Build Gemini generateContent HTTPS request options + JSON body. Pure — no I/O.
+ *
+ * @param {string} apiKey  Gemini API key.
+ * @param {string} model   Model name, e.g. 'gemini-2.5-flash-image'.
+ * @param {string} prompt  Text prompt for the image request.
+ * @returns {{options: object, body: string}}
+ */
+function buildRequestOptions(apiKey, model, prompt) {
+  const body = JSON.stringify({
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: { responseModalities: ['TEXT', 'IMAGE'] },
+  });
+  const options = {
+    hostname: 'generativelanguage.googleapis.com',
+    path: `/v1beta/models/${model}:generateContent`,
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Content-Length': Buffer.byteLength(body),
+      'x-goog-api-key': apiKey,
+    },
+  };
+  return { options, body };
+}
+
+/**
+ * Parse a Gemini generateContent response body and return decoded image bytes.
+ *
+ * @param {string} responseText  Raw HTTP response body.
+ * @returns {Buffer} Decoded image bytes.
+ * @throws on JSON parse failure, API error envelope, or missing inlineData image.
+ */
+function parseImagePart(responseText) {
+  let json;
+  try {
+    json = JSON.parse(responseText);
+  } catch (e) {
+    throw new Error(`Invalid JSON response: ${e.message}`);
+  }
+  if (json && json.error) {
+    throw new Error(`Gemini API error: ${json.error.message || JSON.stringify(json.error)}`);
+  }
+  const candidates = (json && json.candidates) || [];
+  for (const c of candidates) {
+    const parts = (c.content && c.content.parts) || [];
+    for (const p of parts) {
+      if (p.inlineData && p.inlineData.data && typeof p.inlineData.mimeType === 'string' && p.inlineData.mimeType.startsWith('image/')) {
+        return Buffer.from(p.inlineData.data, 'base64');
+      }
+    }
+  }
+  throw new Error('No image in response');
+}
+
+/**
+ * Call Gemini to generate an image for the given prompt and write it to disk.
+ *
+ * @param {string} prompt      Text prompt.
+ * @param {string} outputPath  Destination file path.
+ * @param {object} [deps]
+ * @param {Function} [deps.httpsRequest]  Defaults to `https.request`.
+ * @param {string}   [deps.apiKey]        Defaults to process.env.GEMINI_API_KEY || API_KEY.
+ * @param {string}   [deps.model]         Defaults to MODEL.
+ * @returns {Promise<{success: true, size: number}>}
+ */
+function generateImage(prompt, outputPath, { httpsRequest = https.request, apiKey = process.env.GEMINI_API_KEY || API_KEY, model = MODEL } = {}) {
   return new Promise((resolve, reject) => {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${API_KEY}`;
-    const body = JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { responseModalities: ['TEXT', 'IMAGE'] }
-    });
-
-    const urlObj = new URL(url);
-    const options = {
-      hostname: urlObj.hostname,
-      path: urlObj.pathname + urlObj.search,
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(body),
-      },
-    };
-
-    const req = https.request(options, (res) => {
+    const { options, body } = buildRequestOptions(apiKey, model, prompt);
+    const req = httpsRequest(options, (res) => {
       let data = '';
       res.on('data', (chunk) => { data += chunk; });
       res.on('end', () => {
         try {
-          const json = JSON.parse(data);
-          if (json.error) {
-            reject(new Error(json.error.message || JSON.stringify(json.error)));
-            return;
-          }
-          // Find image part in response
-          const candidates = json.candidates || [];
-          for (const c of candidates) {
-            const parts = (c.content && c.content.parts) || [];
-            for (const p of parts) {
-              if (p.inlineData && p.inlineData.data) {
-                const imgBuffer = Buffer.from(p.inlineData.data, 'base64');
-                fs.writeFileSync(outputPath, imgBuffer);
-                resolve({ success: true, size: imgBuffer.length });
-                return;
-              }
-            }
-          }
-          reject(new Error('No image in response: ' + data.substring(0, 300)));
+          const imgBuffer = parseImagePart(data);
+          fs.writeFileSync(outputPath, imgBuffer);
+          resolve({ success: true, size: imgBuffer.length });
         } catch (e) {
           reject(e);
         }
       });
     });
-
     req.on('error', reject);
     req.write(body);
     req.end();
@@ -152,4 +185,8 @@ async function main() {
   console.log(`\nDone! Success: ${success}, Failed: ${fail}`);
 }
 
-main().catch(console.error);
+module.exports = { buildRequestOptions, parseImagePart, generateImage };
+
+if (require.main === module) {
+  main().catch((e) => { console.error(e); process.exit(1); });
+}

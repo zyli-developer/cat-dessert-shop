@@ -6,6 +6,7 @@
     "minified": true,
     "newFeature": true
   },
-  "appid": "tt9cb5ea0802d30fc302",
-  "projectname": "猫猫猫甜品店"
+  "appid": "ttf9d78f6a67b1997502",
+  "projectname": "猫猫猫甜品店",
+  "compileType": "miniGame"
 }

@@ -1,0 +1,9 @@
+export const DEBUG = true;
+export const EDITOR = false;
+export const EDITOR_NOT_IN_PREVIEW = false;
+export const DEV = true;
+export const PREVIEW = false;
+export const BUILD = false;
+export const MINIGAME = false;
+export const BYTEDANCE = false;
+export const NATIVE = false;

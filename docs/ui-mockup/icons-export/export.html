@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>图标切图导出 · icon export</title>
+<style>
+  :root{ --bg:#FFF7EC; --surface:#FFFDF8; --ink:#5A4636; --muted:#9C8A78; --line:#EAD9C4; --accent:#F5879B; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 -apple-system,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  header{padding:28px 26px 18px;max-width:1080px;margin:0 auto}
+  h1{font-size:26px;margin:0 0 6px}
+  p.lead{color:var(--muted);margin:0 0 18px;max-width:60ch}
+  .bar{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);
+       border-bottom:1px solid var(--line);padding:14px 26px}
+  .bar .wrap{max-width:1080px;margin:0 auto;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  label.f{display:flex;gap:8px;align-items:center;font-weight:600}
+  select{font:inherit;padding:8px 12px;border:1.5px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink)}
+  .btn{border:0;border-radius:14px;padding:11px 20px;font:inherit;font-weight:700;cursor:pointer;color:#fff;
+       background:var(--accent);box-shadow:0 4px 0 #d96b80,0 6px 14px rgba(245,135,155,.35)}
+  .btn:active{transform:translateY(3px);box-shadow:0 1px 0 #d96b80}
+  .btn.ghost{background:var(--surface);color:var(--ink);box-shadow:0 3px 0 var(--line)}
+  .count{color:var(--muted);font-weight:600;margin-left:auto}
+  main{max-width:1080px;margin:0 auto;padding:22px 26px 60px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:16px}
+  .card{background:var(--surface);border:1.5px solid var(--line);border-radius:18px;padding:16px 14px 14px;text-align:center;
+        box-shadow:0 4px 16px rgba(90,70,54,.05)}
+  .thumb{height:96px;display:flex;align-items:center;justify-content:center;border-radius:12px;margin-bottom:12px;
+         background:repeating-conic-gradient(#efe6d6 0% 25%,#fbf5ea 0% 50%) 50%/18px 18px}
+  .thumb svg{width:60px;height:60px}
+  .name{font-family:ui-monospace,"SF Mono",Consolas,monospace;font-size:12.5px;color:var(--ink);word-break:break-all;margin-bottom:10px}
+  .dl{border:1.4px solid var(--line);background:#fff;color:var(--ink);border-radius:10px;padding:6px 12px;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+  .dl:hover{border-color:var(--accent);color:var(--accent)}
+  .note{margin-top:26px;padding:16px 18px;background:#FCEFD6;border:1.5px solid #F0D9A6;border-radius:14px;color:#7A5A2E;font-size:13.5px}
+  code{font-family:ui-monospace,Consolas,monospace;background:#fff;border:1px solid var(--line);border-radius:6px;padding:1px 6px}
+</style></head>
+<body>
+<header>
+  <h1>图标切图导出 · icon export</h1>
+  <p class="lead">26 个统一线条图标（暖棕 #5A4636，与游戏内渲染一致）。选好尺寸 → 一键下载 PNG → 拖进 Cocos 的 <code>resources/textures/ui/</code> 即可替换旧的玻璃按钮 / 扁平图标。SVG 矢量源在同目录 <code>svg/</code> 下。</p>
+</header>
+<div class="bar"><div class="wrap">
+  <label class="f">导出尺寸
+    <select id="size">
+      <option value="96">96 px</option>
+      <option value="128">128 px</option>
+      <option value="144" selected>144 px（推荐）</option>
+      <option value="192">192 px @2x</option>
+      <option value="256">256 px</option>
+      <option value="384">384 px @4x</option>
+    </select>
+  </label>
+  <button class="btn" id="all">⬇ 下载全部 PNG</button>
+  <button class="btn ghost" id="allsvg">⬇ 下载全部 SVG</button>
+  <span class="count" id="count"></span>
+</div></div>
+<main>
+  <div class="grid" id="grid"></div>
+  <div class="note">
+    <b>用法（Cocos Creator 3.x）：</b>把下载的 PNG 放到 <code>client/assets/resources/textures/ui/</code>（或你现有的 UI 贴图目录），
+    在编辑器里把对应 <code>Sprite</code> 的 SpriteFrame 换成新图即可。命名已对齐你现有的 <code>icon_*</code> 约定
+    （齿轮→<code>icon_settings</code>、左右翻页→<code>icon_prev/next</code>）。
+    批量下载若被浏览器拦截，点一次地址栏的「允许多文件下载」即可。
+  </div>
+</main>
+<script>
+const ICONS = [{"base":"icon_close","id":"i-close","svg":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" width=\"144\" height=\"144\"><style>.ic{fill:none;stroke:#5A4636;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}</style><g class=\"ic\" stroke-width=\"2.8\"><path d=\"M7 7l10 10\"/><path d=\"M17 7L7 17\"/></g></svg>"},{"base":"icon_play","id":"i-play","svg":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" width=\"144\" height=\"144\"><style>.ic{fill:none;stroke:#5A4636;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}</style><path d=\"M7 5l13 7-13 7z\" fill=\"#5A4636\"/></svg>"},{"base":"icon_heart","id":"i-heart","svg":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" width=\"144\" height=\"144\"><style>.ic{fill:none;stroke:#5A4636;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}</style><path d=\"M12 20.5S3.5 14.8 3.5 9a4.2 4.2 0 0 1 8.5-1 4.2 4.2 0 0 1 8.5 1c0 5.8-8.5 11.5-8.5 11.5z\" fill=\"#5A4636\"/></svg>"},{"base":"icon_pause","id":"i-pause","svg":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" width=\"144\" height=\"144\"><style>.ic{fill:none;stroke:#5A4636;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}</style><g class=\"ic\" stroke-width=\"3\"><path d=\"M9 5.5v13\"/><path d=\"M15 5.5v13\"/></g></svg>"},{"base":"icon_hammer","id":"i-hammer","svg":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" width=\"144\" height=\"144\"><style>.ic{fill:none;stroke:#5A4636;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}</style><path class=\"ic\" d=\"M13.5 4.2l6.3 6.3-2.6 2.6-6.3-6.3z\"/><path class=\"ic\" d=\"M11.2 6.5l-7 7 4 4 7-7\"/></svg>"},{"base":"icon_shuffle","id":"i-shuffle","svg":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" width=\"144\" height=\"144\"><style>.ic{fill:none;stroke:#5A4636;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}</style><path class=\"ic\" d=\"M4 7h4l9 10h3\"/><path class=\"ic\" d=\"M4 17h4l3-3.4\"/><path class=\"ic\" d=\"M14 8.4L17 5h3\"/><path class=\"ic\" d=\"M18 3l2 2-2 2\"/><path class=\"ic\" d=\"M18 15l2 2-2 2\"/></svg>"},{"base":"icon_coin","id":"i-coin","svg":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 48 48\" width=\"144\" height=\"144\"><style>.ic{fill:none;stroke:#5A4636;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}</style><circle cx=\"24\" cy=\"24\" r=\"21\" fill=\"#F7C156\"/><circle cx=\"24\" cy=\"24\" r=\"21\" fill=\"none\" stroke=\"#DA9B30\" stroke-width=\"3\"/><circle cx=\"24\" cy=\"24\" r=\"15\" fill=\"none\" stroke=\"#FFE7B0\" stroke-width=\"2.5\"/><g fill=\"#fff\"><ellipse cx=\"24\" cy=\"27.5\" rx=\"6.2\" ry=\"5\"/><circle cx=\"18.3\" cy=\"20.5\" r=\"2.5\"/><circle cx=\"24\" cy=\"18.5\" r=\"2.5\"/><circle cx=\"29.7\" cy=\"20.5\" r=\"2.5\"/></g></svg>"},{"base":"icon_star","id":"i-star","svg":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" width=\"144\" height=\"144\"><style>.ic{fill:none;stroke:#5A4636;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}</style><path d=\"M12 3.2l2.6 5.4 5.9.8-4.3 4.1 1.1 5.9L12 16.7 6.7 19.4l1.1-5.9L3.5 9.4l5.9-.8z\" fill=\"#5A4636\"/></svg>"},{"base":"icon_ad","id":"i-ad","svg":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" width=\"144\" height=\"144\"><style>.ic{fill:none;stroke:#5A4636;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}</style><rect x=\"3\" y=\"5\" width=\"18\" height=\"13\" rx=\"2.4\" class=\"ic\"/><path class=\"ic\" d=\"M10 9.5l4.5 2.5L10 14.5z\" fill=\"#5A4636\"/></svg>"},{"base":"icon_lock","id":"i-lock","svg":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" width=\"144\" height=\"144\"><style>.ic{fill:none;stroke:#5A4636;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}</style><rect x=\"5\" y=\"10.5\" width=\"14\" height=\"9.5\" rx=\"2.4\" class=\"ic\"/><path class=\"ic\" d=\"M8 10.5V8a4 4 0 0 1 8 0v2.5\"/></svg>"},{"base":"icon_music","id":"i-music","svg":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" width=\"144\" height=\"144\"><style>.ic{fill:none;stroke:#5A4636;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}</style><path class=\"ic\" d=\"M9 18V6l10-2v11\"/><circle cx=\"6.5\" cy=\"18\" r=\"2.6\" class=\"ic\"/><circle cx=\"16.5\" cy=\"15\" r=\"2.6\" class=\"ic\"/></svg>"},{"base":"icon_sound","id":"i-sound","svg":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" width=\"144\" height=\"144\"><style>.ic{fill:none;stroke:#5A4636;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}</style><path class=\"ic\" d=\"M4 9.5h3l4.5-3.5v12L7 14.5H4z\"/><path class=\"ic\" d=\"M16 9.2a4 4 0 0 1 0 5.6\"/><path class=\"ic\" d=\"M18.5 7a7 7 0 0 1 0 10\"/></svg>"},{"base":"icon_restart","id":"i-restart","svg":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" width=\"144\" height=\"144\"><style>.ic{fill:none;stroke:#5A4636;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}</style><path class=\"ic\" d=\"M19 12a7 7 0 1 1-2.3-5.2\"/><path class=\"ic\" d=\"M17.5 3.5v3.6h-3.6\"/></svg>"},{"base":"icon_home","id":"i-home","svg":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" width=\"144\" height=\"144\"><style>.ic{fill:none;stroke:#5A4636;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}</style><path class=\"ic\" d=\"M4 11l8-6.5 8 6.5\"/><path class=\"ic\" d=\"M6 10v9h12v-9\"/></svg>"},{"base":"icon_settings","id":"i-gear","svg":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" width=\"144\" height=\"144\"><style>.ic{fill:none;stroke:#5A4636;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}</style><circle class=\"ic\" cx=\"12\" cy=\"12\" r=\"3.6\"/><g class=\"ic\"><path d=\"M12 3v3\"/><path d=\"M12 18v3\"/><path d=\"M3 12h3\"/><path d=\"M18 12h3\"/><path d=\"M5.6 5.6l2.1 2.1\"/><path d=\"M16.3 16.3l2.1 2.1\"/><path d=\"M18.4 5.6l-2.1 2.1\"/><path d=\"M7.7 16.3l-2.1 2.1\"/></g></svg>"},{"base":"icon_share","id":"i-share","svg":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" width=\"144\" height=\"144\"><style>.ic{fill:none;stroke:#5A4636;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}</style><g class=\"ic\"><circle cx=\"6\" cy=\"12\" r=\"2.4\"/><circle cx=\"18\" cy=\"6\" r=\"2.4\"/><circle cx=\"18\" cy=\"18\" r=\"2.4\"/><path d=\"M8.1 10.9l7.8-3.8\"/><path d=\"M8.1 13.1l7.8 3.8\"/></g></svg>"},{"base":"icon_rank","id":"i-rank","svg":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" width=\"144\" height=\"144\"><style>.ic{fill:none;stroke:#5A4636;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}</style><path class=\"ic\" d=\"M7 4h10v4a5 5 0 0 1-10 0z\"/><path class=\"ic\" d=\"M7 5H4v1.5a3 3 0 0 0 3 3\"/><path class=\"ic\" d=\"M17 5h3v1.5a3 3 0 0 1-3 3\"/><path class=\"ic\" d=\"M12 13v4\"/><path class=\"ic\" d=\"M8.5 20h7\"/><path class=\"ic\" d=\"M9.5 17h5l.6 3h-6.2z\"/></svg>"},{"base":"icon_gift","id":"i-gift","svg":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" width=\"144\" height=\"144\"><style>.ic{fill:none;stroke:#5A4636;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}</style><path class=\"ic\" d=\"M4.5 11h15v8.5h-15z\"/><path class=\"ic\" d=\"M3.5 7.5h17V11h-17z\"/><path class=\"ic\" d=\"M12 7.5v12\"/><path class=\"ic\" d=\"M12 7.5C9.5 7.5 8 5 9.6 3.6 11 2.5 12 5.2 12 7.5z\"/><path class=\"ic\" d=\"M12 7.5c2.5 0 4-2.5 2.4-3.9C13 2.5 12 5.2 12 7.5z\"/></svg>"},{"base":"icon_prev","id":"i-chevL","svg":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" width=\"144\" height=\"144\"><style>.ic{fill:none;stroke:#5A4636;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}</style><path class=\"ic\" stroke-width=\"3\" d=\"M15 5l-7 7 7 7\"/></svg>"},{"base":"icon_next","id":"i-chevR","svg":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" width=\"144\" height=\"144\"><style>.ic{fill:none;stroke:#5A4636;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}</style><path class=\"ic\" stroke-width=\"3\" d=\"M9 5l7 7-7 7\"/></svg>"},{"base":"icon_vibe","id":"i-vibe","svg":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" width=\"144\" height=\"144\"><style>.ic{fill:none;stroke:#5A4636;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}</style><rect class=\"ic\" x=\"8\" y=\"4\" width=\"8\" height=\"16\" rx=\"2.4\"/><path class=\"ic\" d=\"M11 17h2\"/></svg>"},{"base":"icon_bell","id":"i-bell","svg":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" width=\"144\" height=\"144\"><style>.ic{fill:none;stroke:#5A4636;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}</style><path class=\"ic\" d=\"M6 16.5V11a6 6 0 0 1 12 0v5.5l2 2H4z\"/><path class=\"ic\" d=\"M10 19a2 2 0 0 0 4 0\"/></svg>"},{"base":"icon_chat","id":"i-chat","svg":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" width=\"144\" height=\"144\"><style>.ic{fill:none;stroke:#5A4636;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}</style><path class=\"ic\" d=\"M4 5h16v11H9l-4 4v-4H4z\"/><path class=\"ic\" d=\"M8.5 10.5h.01\"/><path class=\"ic\" d=\"M12 10.5h.01\"/><path class=\"ic\" d=\"M15.5 10.5h.01\"/></svg>"},{"base":"icon_info","id":"i-info","svg":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" width=\"144\" height=\"144\"><style>.ic{fill:none;stroke:#5A4636;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}</style><circle class=\"ic\" cx=\"12\" cy=\"12\" r=\"9\"/><path class=\"ic\" d=\"M12 11.2v5\"/><path class=\"ic\" d=\"M12 7.8h.01\"/></svg>"},{"base":"icon_invite","id":"i-invite","svg":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" width=\"144\" height=\"144\"><style>.ic{fill:none;stroke:#5A4636;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}</style><circle cx=\"9.5\" cy=\"8.5\" r=\"3.4\" class=\"ic\"/><path class=\"ic\" d=\"M3.5 19c.6-3.4 3-5.4 6-5.4s5.4 2 6 5.4\"/><path class=\"ic\" d=\"M18 7v6M15 10h6\"/></svg>"},{"base":"icon_wifioff","id":"i-wifioff","svg":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" width=\"144\" height=\"144\"><style>.ic{fill:none;stroke:#5A4636;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}</style><path class=\"ic\" d=\"M5 9.5a11 11 0 0 1 14 0\"/><path class=\"ic\" d=\"M8 13a6.5 6.5 0 0 1 8 0\"/><path class=\"ic\" d=\"M11 16.3a2.2 2.2 0 0 1 2 0\"/><path class=\"ic\" d=\"M4 4l16 16\"/></svg>"}];
+document.getElementById('count').textContent = ICONS.length + ' 个图标';
+const grid = document.getElementById('grid');
+for (const it of ICONS){
+  const c = document.createElement('div'); c.className='card';
+  c.innerHTML = '<div class="thumb">'+it.svg+'</div><div class="name">'+it.base+'.png</div>'+
+                '<button class="dl" data-b="'+it.base+'">下载 PNG</button>';
+  grid.appendChild(c);
+}
+function svgToPng(svg, size){
+  return new Promise((res,rej)=>{
+    const url = 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+    const img = new Image();
+    img.onload = ()=>{
+      const cv = document.createElement('canvas'); cv.width=size; cv.height=size;
+      const ctx = cv.getContext('2d'); ctx.clearRect(0,0,size,size); ctx.drawImage(img,0,0,size,size);
+      cv.toBlob(b=>res(b),'image/png');
+    };
+    img.onerror = rej; img.src = url;
+  });
+}
+function dl(blob, name){
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),1500);
+}
+const sizeEl = document.getElementById('size');
+grid.addEventListener('click', async e=>{
+  const b = e.target.dataset.b; if(!b) return;
+  const it = ICONS.find(x=>x.base===b);
+  dl(await svgToPng(it.svg, +sizeEl.value), b+'.png');
+});
+document.getElementById('all').addEventListener('click', async ()=>{
+  const s=+sizeEl.value;
+  for (const it of ICONS){ dl(await svgToPng(it.svg, s), it.base+'.png'); await new Promise(r=>setTimeout(r,140)); }
+});
+document.getElementById('allsvg').addEventListener('click', ()=>{
+  for (const it of ICONS){ dl(new Blob([it.svg],{type:'image/svg+xml'}), it.base+'.svg'); }
+});
+</script>
+</body></html>

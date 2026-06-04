@@ -8,6 +8,19 @@ const CAT_COIN_REWARDS: Record<number, number> = { 1: 5, 2: 10, 3: 20 };
 /** 每回合初始金币 */
 const INITIAL_GOLD = 15;
 
+/** KV storage seam for tests. Default wraps `tt.*StorageSync` (抖音小游戏持久化接口)。 */
+export interface KVStorage {
+  get(k: string): string;
+  set(k: string, v: string): void;
+  remove(k: string): void;
+}
+
+const ttStorage: KVStorage = {
+  get: (k) => ((globalThis as any).tt?.getStorageSync(k)) ?? '',
+  set: (k, v) => (globalThis as any).tt?.setStorageSync(k, v),
+  remove: (k) => (globalThis as any).tt?.removeStorageSync(k),
+};
+
 export class GameState {
   private static _instance: GameState | null = null;
 
@@ -32,6 +45,10 @@ export class GameState {
 
   // 关卡配置（从 JSON 加载）
   allLevels: LevelData[] = [];
+
+  /** Injectable storage seam (test-only). Defaults to tt-storage wrapper. */
+  private storage: KVStorage = ttStorage;
+  public setStorage(s: KVStorage): void { this.storage = s; }
 
   resetRound(): void {
     this.gold = INITIAL_GOLD;

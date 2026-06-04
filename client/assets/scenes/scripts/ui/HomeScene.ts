@@ -47,6 +47,7 @@ export class HomeScene extends Component {
         // 为开始按钮添加文字（场景中只有图片）
         this.addButtonLabel(this.btnStart, '开始游戏', 28);
         this.ensureAdCatCoinHint();
+        this.createSidebarButton();
 
         const state = GameState.instance;
         this.viewingRound = state.currentRound;
@@ -121,6 +122,38 @@ export class HomeScene extends Component {
         label.enableOutline = true;
         label.outlineColor = new Color(0, 0, 0, 160);
         label.outlineWidth = 2;
+    }
+
+    /**
+     * 顶部右上角创建一个「+ 添加到侧边栏」小按钮。
+     * 唯一目的：满足抖音小游戏审核硬指标「侧边栏复访」 —— 必须在 bundle 里调用 tt.navigateToScene。
+     * 同时是真实可用功能：玩家点了能把游戏加到自己抖音侧边栏，下次能直接进。
+     */
+    private createSidebarButton(): void {
+        const btn = new Node('BtnSidebar');
+        btn.layer = Layers.Enum.UI_2D;
+        btn.parent = this.node;
+        const ut = btn.addComponent(UITransform);
+        ut.setContentSize(180, 56);
+        btn.setPosition(220, 480, 0);
+
+        const label = btn.addComponent(Label);
+        label.string = '+ 加到侧边栏';
+        label.fontSize = 22;
+        label.lineHeight = 28;
+        label.horizontalAlign = Label.HorizontalAlign.CENTER;
+        label.verticalAlign = Label.VerticalAlign.CENTER;
+        label.color = new Color(255, 255, 255, 255);
+        label.isBold = true;
+        label.enableOutline = true;
+        label.outlineColor = new Color(80, 60, 40, 220);
+        label.outlineWidth = 3;
+
+        btn.on(Node.EventType.TOUCH_END, this.onSidebarClicked, this);
+    }
+
+    private async onSidebarClicked(): Promise<void> {
+        await DouyinSDK.navigateToSidebar();
     }
 
     private addButtonLabel(btn: Node | null, text: string, fontSize: number): void {

@@ -1,13 +1,40 @@
 const fs = require('fs');
 const path = require('path');
 
-function optimizeHomeScene() {
-    const scenePath = 'client/assets/scenes/Home.scene';
+// Pure helper: apply label styling (bold + outline + shadow) to a label component.
+// Idempotent: calling twice produces the same output. Used by TC-SCR-OPT-001.
+function applyLabelStyle(label) {
+    if (!label) return label;
+    label._isBold = true;
+    label._enableOutline = true;
+    label._outlineColor = { "__type__": "cc.Color", "r": 0, "g": 0, "b": 0, "a": 150 };
+    label._outlineWidth = 3;
+    label._enableShadow = true;
+    label._shadowColor = { "__type__": "cc.Color", "r": 0, "g": 0, "b": 0, "a": 80 };
+    label._shadowOffset = { "__type__": "cc.Vec2", "x": 1, "y": -1 };
+    label._shadowBlur = 2;
+    return label;
+}
+
+// Pure helper: validate that a parsed scene JSON has the shape the optimizer expects.
+// Returns { ok: true } or { ok: false, reason }. Used by TC-SCR-OPT-002.
+// NOTE: the original script does no explicit schema validation beyond a
+// "Canvas not found at index 2" guard in optimizeHomeScene. This helper
+// formalises the minimal invariants both optimize functions rely on.
+function validateSceneShape(scene) {
+    if (!Array.isArray(scene)) return { ok: false, reason: 'scene must be an array' };
+    if (scene.length < 3) return { ok: false, reason: 'scene too short (need at least 3 entries)' };
+    const hasCanvas = scene.some(obj => obj && obj.__type__ === 'cc.Node' && obj._name === 'Canvas');
+    if (!hasCanvas) return { ok: false, reason: 'no Canvas node found' };
+    return { ok: true };
+}
+
+function optimizeHomeScene(scenePath = 'client/assets/scenes/Home.scene') {
     const scene = JSON.parse(fs.readFileSync(scenePath, 'utf8'));
 
     // Find Canvas (usually __id__: 2)
     const canvas = scene[2];
-    if (canvas._name !== 'Canvas') {
+    if (!canvas || canvas._name !== 'Canvas') {
         console.error('Canvas not found at index 2');
         return;
     }
@@ -165,17 +192,7 @@ function optimizeHomeScene() {
     labelNodes.forEach(name => {
         const nodeIdx = nodeMap[name];
         if (nodeIdx === undefined) return;
-        const label = findComponent(nodeIdx, 'cc.Label');
-        if (label) {
-            label._isBold = true;
-            label._enableOutline = true;
-            label._outlineColor = { "__type__": "cc.Color", "r": 0, "g": 0, "b": 0, "a": 150 };
-            label._outlineWidth = 3;
-            label._enableShadow = true;
-            label._shadowColor = { "__type__": "cc.Color", "r": 0, "g": 0, "b": 0, "a": 80 };
-            label._shadowOffset = { "__type__": "cc.Vec2", "x": 1, "y": -1 };
-            label._shadowBlur = 2;
-        }
+        applyLabelStyle(findComponent(nodeIdx, 'cc.Label'));
     });
 
     // Update HomeScene component properties
@@ -197,11 +214,14 @@ function optimizeHomeScene() {
     console.log('Home.scene optimized');
 }
 
-function optimizeGameScene() {
-    const scenePath = 'client/assets/scenes/Game.scene';
+function optimizeGameScene(scenePath = 'client/assets/scenes/Game.scene') {
     const scene = JSON.parse(fs.readFileSync(scenePath, 'utf8'));
 
     const canvas = scene.find(obj => obj.__type__ === 'cc.Node' && obj._name === 'Canvas');
+    if (!canvas) {
+        console.error('Canvas node not found in scene');
+        return;
+    }
     const canvasId = scene.indexOf(canvas);
 
     const nodeMap = {};
@@ -225,17 +245,7 @@ function optimizeGameScene() {
     hudLabels.forEach(name => {
         const nodeIdx = nodeMap[name];
         if (nodeIdx === undefined) return;
-        const label = findComponent(nodeIdx, 'cc.Label');
-        if (label) {
-            label._isBold = true;
-            label._enableOutline = true;
-            label._outlineColor = { "__type__": "cc.Color", "r": 0, "g": 0, "b": 0, "a": 150 };
-            label._outlineWidth = 3;
-            label._enableShadow = true;
-            label._shadowColor = { "__type__": "cc.Color", "r": 0, "g": 0, "b": 0, "a": 80 };
-            label._shadowOffset = { "__type__": "cc.Vec2", "x": 1, "y": -1 };
-            label._shadowBlur = 2;
-        }
+        applyLabelStyle(findComponent(nodeIdx, 'cc.Label'));
     });
 
     // Group HUD in TopLeft
@@ -346,5 +356,14 @@ function optimizeGameScene() {
     console.log('Game.scene optimized');
 }
 
-optimizeHomeScene();
-optimizeGameScene();
+if (require.main === module) {
+    optimizeHomeScene();
+    optimizeGameScene();
+}
+
+module.exports = {
+    applyLabelStyle,
+    validateSceneShape,
+    optimizeHomeScene,
+    optimizeGameScene,
+};

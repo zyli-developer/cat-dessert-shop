@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>猫咪甜品店 · 状态补充（State UIs）</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css">
+<style>
+  html,body{ height:auto; overflow:auto; }
+  body{ background:
+      radial-gradient(120% 60% at 50% 0%, #FFF7EC 0%, #F4E3C8 60%, #EAD7B8 100%) fixed;
+      color:var(--ink); padding:0 0 120px; }
+  .wrap{ max-width:1180px; margin:0 auto; padding:0 28px; }
+  .head{ padding:64px 0 30px; max-width:880px; }
+  .kicker{ font-family:var(--font-display); font-weight:800; letter-spacing:3px;
+    font-size:22px; color:var(--pink-dp); text-transform:uppercase; }
+  .head h1{ font-family:var(--font-display); font-weight:800; font-size:62px; line-height:1.08; margin:8px 0 16px; }
+  .head p{ font-size:23px; line-height:1.6; color:var(--ink-soft); }
+  .head .note{ margin-top:18px; padding:18px 24px; border-radius:20px; background:#FFFDF8;
+    box-shadow:inset 0 0 0 2px #fff, 0 0 0 2px var(--line-2), var(--shadow-sm); font-size:21px; line-height:1.55; }
+  .head .note b{ color:var(--pink-dp); }
+
+  .sec{ margin-top:58px; }
+  .sec > h2{ font-family:var(--font-display); font-weight:800; font-size:38px; display:flex; align-items:baseline; gap:16px; }
+  .sec > h2 .n{ font-size:26px; color:var(--pink-dp); font-weight:800; }
+  .sec > .lead{ color:var(--ink-soft); font-size:21px; margin:6px 0 26px; max-width:760px; line-height:1.5; }
+
+  .grid{ display:flex; flex-wrap:wrap; gap:30px; }
+  .card{ background:#FFFDF8; border-radius:30px; padding:24px; flex:1 1 330px; min-width:330px;
+    box-shadow:inset 0 0 0 3px #fff, 0 0 0 3px var(--line-2), var(--shadow); }
+  .card.wide{ flex-basis:710px; }
+  .card__tag{ display:inline-flex; align-items:center; gap:8px; height:38px; padding:0 16px; border-radius:999px;
+    font-family:var(--font-display); font-weight:800; font-size:20px; }
+  .tag-ok{ background:var(--mint-sf); color:var(--mint-dp); box-shadow:inset 0 0 0 2px var(--mint); }
+  .tag-warn{ background:var(--pink-sf); color:var(--pink-dp); box-shadow:inset 0 0 0 2px var(--pink); }
+  .tag-info{ background:var(--butter-sf); color:#9A6A1E; box-shadow:inset 0 0 0 2px var(--butter); }
+  .card h3{ font-family:var(--font-display); font-weight:800; font-size:30px; margin:16px 0 6px; }
+  .card p.when{ font-size:20px; color:var(--ink-soft); line-height:1.5; }
+  .card p.when b{ color:var(--ink); }
+
+  /* 演示舞台 */
+  .view{ position:relative; border-radius:24px; overflow:hidden; margin-bottom:18px;
+    background:#EFE0C6; display:grid; place-items:center; }
+  /* 局部模块演示（近 1:1）*/
+  .view--mod{ min-height:300px; padding:40px 20px; background:
+     linear-gradient(180deg,#FBEAD0,#F3DCBC); }
+  /* 整屏演示：750×1334 缩放进手机框 */
+  .frame{ position:relative; width:330px; height:587px; border-radius:40px; overflow:hidden;
+    background:#000; box-shadow:0 18px 40px rgba(110,70,35,.3), inset 0 0 0 6px #2A2018; }
+  .scene{ position:absolute; left:0; top:0; width:750px; height:1334px;
+    transform:scale(.44); transform-origin:top left; background:var(--paper); overflow:hidden; }
+  .scene .sbg{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+  .scene .sveil{ position:absolute; inset:0;
+    background:linear-gradient(180deg,rgba(255,247,236,.28),rgba(255,247,236,.12) 32%,rgba(255,247,236,.6) 100%); }
+
+  .toolbar{ display:flex; align-items:flex-end; justify-content:center; gap:42px; }
+  .toggle{ margin-top:6px; display:inline-flex; align-items:center; gap:10px; cursor:pointer;
+    background:#fff; border:none; border-radius:999px; padding:12px 22px;
+    font-family:var(--font-display); font-weight:800; font-size:19px; color:var(--ink);
+    box-shadow:inset 0 0 0 2px var(--line-2), var(--shadow-sm); }
+  .toggle:active{ transform:translateY(2px); }
+
+  .legend{ margin-top:60px; padding:30px 34px; border-radius:26px; background:#322619; color:#F3E4CC;
+    box-shadow:var(--shadow-lg); }
+  .legend h2{ font-family:var(--font-display); font-weight:800; font-size:30px; color:#fff; margin-bottom:14px; }
+  .legend ul{ list-style:none; display:grid; gap:12px; }
+  .legend li{ font-size:21px; line-height:1.5; padding-left:30px; position:relative; color:#E6D4B8; }
+  .legend li::before{ content:'•'; position:absolute; left:6px; color:var(--pink-hi); font-size:28px; line-height:1; }
+  .legend b{ color:#FFD98A; }
+</style>
+</head>
+<body>
+
+<!-- ===== 共享图标 ===== -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-pause" viewBox="0 0 24 24"><g class="ic" stroke-width="3"><path d="M9 5.5v13"/><path d="M15 5.5v13"/></g></symbol>
+<symbol id="i-hammer" viewBox="0 0 24 24"><path class="ic" d="M13.5 4.2l6.3 6.3-2.6 2.6-6.3-6.3z"/><path class="ic" d="M11.2 6.5l-7 7 4 4 7-7"/></symbol>
+<symbol id="i-shuffle" viewBox="0 0 24 24"><path class="ic" d="M4 7h4l9 10h3"/><path class="ic" d="M4 17h4l3-3.4"/><path class="ic" d="M14 8.4L17 5h3"/><path class="ic" d="M18 3l2 2-2 2"/><path class="ic" d="M18 15l2 2-2 2"/></symbol>
+<symbol id="i-coin" viewBox="0 0 48 48"><circle cx="24" cy="24" r="21" fill="#F7C156"/><circle cx="24" cy="24" r="21" fill="none" stroke="#DA9B30" stroke-width="3"/><circle cx="24" cy="24" r="15" fill="none" stroke="#FFE7B0" stroke-width="2.5"/><g fill="#fff"><ellipse cx="24" cy="27.5" rx="6.2" ry="5"/><circle cx="18.3" cy="20.5" r="2.5"/><circle cx="24" cy="18.5" r="2.5"/><circle cx="29.7" cy="20.5" r="2.5"/></g></symbol>
+<symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3.2l2.6 5.4 5.9.8-4.3 4.1 1.1 5.9L12 16.7 6.7 19.4l1.1-5.9L3.5 9.4l5.9-.8z" fill="currentColor"/></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="9.5" rx="2.4" class="ic"/><path class="ic" d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></symbol>
+<symbol id="i-close" viewBox="0 0 24 24"><g class="ic" stroke-width="2.8"><path d="M6 6l12 12"/><path d="M18 6L6 18"/></g></symbol>
+<symbol id="i-ad" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="13" rx="2.4" class="ic"/><path class="ic" d="M10 9.5l4.5 2.5L10 14.5z" fill="currentColor"/></symbol>
+<symbol id="i-music" viewBox="0 0 24 24"><path class="ic" d="M9 18V6l10-2v11"/><circle cx="6.5" cy="18" r="2.6" class="ic"/><circle cx="16.5" cy="15" r="2.6" class="ic"/></symbol>
+<symbol id="i-sound" viewBox="0 0 24 24"><path class="ic" d="M4 9.5h3l4.5-3.5v12L7 14.5H4z"/><path class="ic" d="M16 9.2a4 4 0 0 1 0 5.6"/><path class="ic" d="M18.5 7a7 7 0 0 1 0 10"/></symbol>
+<symbol id="i-restart" viewBox="0 0 24 24"><path class="ic" d="M19 12a7 7 0 1 1-2.3-5.2"/><path class="ic" d="M17.5 3.5v3.6h-3.6"/></symbol>
+<symbol id="i-home" viewBox="0 0 24 24"><path class="ic" d="M4 11l8-6.5 8 6.5"/><path class="ic" d="M6 10v9h12v-9"/></symbol>
+<symbol id="i-invite" viewBox="0 0 24 24"><circle cx="9.5" cy="8.5" r="3.4" class="ic"/><path class="ic" d="M3.5 19c.6-3.4 3-5.4 6-5.4s5.4 2 6 5.4"/><path class="ic" d="M18 7v6M15 10h6"/></symbol>
+<symbol id="i-wifioff" viewBox="0 0 24 24"><path class="ic" d="M5 9.5a11 11 0 0 1 14 0"/><path class="ic" d="M8 13a6.5 6.5 0 0 1 8 0"/><path class="ic" d="M11 16.3a2.2 2.2 0 0 1 2 0"/><path class="ic" d="M4 4l16 16"/></symbol>
+<symbol id="i-bell" viewBox="0 0 24 24"><path class="ic" d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2H4.5z"/><path class="ic" d="M10 19a2 2 0 0 0 4 0"/></symbol>
+</defs></svg>
+
+<div class="wrap">
+
+  <header class="head">
+    <div class="kicker">State UIs · 状态补充稿</div>
+    <h1>各种情况下的界面状态</h1>
+    <p>在已有 6 屏基础上，补齐玩家真实会遇到的边界 / 空 / 反馈状态——全部沿用同一套设计系统（暖棕文字、果冻按钮、统一线条图标），可直接落回 Cocos。</p>
+    <div class="note">
+      关于你问的<b>「橡皮擦没有可用数量」</b>：PRD §2（货币与道具）里道具是<b>金币购买制</b>——锤子 / 洗牌各 15 金币、无次数限制、「有金币就能用」，并没有橡皮擦。所以在这款游戏里，<b>「道具没有可用数量」= 当前金币不足以使用该道具</b>。下面 A 组就是按这个口径设计的。若你想改成「道具计数 / 库存」模式（带 ×N 数量），告诉我即可切换。
+    </div>
+  </header>
+
+  <!-- ============ A. 道具栏状态 ============ -->
+  <section class="sec">
+    <h2><span class="n">A</span> 道具栏状态（金币模型）</h2>
+    <p class="lead">底部三个入口：锤子（15）· 洗牌（15）· 看广告（+10 金币）。下方两张卡可点击切换「够用 ↔ 不足」，体会引导路径。</p>
+    <div class="grid">
+
+      <!-- A1 / A2 可交互切换 -->
+      <div class="card wide">
+        <span class="card__tag tag-warn">A1 · A2 可点击</span>
+        <div class="view view--mod" style="flex-direction:column" id="demoView">
+          <div id="hintWrap" style="height:120px;display:grid;place-items:center;width:100%"></div>
+          <div class="toolbar" id="demoBar"></div>
+        </div>
+        <button class="toggle" onclick="toggleAfford()"><svg style="width:22px;height:22px"><use href="#i-coin"/></svg><span id="toggleLabel">金币：18（够用）→ 点我切到 12（不足）</span></button>
+        <h3>道具可用 / 不可用</h3>
+        <p class="when"><b>可用：</b>金币 ≥ 15，价格币为焦糖色，点击即扣费使用。<br><b>不足：</b>金币 &lt; 15，锤子 / 洗牌整体去色、价格转红、右上角加锁，并弹出深色引导气泡指向脉动的「看广告 +10」按钮——把死路变成一次激励视频。</p>
+      </div>
+
+      <!-- A3 选择模式 -->
+      <div class="card">
+        <span class="card__tag tag-info">A3 全屏</span>
+        <div class="view">
+          <div class="frame">
+            <div class="scene">
+              <img class="sbg" src="assets/bg/bg_game.png" alt=""><div class="sveil"></div>
+              <!-- 容器与甜点（简化）-->
+              <div style="position:absolute;left:167px;top:430px;width:416px;height:560px;border-radius:30px 30px 44px 44px;
+                background:linear-gradient(180deg,rgba(255,255,255,.5),rgba(255,247,236,.26));
+                box-shadow:inset 0 0 0 4px rgba(255,255,255,.85),0 0 0 4px var(--line-2);overflow:hidden">
+                <img src="assets/desserts/dessert_lv5_taiyaki.png" style="position:absolute;left:18px;bottom:10px;width:130px">
+                <img src="assets/desserts/dessert_lv4_dorayaki.png" style="position:absolute;right:18px;bottom:10px;width:104px">
+                <img src="assets/desserts/dessert_lv3_puff.png" style="position:absolute;left:120px;bottom:140px;width:84px">
+                <img src="assets/desserts/dessert_lv2_cookie2.png" style="position:absolute;left:60px;bottom:170px;width:62px">
+              </div>
+              <!-- 选择遮罩 + 准星 + 顶部条 -->
+              <div class="selmask"></div>
+              <div class="selbar"><svg style="color:var(--ink)"><use href="#i-hammer"/></svg>点选一个甜品消除它</div>
+              <div class="aim" style="left:300px;top:600px"><img class="aim__hammer" src="assets/desserts/dessert_lv2_cookie2.png" style="display:none"></div>
+              <img src="assets/desserts/dessert_lv3_puff.png" style="position:absolute;left:248px;top:548px;width:120px;filter:drop-shadow(0 0 0 4px #fff)">
+              <button class="iconbtn" style="position:absolute;right:34px;top:34px"><svg><use href="#i-close"/></svg></button>
+            </div>
+          </div>
+        </div>
+        <h3>锤子 · 选择消除模式</h3>
+        <p class="when">点锤子并扣 15 金币后进入：容器变暗、顶部提示条出现、手指 / 准星跟随，点中的甜品高亮。右上角 <b>✕</b> 可取消并退费。</p>
+      </div>
+
+      <!-- A4 看广告反馈 -->
+      <div class="card">
+        <span class="card__tag tag-ok">A4 反馈</span>
+        <div class="view view--mod">
+          <div class="toast"><svg class="coin"><use href="#i-coin"/></svg>+10 金币</div>
+        </div>
+        <h3>看广告 · 奖励到账</h3>
+        <p class="when">激励视频结束后，顶部滑入 <b>+10 金币</b> Toast，同时 HUD 金币芯片做一次弹跳。失败复活 / 通关翻倍同款反馈。</p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============ B. 容器警戒 ============ -->
+  <section class="sec">
+    <h2><span class="n">B</span> 容器警戒（PRD §6）</h2>
+    <p class="lead">甜品堆过警戒线后进入 5 秒倒计时，再不消除即溢出判负。</p>
+    <div class="grid">
+      <div class="card">
+        <span class="card__tag tag-warn">B1 全屏</span>
+        <div class="view">
+          <div class="frame">
+            <div class="scene">
+              <img class="sbg" src="assets/bg/bg_game.png" alt=""><div class="sveil"></div>
+              <div style="position:absolute;left:167px;top:300px;width:416px;height:690px;border-radius:30px 30px 44px 44px;
+                background:linear-gradient(180deg,rgba(255,255,255,.5),rgba(255,247,236,.26));
+                box-shadow:inset 0 0 0 4px rgba(255,255,255,.85),0 0 0 4px var(--line-2);overflow:hidden">
+                <!-- 警戒线 -->
+                <div style="position:absolute;left:0;right:0;top:70px;height:3px;background:repeating-linear-gradient(90deg,var(--pink-dp) 0 16px,transparent 16px 30px)"></div>
+                <span style="position:absolute;right:16px;top:24px;font-family:var(--font-display);font-weight:800;font-size:22px;color:var(--pink-dp);background:var(--pink-sf);padding:3px 14px;border-radius:999px;box-shadow:0 0 0 2px #fff">警戒线</span>
+                <img src="assets/desserts/dessert_lv6_swissroll.png" style="position:absolute;left:14px;bottom:10px;width:150px">
+                <img src="assets/desserts/dessert_lv5_taiyaki.png" style="position:absolute;right:14px;bottom:10px;width:124px">
+                <img src="assets/desserts/dessert_lv4_dorayaki.png" style="position:absolute;left:150px;bottom:150px;width:104px">
+                <img src="assets/desserts/dessert_lv3_puff.png" style="position:absolute;left:40px;bottom:40px;width:90px">
+                <!-- 顶部已超线的甜点 -->
+                <img src="assets/desserts/dessert_lv4_dorayaki.png" style="position:absolute;left:230px;top:18px;width:104px">
+              </div>
+              <div class="danger-vignette"></div>
+              <div class="countdown">3</div>
+              <div class="selbar" style="top:auto;bottom:120px;background:var(--pink);color:#fff;box-shadow:var(--shadow-lg),inset 0 0 0 3px rgba(255,255,255,.5)">⚠ 甜品要溢出啦！快合成</div>
+            </div>
+          </div>
+        </div>
+        <h3>超线倒计时</h3>
+        <p class="when">堆顶越过警戒线即触发：屏幕边缘红光呼吸、中央 <b>5→1</b> 大字倒计时、底部红色警告条。期间合成下降到线下即可解除。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ C. 弹窗补全 ============ -->
+  <section class="sec">
+    <h2><span class="n">C</span> 暂停弹窗（PRD §6 要求，之前缺）</h2>
+    <p class="lead">点 HUD 暂停按钮弹出，含继续 / 重开 / 回主页与音乐音效快捷开关。</p>
+    <div class="grid">
+      <div class="card">
+        <span class="card__tag tag-info">C1 全屏</span>
+        <div class="view">
+          <div class="frame">
+            <div class="scene">
+              <img class="sbg" src="assets/bg/bg_game.png" alt=""><div class="sveil"></div>
+              <div class="overlay">
+                <div class="dialog pop" style="max-width:560px">
+                  <img class="dialog__cat" src="assets/character/cat_white_idle.png" alt="">
+                  <div class="title-lg" style="margin-bottom:26px">休息一下～</div>
+                  <div class="row between" style="background:var(--paper);border-radius:20px;padding:16px 24px;margin-bottom:14px;box-shadow:inset 0 0 0 2px var(--line)">
+                    <span class="row" style="gap:14px;font-size:30px;font-weight:700"><svg style="width:38px;height:38px"><use href="#i-music"/></svg>音乐</span>
+                    <span class="switch on"><i></i></span>
+                  </div>
+                  <div class="row between" style="background:var(--paper);border-radius:20px;padding:16px 24px;margin-bottom:30px;box-shadow:inset 0 0 0 2px var(--line)">
+                    <span class="row" style="gap:14px;font-size:30px;font-weight:700"><svg style="width:38px;height:38px"><use href="#i-sound"/></svg>音效</span>
+                    <span class="switch on"><i></i></span>
+                  </div>
+                  <button class="btn btn--primary btn--lg btn--block" style="margin-bottom:18px">继续游戏</button>
+                  <div class="row" style="gap:18px">
+                    <button class="btn btn--ghost btn--block" style="height:96px;font-size:30px"><svg style="width:38px;height:38px;color:var(--ink)"><use href="#i-restart"/></svg>重新开始</button>
+                    <button class="btn btn--ghost btn--block" style="height:96px;font-size:30px"><svg style="width:38px;height:38px;color:var(--ink)"><use href="#i-home"/></svg>主页</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <h3>暂停</h3>
+        <p class="when">游戏暂停、背景虚化。<b>继续</b>为主按钮；重开 / 主页为幽灵按钮；音乐音效就地可切，无需进设置页。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ D. 空状态 / 异常 ============ -->
+  <section class="sec">
+    <h2><span class="n">D</span> 空状态 / 网络异常</h2>
+    <p class="lead">没有数据、断网等情况也要给玩家一个有温度的出口，而不是空白页或冷冰冰报错。</p>
+    <div class="grid">
+
+      <!-- D1 排行榜空态 -->
+      <div class="card">
+        <span class="card__tag tag-info">D1 全屏</span>
+        <div class="view">
+          <div class="frame">
+            <div class="scene">
+              <img class="sbg" src="assets/bg/bg_home.png" alt=""><div class="sveil"></div>
+              <div class="safe-top">
+                <div class="row between">
+                  <button class="iconbtn"><svg><use href="#i-close"/></svg></button>
+                  <span class="title-lg">排行榜</span>
+                  <span style="width:66px"></span>
+                </div>
+              </div>
+              <div class="empty" style="position:absolute;left:0;right:0;top:380px">
+                <img src="assets/character/cat_blue_idle.png" alt="">
+                <h3>本周还没有好友上榜</h3>
+                <p>邀请好友一起开甜品店，比比谁的猫客更多～</p>
+                <button class="btn btn--primary btn--lg" style="margin-top:24px"><svg style="width:40px;height:40px;color:#fff"><use href="#i-invite"/></svg>邀请好友</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <h3>排行榜 · 无好友数据</h3>
+        <p class="when">榜单为空时，用蓝猫 + 一句邀请话术替代空列表，主按钮直接拉起<b>邀请好友</b>，把空态变成增长入口。</p>
+      </div>
+
+      <!-- D2 网络异常 -->
+      <div class="card">
+        <span class="card__tag tag-warn">D2 反馈</span>
+        <div class="view view--mod" style="flex-direction:column;gap:26px">
+          <div class="toast toast--warn"><svg><use href="#i-wifioff"/></svg>网络开小差，正在重连…</div>
+          <div class="toast"><svg style="width:40px;height:40px"><use href="#i-bell"/></svg>进度已保存，放心</div>
+        </div>
+        <h3>断网 / 重连</h3>
+        <p class="when">登录、上传分数、看广告失败时顶部 Toast 提示并自动重试；<b>不阻断当前对局</b>，本地进度先存，连上再同步。</p>
+      </div>
+
+    </div>
+  </section>
+
+  <div class="legend">
+    <h2>实现备注（交给程序对齐）</h2>
+    <ul>
+      <li><b>道具为金币门槛</b>，非库存：可用判断 = <b>金币 ≥ 15</b>；不足时按钮置 <code>.is-disabled</code> 并引导看广告，不要直接灰掉无反馈。</li>
+      <li><b>锤子选择模式</b>是一个独立交互态：进入即扣费、点中消除、点 ✕ 退费；洗牌则是确认即执行无需选择。</li>
+      <li><b>警戒线倒计时</b>对应 PRD §6 的 5 秒判负窗口，倒计时数字与边缘红光建议用同一个状态机驱动。</li>
+      <li><b>暂停弹窗</b>补齐了 PRD §6 列出但之前 6 屏未覆盖的界面；音乐 / 音效开关与设置页共用同一份配置。</li>
+      <li>这些状态样式已写入 <code>css/app.css</code> 末尾「状态补充」段，可直接在 <code>game.html</code> 复用，也方便切成 Cocos prefab。</li>
+    </ul>
+  </div>
+
+</div>
+
+<script>
+  // ---- A 组：道具栏「够用 ↔ 不足」可点击切换 ----
+  var afford = true; // true = 18金币够用
+  function tool(kind){
+    if(kind==='ad'){
+      return '<button class="tool tool--ad pulse" id="adTool"><svg><use href="#i-ad"/></svg>'+
+             '<span class="tool__price">+10</span></button>';
+    }
+    var icon = kind==='hammer' ? 'i-hammer' : 'i-shuffle';
+    var dis = afford ? '' : ' is-disabled';
+    var lock = afford ? '' : '<span class="tool__lock"><svg><use href="#i-lock"/></svg></span>';
+    return '<button class="tool'+dis+'"><svg style="color:var(--ink)"><use href="#'+icon+'"/></svg>'+
+           '<span class="tool__price"><svg class="coin"><use href="#i-coin"/></svg>15</span>'+lock+'</button>';
+  }
+  function render(){
+    document.getElementById('demoBar').innerHTML = tool('hammer')+tool('shuffle')+tool('ad');
+    document.getElementById('hintWrap').innerHTML = afford ? '' :
+      '<div class="hint hint--down">金币不足 12 / 15 · <b>看广告 +10</b> 即可使用道具 →</div>';
+    document.getElementById('toggleLabel').textContent = afford
+      ? '金币：18（够用）→ 点我切到 12（不足）'
+      : '金币：12（不足）→ 点我切回 18（够用）';
+    if(!afford){ document.getElementById('adTool').style.boxShadow=''; }
+  }
+  function toggleAfford(){ afford = !afford; render(); }
+  render();
+</script>
+</body>
+</html>
