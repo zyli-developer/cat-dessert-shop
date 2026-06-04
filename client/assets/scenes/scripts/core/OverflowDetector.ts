@@ -1,5 +1,6 @@
-import { _decorator, Component, Node, Label, Graphics, Color, tween, UIOpacity } from 'cc';
+import { _decorator, Component, Node, Label, Graphics, Color, tween, UIOpacity, UITransform, Layers } from 'cc';
 import { Dessert } from './Dessert';
+import { applyInkOutline } from '../ui/DesignTokens';
 const { ccclass, property } = _decorator;
 
 @ccclass('OverflowDetector')
@@ -24,6 +25,8 @@ export class OverflowDetector extends Component {
     private timer: number = 0;
     private _enabled: boolean = true;
     private flashTween: any = null;
+    private glowNode: Node | null = null;
+    private glowTween: any = null;
 
     onGameOver: (() => void) | null = null;
 
@@ -55,9 +58,10 @@ export class OverflowDetector extends Component {
             if (this.countdownLabel) {
                 const t = Math.ceil(Math.max(0, this.timer));
                 this.countdownLabel.string = `${t}`;
-                // 颜色随倒计时变红
+                // 颜色随倒计时变红（危险态保留红，描边改暖棕）
                 const r = Math.min(255, 150 + (5 - t) * 20);
                 this.countdownLabel.color = new Color(r, 50, 50, 255);
+                applyInkOutline(this.countdownLabel, 220, 3);
                 // 倒计时脉冲
                 this.countdownLabel.fontSize = t <= 2 ? 60 : 48;
             }
@@ -93,6 +97,7 @@ export class OverflowDetector extends Component {
     }
 
     private startWarningFlash(): void {
+        this.startEdgeGlow();
         if (!this.warningLineNode) return;
         const opacity = this.warningLineNode.getComponent(UIOpacity)
             || this.warningLineNode.addComponent(UIOpacity);
@@ -114,6 +119,50 @@ export class OverflowDetector extends Component {
         if (this.warningLineNode) {
             const opacity = this.warningLineNode.getComponent(UIOpacity);
             if (opacity) opacity.opacity = 255;
+        }
+        this.stopEdgeGlow();
+    }
+
+    /** 容器边缘红光呼吸 —— 超线倒计时期间的危险反馈。 */
+    private startEdgeGlow(): void {
+        if (this.glowTween || !this.containerNode) return;
+        const ut = this.containerNode.getComponent(UITransform);
+        const w = ut?.width || 400;
+        const h = ut?.height || 600;
+
+        let glow = this.glowNode;
+        if (!glow || !glow.isValid) {
+            glow = new Node('OverflowGlow');
+            glow.layer = Layers.Enum.UI_2D;
+            glow.parent = this.containerNode;
+            glow.setPosition(0, 0, 0);
+            glow.addComponent(UITransform).setContentSize(w, h);
+            const gfx = glow.addComponent(Graphics);
+            gfx.lineWidth = 10;
+            gfx.strokeColor = new Color(255, 70, 70, 255);
+            gfx.rect(-w / 2, -h / 2, w, h);
+            gfx.stroke();
+            this.glowNode = glow;
+        }
+        glow.active = true;
+        const op = glow.getComponent(UIOpacity) || glow.addComponent(UIOpacity);
+        op.opacity = 255;
+        this.glowTween = tween(op)
+            .repeatForever(
+                tween(op)
+                    .to(0.5, { opacity: 80 })
+                    .to(0.5, { opacity: 255 })
+            )
+            .start();
+    }
+
+    private stopEdgeGlow(): void {
+        if (this.glowTween) {
+            this.glowTween.stop();
+            this.glowTween = null;
+        }
+        if (this.glowNode?.isValid) {
+            this.glowNode.active = false;
         }
     }
 

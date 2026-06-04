@@ -1,10 +1,11 @@
-import { _decorator, Component, Label, Node, Sprite, UITransform, Color,
+import { _decorator, Component, Label, Node, Sprite, UITransform,
          director, resources, JsonAsset, macro } from 'cc';
 import { ApiClient } from '../net/ApiClient';
 import { GameState } from '../data/GameState';
 import { LevelData } from '../data/GameTypes';
 import { DouyinSDK } from '../platform/DouyinSDK';
 import { GlobalFontManager } from './GlobalFontManager';
+import { TOKENS, applyInkOutline } from './DesignTokens';
 const { ccclass, property } = _decorator;
 
 @ccclass('LoadingScene')
@@ -187,10 +188,8 @@ export class LoadingScene extends Component {
         label.lineHeight = 42;
         label.horizontalAlign = Label.HorizontalAlign.CENTER;
         label.verticalAlign = Label.VerticalAlign.CENTER;
-        label.color = new Color(255, 255, 255, 255);
-        label.enableOutline = true;
-        label.outlineColor = new Color(80, 60, 40, 220);
-        label.outlineWidth = 3;
+        label.color = TOKENS.white;
+        applyInkOutline(label, 220, 3);
 
         GlobalFontManager.applyFont(btn);
 
@@ -220,10 +219,8 @@ export class LoadingScene extends Component {
         label.lineHeight = 36;
         label.horizontalAlign = Label.HorizontalAlign.CENTER;
         label.verticalAlign = Label.VerticalAlign.CENTER;
-        label.color = new Color(255, 255, 255, 255);
-        label.enableOutline = true;
-        label.outlineColor = new Color(50, 50, 50, 200);
-        label.outlineWidth = 3;
+        label.color = TOKENS.white;
+        applyInkOutline(label, 200, 3);
 
         btn.on(Node.EventType.TOUCH_END, this.onOfflineClicked, this);
         this.offlineBtn = btn;

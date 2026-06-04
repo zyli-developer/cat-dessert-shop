@@ -5,6 +5,7 @@ import type { UserProfile } from '../net/ApiTypes';
 import { PopupManager } from './PopupManager';
 import { DouyinSDK } from '../platform/DouyinSDK';
 import { GlobalFontManager } from './GlobalFontManager';
+import { TOKENS, applyInkOutline } from './DesignTokens';
 const { ccclass, property } = _decorator;
 
 @ccclass('HomeScene')
@@ -117,11 +118,9 @@ export class HomeScene extends Component {
         label.lineHeight = 26;
         label.horizontalAlign = Label.HorizontalAlign.CENTER;
         label.verticalAlign = Label.VerticalAlign.CENTER;
-        label.color = new Color(255, 255, 255, 255);
+        label.color = TOKENS.white;
         label.isBold = true;
-        label.enableOutline = true;
-        label.outlineColor = new Color(0, 0, 0, 160);
-        label.outlineWidth = 2;
+        applyInkOutline(label, 200, 2);
     }
 
     /**
@@ -143,11 +142,9 @@ export class HomeScene extends Component {
         label.lineHeight = 28;
         label.horizontalAlign = Label.HorizontalAlign.CENTER;
         label.verticalAlign = Label.VerticalAlign.CENTER;
-        label.color = new Color(255, 255, 255, 255);
+        label.color = TOKENS.white;
         label.isBold = true;
-        label.enableOutline = true;
-        label.outlineColor = new Color(80, 60, 40, 220);
-        label.outlineWidth = 3;
+        applyInkOutline(label, 220, 3);
 
         btn.on(Node.EventType.TOUCH_END, this.onSidebarClicked, this);
     }
@@ -174,11 +171,9 @@ export class HomeScene extends Component {
         label.lineHeight = h;
         label.horizontalAlign = Label.HorizontalAlign.CENTER;
         label.verticalAlign = Label.VerticalAlign.CENTER;
-        label.color = new Color(255, 255, 255, 255);
+        label.color = TOKENS.white;
         label.isBold = true;
-        label.enableOutline = true;
-        label.outlineColor = new Color(0, 0, 0, 150);
-        label.outlineWidth = 3;
+        applyInkOutline(label, 220, 3);
     }
 
     // --- 按钮回调 ---

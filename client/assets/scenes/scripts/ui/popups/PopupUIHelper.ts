@@ -1,20 +1,43 @@
 import { Node, UITransform, Graphics, Color, Label, Layers } from 'cc';
 import { GlobalFontManager } from '../GlobalFontManager';
+import {
+    TOKENS, JELLY_VARIANTS, JellyVariantName, applyInkOutline,
+} from '../DesignTokens';
 
-/** 配色方案 */
+/**
+ * 弹窗配色 —— 治愈手绘烘焙风（纸感暖色）。
+ * 保留旧 key 名以兼容现有调用方（WinPopup / FailPopup / PausePopup），
+ * 但底层全部指向 DesignTokens 暖色板。按钮色仅作为「语义标记」，
+ * 实际渲染交给果冻按钮变体（见 makeJellyButton）。
+ */
 export const POPUP_COLORS = {
-    bg: new Color(58, 46, 63, 245),          // 深紫灰
-    bgBorder: new Color(255, 200, 120, 255),  // 金色边框
-    btnPrimary: new Color(255, 160, 60, 255), // 橙色按钮
-    btnSecondary: new Color(120, 100, 160, 255), // 紫灰按钮
-    btnDanger: new Color(220, 80, 80, 255),   // 红色按钮
-    btnSuccess: new Color(80, 190, 120, 255), // 绿色按钮
-    textLight: new Color(255, 255, 240, 255), // 暖白文字
-    textGold: new Color(255, 220, 100, 255),  // 金色文字
-    textDim: new Color(180, 170, 200, 255),   // 淡紫灰文字
-    starOn: new Color(255, 210, 60, 255),     // 星星亮
-    starOff: new Color(80, 70, 90, 255),      // 星星暗
+    bg: TOKENS.paper2,          // 卡片象牙白底
+    bgBorder: TOKENS.line2,     // 柔描边外圈
+    btnPrimary: TOKENS.pink,    // 主 CTA → primary 变体
+    btnSecondary: TOKENS.ghostFace, // 中性 → ghost 变体
+    btnDanger: TOKENS.danger,   // 危险（多用于标题文字）
+    btnSuccess: TOKENS.mint,    // 正向/广告 → mint 变体
+    textLight: TOKENS.ink,      // 主文字（暖棕，纸底上）
+    textGold: TOKENS.butterDp,  // 标题/金币高亮（焦糖）
+    textDim: TOKENS.inkSoft,    // 次级文字
+    starOn: TOKENS.star,        // 星星亮
+    starOff: TOKENS.starOff,    // 星星暗
 };
+
+/** 按钮语义色 → 果冻变体映射（按 Color 引用匹配）。 */
+const BUTTON_VARIANT: Array<[Color, JellyVariantName]> = [
+    [POPUP_COLORS.btnPrimary, 'primary'],
+    [POPUP_COLORS.btnSuccess, 'mint'],
+    [POPUP_COLORS.btnSecondary, 'ghost'],
+    [POPUP_COLORS.btnDanger, 'primary'],
+];
+
+function variantFor(c: Color): JellyVariantName {
+    for (const [color, name] of BUTTON_VARIANT) {
+        if (color === c) return name;
+    }
+    return 'primary';
+}
 
 /** 在节点上画圆角矩形背景 */
 export function drawRoundedRect(
@@ -38,29 +61,49 @@ export function drawRoundedRect(
     if (borderColor) gfx.stroke();
 }
 
-/** 创建一个带文字的按钮节点 */
-export function makeButton(
-    parent: Node, text: string, y: number,
-    bgColor: Color, w: number = 320, h: number = 70
-): Node {
-    const btn = new Node(text);
-    btn.layer = Layers.Enum.UI_2D;
-    btn.parent = parent;
-    btn.setPosition(0, y);
+/**
+ * 在给定节点上搭建果冻按钮三层结构（Shadow 厚底 / Face 面色+顶高光 / Label）。
+ * 节点需已挂到父级并设好 position。
+ */
+function buildJelly(btn: Node, text: string, variant: JellyVariantName, w: number, h: number): void {
+    const v = JELLY_VARIANTS[variant];
+    const radius = h / 2;
 
-    const ut = btn.addComponent(UITransform);
+    let ut = btn.getComponent(UITransform);
+    if (!ut) ut = btn.addComponent(UITransform);
     ut.setContentSize(w, h);
 
-    // 背景画在按钮节点上
-    drawRoundedRect(btn, w, h, bgColor, undefined, 0, h / 2);
+    // ① Shadow —— 厚底深色，下沉 8px
+    const shadow = new Node('Shadow');
+    shadow.layer = Layers.Enum.UI_2D;
+    shadow.parent = btn;
+    shadow.setPosition(0, -8, 0);
+    shadow.addComponent(UITransform).setContentSize(w, h);
+    drawRoundedRect(shadow, w, h, v.shadow, undefined, 0, radius);
 
-    // 文字放在子节点上，渲染在 Graphics 之上
+    // ② Face —— 面主色
+    const face = new Node('Face');
+    face.layer = Layers.Enum.UI_2D;
+    face.parent = btn;
+    face.setPosition(0, 0, 0);
+    face.addComponent(UITransform).setContentSize(w, h);
+    drawRoundedRect(face, w, h, v.face, undefined, 0, radius);
+
+    // ③ TopHi —— 顶部内高光（受光面）
+    const hiH = Math.max(6, h * 0.42);
+    const hi = new Node('TopHi');
+    hi.layer = Layers.Enum.UI_2D;
+    hi.parent = face;
+    hi.addComponent(UITransform).setContentSize(w - 12, hiH);
+    hi.setPosition(0, h / 2 - hiH / 2 - 4, 0);
+    const hiColor = new Color(v.faceHi.r, v.faceHi.g, v.faceHi.b, 150);
+    drawRoundedRect(hi, w - 12, hiH, hiColor, undefined, 0, hiH / 2);
+
+    // ④ Label —— 文字（渲染在最上层）
     const labelNode = new Node('BtnLabel');
     labelNode.layer = Layers.Enum.UI_2D;
-    labelNode.parent = btn;
-
-    const labelUT = labelNode.addComponent(UITransform);
-    labelUT.setContentSize(w, h);
+    labelNode.parent = face;
+    labelNode.addComponent(UITransform).setContentSize(w, h);
 
     const label = labelNode.addComponent(Label);
     label.string = text;
@@ -68,16 +111,46 @@ export function makeButton(
     label.lineHeight = h;
     label.horizontalAlign = Label.HorizontalAlign.CENTER;
     label.verticalAlign = Label.VerticalAlign.CENTER;
-    label.color = POPUP_COLORS.textLight;
+    label.color = v.text;
     label.isBold = true;
-    label.enableOutline = true;
-    label.outlineColor = new Color(0, 0, 0, 120);
-    label.outlineWidth = 2;
-
-    // 应用全局字体
+    if (variant === 'ghost') {
+        // 幽灵按钮暖棕字 + 砂色描边
+        applyInkOutline(label, 200, 2);
+    }
     GlobalFontManager.applyFont(labelNode);
 
+    attachJellyPress(btn, face);
+}
+
+/** 按下整体下沉 6px（Face 下移盖住厚底），松开还原 —— 果冻"汁感"。 */
+function attachJellyPress(btn: Node, face: Node): void {
+    const baseY = face.position.y;
+    const press = () => face.setPosition(0, baseY - 6, 0);
+    const release = () => face.setPosition(0, baseY, 0);
+    btn.on(Node.EventType.TOUCH_START, press);
+    btn.on(Node.EventType.TOUCH_END, release);
+    btn.on(Node.EventType.TOUCH_CANCEL, release);
+}
+
+/** 创建果冻按钮节点（三层结构 + 按下下沉）。 */
+export function makeJellyButton(
+    parent: Node, text: string, y: number,
+    variant: JellyVariantName = 'primary', w: number = 320, h: number = 70
+): Node {
+    const btn = new Node(text);
+    btn.layer = Layers.Enum.UI_2D;
+    btn.parent = parent;
+    btn.setPosition(0, y, 0);
+    buildJelly(btn, text, variant, w, h);
     return btn;
+}
+
+/** 创建一个带文字的按钮节点（兼容旧签名，内部走果冻按钮）。 */
+export function makeButton(
+    parent: Node, text: string, y: number,
+    bgColor: Color, w: number = 320, h: number = 70
+): Node {
+    return makeJellyButton(parent, text, y, variantFor(bgColor), w, h);
 }
 
 /** 创建文字标签 */
@@ -99,9 +172,7 @@ export function makeLabel(
     label.horizontalAlign = Label.HorizontalAlign.CENTER;
     label.verticalAlign = Label.VerticalAlign.CENTER;
     label.color = color;
-    label.enableOutline = true;
-    label.outlineColor = new Color(0, 0, 0, 100);
-    label.outlineWidth = 2;
+    applyInkOutline(label, 100, 2);
 
     // 应用全局字体
     GlobalFontManager.applyFont(node);
@@ -109,40 +180,13 @@ export function makeLabel(
     return label;
 }
 
-/** 样式化已有的按钮节点（prefab 中的空 Sprite 按钮） */
+/** 样式化已有的按钮节点（prefab 中的空 Sprite 按钮）→ 果冻按钮。 */
 export function styleExistingButton(
     node: Node | null, text: string, bgColor: Color,
     w: number = 320, h: number = 70
 ): void {
     if (!node) return;
-
-    const ut = node.getComponent(UITransform);
-    if (ut) ut.setContentSize(w, h);
-
-    drawRoundedRect(node, w, h, bgColor, undefined, 0, h / 2);
-
-    // 文字放在子节点上，渲染在 Graphics 之上
-    const labelNode = new Node('BtnLabel');
-    labelNode.layer = Layers.Enum.UI_2D;
-    labelNode.parent = node;
-
-    const labelUT = labelNode.addComponent(UITransform);
-    labelUT.setContentSize(w, h);
-
-    const label = labelNode.addComponent(Label);
-    label.string = text;
-    label.fontSize = 28;
-    label.lineHeight = h;
-    label.horizontalAlign = Label.HorizontalAlign.CENTER;
-    label.verticalAlign = Label.VerticalAlign.CENTER;
-    label.color = POPUP_COLORS.textLight;
-    label.isBold = true;
-    label.enableOutline = true;
-    label.outlineColor = new Color(0, 0, 0, 120);
-    label.outlineWidth = 2;
-
-    // 应用全局字体
-    GlobalFontManager.applyFont(labelNode);
+    buildJelly(node, text, variantFor(bgColor), w, h);
 }
 
 /** 样式化已有的 Label */
@@ -155,9 +199,7 @@ export function styleExistingLabel(
     label.lineHeight = fontSize + 8;
     label.color = color;
     label.isBold = true;
-    label.enableOutline = true;
-    label.outlineColor = new Color(0, 0, 0, 100);
-    label.outlineWidth = 2;
+    applyInkOutline(label, 100, 2);
 
     // 应用全局字体
     GlobalFontManager.applyFont(label.node);
