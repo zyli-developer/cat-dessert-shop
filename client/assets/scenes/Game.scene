@@ -850,9 +850,9 @@
     "_enableOutline": true,
     "_outlineColor": {
       "__type__": "cc.Color",
-      "r": 0,
-      "g": 0,
-      "b": 0,
+      "r": 90,
+      "g": 70,
+      "b": 54,
       "a": 255
     },
     "_outlineWidth": 2,
@@ -1743,9 +1743,9 @@
     "_enableOutline": true,
     "_outlineColor": {
       "__type__": "cc.Color",
-      "r": 0,
-      "g": 0,
-      "b": 0,
+      "r": 90,
+      "g": 70,
+      "b": 54,
       "a": 255
     },
     "_outlineWidth": 2,
@@ -2041,9 +2041,9 @@
     "_enableOutline": true,
     "_outlineColor": {
       "__type__": "cc.Color",
-      "r": 0,
-      "g": 0,
-      "b": 0,
+      "r": 90,
+      "g": 70,
+      "b": 54,
       "a": 255
     },
     "_outlineWidth": 2,
@@ -2339,9 +2339,9 @@
     "_enableOutline": true,
     "_outlineColor": {
       "__type__": "cc.Color",
-      "r": 0,
-      "g": 0,
-      "b": 0,
+      "r": 90,
+      "g": 70,
+      "b": 54,
       "a": 255
     },
     "_outlineWidth": 2,
@@ -2666,9 +2666,9 @@
     "_enableOutline": true,
     "_outlineColor": {
       "__type__": "cc.Color",
-      "r": 0,
-      "g": 0,
-      "b": 0,
+      "r": 90,
+      "g": 70,
+      "b": 54,
       "a": 255
     },
     "_outlineWidth": 2,
@@ -3019,9 +3019,9 @@
     "_enableOutline": true,
     "_outlineColor": {
       "__type__": "cc.Color",
-      "r": 0,
-      "g": 0,
-      "b": 0,
+      "r": 90,
+      "g": 70,
+      "b": 54,
       "a": 255
     },
     "_outlineWidth": 2,
@@ -3264,9 +3264,9 @@
     "_enableOutline": true,
     "_outlineColor": {
       "__type__": "cc.Color",
-      "r": 0,
-      "g": 0,
-      "b": 0,
+      "r": 90,
+      "g": 70,
+      "b": 54,
       "a": 255
     },
     "_outlineWidth": 2,
