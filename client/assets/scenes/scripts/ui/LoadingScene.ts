@@ -16,6 +16,9 @@ export class LoadingScene extends Component {
     @property(Sprite)
     progressBar: Sprite | null = null;
 
+    /** 进度头爪印金币 —— 随填充宽度沿轨道移动（对齐 mockup load-head）。 */
+    private coinHead: Node | null = null;
+
     private loginBtn: Node | null = null;
     private offlineBtn: Node | null = null;
     private offlineRequested = false;
@@ -33,6 +36,8 @@ export class LoadingScene extends Component {
     start(): void {
         const bg = this.node.getChildByName('Background');
         if (bg) bg.setSiblingIndex(0);
+
+        this.coinHead = this.node.getChildByName('CoinHead');
 
         this.doLoad();
     }
@@ -278,14 +283,21 @@ export class LoadingScene extends Component {
     }
 
     private setProgress(ratio: number): void {
+        const r = Math.max(0, Math.min(ratio, 1));
+        const track = this.progressBar?.node.parent;
+        const trackUt = track?.getComponent(UITransform);
+        // 槽宽取自父级 ProgressBg（设计稿 566），fill 锚点在左侧从左向右生长。
+        const full = trackUt && trackUt.width > 0 ? trackUt.width : 566;
+
         if (this.progressBar) {
             const ut = this.progressBar.getComponent(UITransform);
-            // 槽宽取自父级 ProgressBg（设计稿 566），fill 锚点在左侧从左向右生长。
-            const trackUt = this.progressBar.node.parent?.getComponent(UITransform);
-            const full = trackUt && trackUt.width > 0 ? trackUt.width : 400;
-            if (ut) {
-                ut.width = full * Math.min(ratio, 1);
-            }
+            if (ut) ut.width = full * r;
+        }
+
+        // 爪印金币进度头：沿轨道从左端随填充右移（与 ProgressBg 同父，x 对齐）。
+        if (this.coinHead && track) {
+            const tx = track.position.x;
+            this.coinHead.setPosition(tx - full / 2 + full * r, this.coinHead.position.y, 0);
         }
     }
 }
