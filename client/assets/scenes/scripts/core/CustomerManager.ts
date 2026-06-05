@@ -4,8 +4,15 @@ import { getDessert } from '../data/DessertConfig';
 import { AudioManager } from '../utils/AudioManager';
 const { ccclass, property } = _decorator;
 
-/** 猫咪类型，确保不连续重复 */
-const CAT_TYPES = ['orange', 'blue', 'white'] as const;
+/**
+ * 顾客猫咪品种池 —— 随机上客时从中抽取，确保不连续重复。
+ * 资源位于 `resources/textures/character/cat_<type>_<idle|happy|bye>`（每品种 3 表情）。
+ * 含 3 个初版 + 7 个新增品种，共 10 个，全部参与随机。
+ */
+export const CAT_TYPES = [
+    'orange', 'blue', 'white',
+    'bengal', 'maine_coon', 'munchkin', 'persian', 'scottish_fold', 'siamese', 'sphynx',
+] as const;
 
 @ccclass('CustomerManager')
 export class CustomerManager extends Component {

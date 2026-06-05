@@ -25,7 +25,7 @@
  *   a synchronous shim so the multi-step transition runs to completion inline.
  */
 
-import { CustomerManager } from '../../assets/scenes/scripts/core/CustomerManager';
+import { CustomerManager, CAT_TYPES } from '../../assets/scenes/scripts/core/CustomerManager';
 import { CustomerData } from '../../assets/scenes/scripts/data/GameTypes';
 import { Node, Label, Sprite } from 'cc';
 
@@ -105,9 +105,10 @@ describe('CustomerManager', () => {
     // seam, which IS the randomness surface the class actually exposes.
     const cm = makeManager();
 
-    // rng sequence chosen to force picks 0, 1, 0, 1... against the
-    // "available" slice (which always excludes lastCatType, so size == 2 after
-    // the first pick). First call has size 3, we pick index 0.
+    // rng sequence drives picks against the "available" slice (which always
+    // excludes lastCatType, so size == CAT_TYPES.length - 1 after the first
+    // pick). The no-repeat invariant holds for any seed/pool size; values here
+    // just exercise low/high indices across the now-10-breed pool.
     const seq = [0.0, 0.0, 0.99, 0.0, 0.99];
     let i = 0;
     cm.setRng(() => seq[i++]);
@@ -130,8 +131,8 @@ describe('CustomerManager', () => {
     for (let k = 1; k < picks.length; k++) {
       expect(picks[k]).not.toBe(picks[k - 1]);
     }
-    // And picks are drawn from the canonical CAT_TYPES set.
-    for (const p of picks) expect(['orange', 'blue', 'white']).toContain(p);
+    // And picks are drawn from the canonical CAT_TYPES set (all 10 breeds).
+    for (const p of picks) expect(CAT_TYPES as readonly string[]).toContain(p);
   });
 
   it('TC-CUST-005 satisfying the final customer fires onAllCustomersDone then onRoundComplete', () => {

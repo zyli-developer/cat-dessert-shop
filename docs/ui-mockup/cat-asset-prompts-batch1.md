@@ -15,13 +15,13 @@
 4. 出完一只勾掉一行，方便追踪。
 
 ## 进度勾选
-- [ ] 1. 缅因猫 Maine Coon（`cat_maine_coon_*`）
-- [ ] 2. 波斯猫 Persian（`cat_persian_*`）
-- [ ] 3. 无毛猫 Sphynx（`cat_sphynx_*`）
-- [ ] 4. 折耳猫 Scottish Fold（`cat_scottish_fold_*`）
-- [ ] 5. 暹罗猫 Siamese（`cat_siamese_*`）
-- [ ] 6. 孟加拉猫 Bengal（`cat_bengal_*`）
-- [ ] 7. 曼基康 Munchkin（`cat_munchkin_*`）
+- [x] 1. 缅因猫 Maine Coon（`cat_maine_coon_*`）
+- [x] 2. 波斯猫 Persian（`cat_persian_*`）
+- [x] 3. 无毛猫 Sphynx（`cat_sphynx_*`）
+- [x] 4. 折耳猫 Scottish Fold（`cat_scottish_fold_*`）
+- [x] 5. 暹罗猫 Siamese（`cat_siamese_*`）
+- [x] 6. 孟加拉猫 Bengal（`cat_bengal_*`）
+- [x] 7. 曼基康 Munchkin（`cat_munchkin_*`）
 
 ---
 
