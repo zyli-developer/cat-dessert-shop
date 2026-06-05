@@ -16,6 +16,7 @@
 [
   {
     "round": 1,
+    "name": "曲奇晨光 · 清晨",
     "customers": [
       { "demands": [{ "level": 2, "count": 1 }] },
       { "demands": [{ "level": 2, "count": 4 }] }
@@ -29,8 +30,9 @@
 ```
 
 **验收标准**：
-- [ ] 10 关数据完整，与 `02-levels.md` 配置表一致
+- [ ] 10 关数据完整，与 `02-levels.md` 配置表一致（含每关 `name` 主题名）
 - [ ] LoadingScene 可正确加载 JSON 到 GameState.allLevels
+- [ ] 改动关卡名后已重跑 `scripts/subset_font.py`（字体子集纳入新字形，避免豆腐块）
 
 ---
 
