@@ -34,6 +34,7 @@ const CustomerSchema = z.object({
 
 const LevelSchema = z.object({
   round: z.number().int().positive(),
+  name: z.string().min(1),
   customers: z.array(CustomerSchema).min(1),
   dropRange: z.tuple([z.number().int().positive(), z.number().int().positive()])
     .refine(([a, b]) => a <= b, 'dropRange min must be <= max'),
