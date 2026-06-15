@@ -1,5 +1,5 @@
 import { _decorator, Component, Node, Prefab, instantiate, Color, UITransform,
-         UIOpacity, BlockInputEvents, Sprite, SpriteFrame, tween, Vec3, resources, director, Layers } from 'cc';
+         UIOpacity, BlockInputEvents, Graphics, tween, Vec3, resources, director, Layers } from 'cc';
 import { ensurePopupKit } from './popups/PopupUIHelper';
 const { ccclass } = _decorator;
 
@@ -143,14 +143,15 @@ export class PopupManager {
         mask.parent = parent;
         mask.setSiblingIndex(998);
 
-        const uiTransform = mask.addComponent(UITransform);
-        uiTransform.setContentSize(1440, 2560); // 足够大覆盖屏幕
+        mask.addComponent(UITransform).setContentSize(1600, 2800); // 足够大覆盖任何机型
 
-        // 半透明黑色背景
-        const sprite = mask.addComponent(Sprite);
-        sprite.type = Sprite.Type.SIMPLE;
-        sprite.sizeMode = Sprite.SizeMode.CUSTOM;
-        sprite.color = new Color(0, 0, 0, 255);
+        // 暖棕半透明遮罩（mockup .overlay rgba(74,55,40,.42)）——
+        // alpha 必须烘进 fillColor：抖音端 Graphics + UIOpacity 减淡会渲染成不透明，
+        // UIOpacity 只用来做 0→255 渐显，最终透明度由 fillColor 决定。
+        const g = mask.addComponent(Graphics);
+        g.fillColor = new Color(74, 55, 40, 107);
+        g.rect(-800, -1400, 1600, 2800);
+        g.fill();
 
         // 阻挡输入穿透
         mask.addComponent(BlockInputEvents);
@@ -159,7 +160,7 @@ export class PopupManager {
         opacity.opacity = 0;
 
         // 渐显遮罩
-        tween(opacity).to(0.2, { opacity: 150 }).start();
+        tween(opacity).to(0.2, { opacity: 255 }).start();
 
         return mask;
     }

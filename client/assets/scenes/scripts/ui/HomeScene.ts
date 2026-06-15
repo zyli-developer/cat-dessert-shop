@@ -4,8 +4,10 @@ import { GameState } from '../data/GameState';
 import type { UserProfile } from '../net/ApiTypes';
 import { PopupManager } from './PopupManager';
 import { DouyinSDK } from '../platform/DouyinSDK';
+import { AD_UNIT_IDS } from '../platform/AdConfig';
 import { GlobalFontManager } from './GlobalFontManager';
 import { TOKENS, applyInkOutline } from './DesignTokens';
+import { SafeArea } from '../platform/SafeArea';
 const { ccclass, property } = _decorator;
 
 @ccclass('HomeScene')
@@ -52,10 +54,12 @@ export class HomeScene extends Component {
 
         // 为开始按钮添加文字（场景中只有果冻底图）
         this.addButtonLabel(this.btnStart, '开始营业', 34);
+        this.createBgVeil();
         this.ensureAdCatCoinHint();
         this.ensureGiftBadge();
         this.createHomelandPlaceholder();
         this.setupLevelCard();
+        this.applySafeArea();
 
         const state = GameState.instance;
         this.viewingRound = state.currentRound;
@@ -82,6 +86,45 @@ export class HomeScene extends Component {
             this._ready = true;
             console.log('[HomeScene] Touch events bound, ready=true');
         }, 0.3);
+    }
+
+    /**
+     * 真机安全区适配（对齐 docs/安全区适配说明.md）—— 顶栏 HUD 在场景里被钉死在 y=582，
+     * 离屏顶仅 58px，真机上被抖音胶囊/刘海压住；左上金币芯片(-300) 与右上设置按钮(300)
+     * 还超出水平安全带 [84,636]，长屏会被裁。这里运行时把它们压到胶囊下沿之下并收进安全带。
+     */
+    private applySafeArea(): void {
+        const safe = SafeArea.get();
+        // 顶栏基线：胶囊下沿之下再留出按钮半高(~32)+呼吸(~20)，确保 63px 高的设置按钮整体在胶囊之下、可点击。
+        // 之前只减 36，按钮顶仅离胶囊 4.5px，右上角仍被系统胶囊压住 → 点不到。
+        const topY = (640 - safe.capsuleBottom) - 52;
+
+        const coin = ['CoinIcon', 'ChipBg', 'CatCoinLabel']
+            .map(n => this.findNode(n)).filter((n): n is Node => !!n);
+        const right = ['BtnShare', 'BtnSettings']
+            .map(n => this.findNode(n)).filter((n): n is Node => !!n);
+
+        // 整行下移到胶囊下方
+        for (const n of [...coin, ...right]) n.setPosition(n.position.x, topY, 0);
+
+        // 各组整体收进水平安全带（按组的包围盒平移，保持组内相对布局）
+        this.fitGroupX(coin);
+        this.fitGroupX(right);
+    }
+
+    /** 若一组节点的包围盒超出水平安全带 [±limit]，整体平移使其落回带内（不改组内相对位置）。 */
+    private fitGroupX(nodes: Node[], limit = 276, margin = 6): void {
+        if (!nodes.length) return;
+        let left = Infinity, rightEdge = -Infinity;
+        for (const n of nodes) {
+            const hw = (n.getComponent(UITransform)?.width ?? 0) / 2;
+            left = Math.min(left, n.position.x - hw);
+            rightEdge = Math.max(rightEdge, n.position.x + hw);
+        }
+        let dx = 0;
+        if (left < -(limit - margin)) dx = -(limit - margin) - left;
+        else if (rightEdge > limit - margin) dx = (limit - margin) - rightEdge;
+        if (dx !== 0) for (const n of nodes) n.setPosition(n.position.x + dx, n.position.y, 0);
     }
 
     /** 递归查找节点 */
@@ -163,37 +206,35 @@ export class HomeScene extends Component {
     }
 
     /**
-     * 关卡卡排版（home.html 关卡选择卡）：
-     * 顶部小字「第 N 关 · 共 X 关」(RoundLabel 降为副标题) + 中部大字关卡主题名(LevelName)。
+     * 关卡卡排版（home.html 关卡选择卡）：场景已有 SeasonLabel（大字主题名）+
+     * RoundLabel（顶部小字「第 N 关 · 共 X 关」）+ Stars，位置由场景给定。
+     * 这里只复用 SeasonLabel 作主题名标签，并把 RoundLabel 降为小副标题样式。
      */
     private setupLevelCard(): void {
-        // RoundLabel 降级为顶部小副标题
+        this.levelNameLabel = this.findLabel('SeasonLabel');
         if (this.roundLabel) {
-            this.roundLabel.fontSize = 22;
-            this.roundLabel.lineHeight = 26;
+            this.roundLabel.fontSize = 24;
+            this.roundLabel.lineHeight = 28;
             this.roundLabel.color = TOKENS.inkSoft;
-            this.roundLabel.node.setPosition(0, 48, 0);
             this.roundLabel.enableOutline = false;
         }
+    }
 
-        // 中部大字主题名
-        if (!this.levelNameLabel) {
-            const node = new Node('LevelName');
-            node.layer = Layers.Enum.UI_2D;
-            node.parent = this.roundLabel?.node.parent ?? this.node;
-            node.setPosition(0, 10, 0);
-            node.addComponent(UITransform).setContentSize(500, 56);
-            const l = node.addComponent(Label);
-            l.fontSize = 36;
-            l.lineHeight = 46;
-            l.horizontalAlign = Label.HorizontalAlign.CENTER;
-            l.verticalAlign = Label.VerticalAlign.CENTER;
-            l.color = TOKENS.ink;
-            l.isBold = true;
-            l.cacheMode = Label.CacheMode.BITMAP;
-            this.levelNameLabel = l;
-            GlobalFontManager.applyFont(node);
-        }
+    /**
+     * 背景柔化遮罩（对齐 home.html `stage__veil`）—— 在门面背景上铺一层奶油纸色半透明，
+     * 让前景 logo/卡片/按钮浮起来，避免背景插画过饱和抢戏。
+     */
+    private createBgVeil(): void {
+        if (this.node.getChildByName('BgVeil')) return;
+        const veil = new Node('BgVeil');
+        veil.layer = Layers.Enum.UI_2D;
+        veil.parent = this.node;
+        veil.addComponent(UITransform).setContentSize(720, 1280);
+        const g = veil.addComponent(Graphics);
+        g.fillColor = new Color(255, 247, 236, 120);
+        g.rect(-360, -640, 720, 1280);
+        g.fill();
+        veil.setSiblingIndex(1); // 紧贴 Background(0) 之上、所有前景内容之下
     }
 
     /** 每日礼包入口角标「1」（home.html tool__count）。 */
@@ -311,6 +352,7 @@ export class HomeScene extends Component {
 
     private addButtonLabel(btn: Node | null, text: string, fontSize: number): void {
         if (!btn || !text) return;
+        if (btn.getChildByName('BtnLabel')) return; // 场景已烘焙 BtnLabel → 复用，避免重复
         const labelNode = new Node('BtnLabel');
         labelNode.layer = Layers.Enum.UI_2D;
         labelNode.parent = btn;
@@ -359,11 +401,13 @@ export class HomeScene extends Component {
     }
 
     private onRankClicked(): void {
-        PopupManager.show('RankPopup');
+        // 排行榜是独立整页（Rank.scene），不再用弹窗
+        director.loadScene('Rank');
     }
 
     private onSettingsClicked(): void {
-        PopupManager.show('SettingsPopup');
+        // 设置是独立整页（Settings.scene），不再用弹窗
+        director.loadScene('Settings');
     }
 
     private onGiftClicked(): void {
@@ -371,7 +415,7 @@ export class HomeScene extends Component {
     }
 
     private async onAdCatCoinClicked(): Promise<void> {
-        const success = await DouyinSDK.showRewardedAd('home_catcoin');
+        const success = await DouyinSDK.showRewardedAd(AD_UNIT_IDS.homeCatCoin);
         if (success) {
             const state = GameState.instance;
             if (state.userProfile) {

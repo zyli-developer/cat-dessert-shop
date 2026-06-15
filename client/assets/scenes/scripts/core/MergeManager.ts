@@ -2,7 +2,8 @@ import { _decorator, Component, Node, Prefab, instantiate, Vec3, tween,
          Contact2DType, Collider2D, IPhysics2DContact, PhysicsSystem2D,
          RigidBody2D, ERigidBody2DType, Color, UIOpacity, Layers } from 'cc';
 import { Dessert } from './Dessert';
-import { getDessert, MAX_LEVEL, LV8_MERGE_GOLD, LV8_MERGE_SCORE } from '../data/DessertConfig';
+import { getDessert, getBlocker, isBlocker, MAX_LEVEL, LV8_MERGE_GOLD, LV8_MERGE_SCORE,
+         MIN_BLOCKER_CRACK_TRIGGER, BLOCKER_CRACK_ADJACENCY_MARGIN } from '../data/DessertConfig';
 import { GameState } from '../data/GameState';
 import { AudioManager } from '../utils/AudioManager';
 const { ccclass, property } = _decorator;
@@ -54,6 +55,8 @@ export class MergeManager extends Component {
 
         if (!dessertA || !dessertB) return;
         if (dessertA.isMerging || dessertB.isMerging) return;
+        // 障碍物（焦糊曲奇/冰封蛋糕）不参与任何合成 —— 同档 level 相同也不能合
+        if (isBlocker(dessertA.level) || isBlocker(dessertB.level)) return;
         if (dessertA.level !== dessertB.level) return;
 
         console.log(`[MergeManager] contact: lv${dessertA.level} + lv${dessertB.level}`);
@@ -128,14 +131,21 @@ export class MergeManager extends Component {
             // 合成加分
             GameState.instance.addScore(getDessert(newLevel).score);
 
+            // 大合成震击相邻障碍物：裂纹 → 震碎清除（技巧解法，不耗金币）。
+            // 是否够格震击某档由该档自己的 crackTriggerLevel 决定（高档需要更大合成）。
+            if (newLevel >= MIN_BLOCKER_CRACK_TRIGGER) {
+                this.damageNearbyBlockers(midPos, getDessert(newLevel).radius, newLevel);
+            }
+
             // 连锁反馈
             if (this.chainCount > 1) {
                 this.onChainMerge?.(this.chainCount);
                 this.playChainEffect(this.chainCount);
             }
 
-            // 音效
+            // 音效 + 触感（震动开关在 AudioManager 内判断）
             AudioManager.instance?.playSFX('audio/sfx_merge');
+            AudioManager.instance?.vibrate();
 
             console.log(`[MergeManager] merge complete: lv${level}→lv${newLevel}, hasCallback=${!!this.onMergeComplete}`);
             this.onMergeComplete?.(newLevel, newNode);
@@ -190,6 +200,24 @@ export class MergeManager extends Component {
         node.worldPosition = worldPos;
         node.getComponent(Dessert)?.init(level);
         return node;
+    }
+
+    /**
+     * 一次大合成后，震击落点附近的障碍物。每档只有当本次合成结果 ≥ 该档 crackTriggerLevel
+     * 时才够格震击它（高档需要更大的合成）。范围内每个达标障碍受一次击，碎了按该档加分。
+     */
+    private damageNearbyBlockers(worldPos: Vec3, resultRadius: number, newLevel: number): void {
+        if (!this.containerNode) return;
+        for (const d of this.containerNode.getComponentsInChildren(Dessert)) {
+            const blocker = getBlocker(d.level);
+            if (!blocker || !d.node?.isValid) continue;
+            if (newLevel < blocker.crackTriggerLevel) continue; // 合成不够大，敲不动这一档
+            const threshold = blocker.radius + resultRadius + BLOCKER_CRACK_ADJACENCY_MARGIN;
+            if (Vec3.distance(worldPos, d.node.worldPosition) > threshold) continue;
+            if (d.takeBlockerHit()) {
+                GameState.instance.addScore(blocker.shatterScore);
+            }
+        }
     }
 
     getAllDesserts(): Dessert[] {

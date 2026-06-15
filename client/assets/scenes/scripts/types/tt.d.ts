@@ -35,6 +35,25 @@ declare namespace tt {
     pixelRatio: number;
     SDKVersion: string;
     appName: string;
+    /** 安全区域（逻辑 px，相对屏幕左上角）。刘海 / 灵动岛 / Home 指示条之外的可用区。 */
+    safeArea?: {
+      top: number;
+      bottom: number;
+      left: number;
+      right: number;
+      width: number;
+      height: number;
+    };
+  };
+
+  /** 抖音右上角系统胶囊菜单的矩形（逻辑 px，相对屏幕左上角）。 */
+  function getMenuButtonBoundingClientRect(): {
+    top: number;
+    right: number;
+    bottom: number;
+    left: number;
+    width: number;
+    height: number;
   };
 
   // --- 生命周期 ---

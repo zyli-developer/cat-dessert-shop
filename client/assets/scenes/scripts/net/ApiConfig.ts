@@ -11,7 +11,8 @@
  *
  * 修改后需重新构建小游戏并导入开发者工具。
  */
-// 真机调试用 cloudflared 临时隧道(HTTPS),指向本机 localhost:3333。
-// ⚠️ 这是 trycloudflare 临时地址,每次重启 cloudflared 都会变,变了要回来改这里并重新构建。
-// 本机/浏览器预览仍可临时改回 http://192.168.3.8:3333。
-export const API_BASE_URL = 'https://privileges-queens-manually-erik.trycloudflare.com';
+// ⚠ 不要手改这一行——用脚本一键切换（写完后仍需 Cocos 重新构建）：
+//   真机预览/调试: node scripts/set_api_base.mjs --tunnel   （cloudflared HTTPS 隧道→localhost:3333；真机禁明文 HTTP，局域网 IP 无效）
+//   浏览器/模拟器: node scripts/set_api_base.mjs --lan      （自动探测本机 IPv4）
+//   正式上线:     node scripts/set_api_base.mjs --url <https 域名>
+export const API_BASE_URL = 'https://plymouth-starring-eve-paintball.trycloudflare.com';

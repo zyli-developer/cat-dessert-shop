@@ -1,4 +1,5 @@
 import { sys } from 'cc';
+import { MOCK_REWARDED_ADS } from './AdConfig';
 
 /**
  * 解析抖音宿主提供的 tt 对象。
@@ -361,22 +362,48 @@ export class DouyinSDK {
             }
             const ttApi = resolveTT();
 
+            // 测试期模拟广告（见 AdConfig.MOCK_REWARDED_ADS 注释；上线前必须关闭）
+            if (MOCK_REWARDED_ADS) {
+                console.warn(`[DouyinSDK] ⚠ MOCK_REWARDED_ADS=true，模拟激励视频 "${adId}"（上线前在 AdConfig.ts 改回 false）`);
+                if (typeof ttApi?.showModal === 'function') {
+                    ttApi.showModal({
+                        title: '模拟广告（测试）',
+                        content: `广告位: ${adId}\n「确定」= 看完发奖\n「取消」= 中途关闭`,
+                        success: (res: any) => resolve(!!res?.confirm),
+                        fail: () => resolve(true),
+                    });
+                } else {
+                    resolve(true);
+                }
+                return;
+            }
+
             let ad = this.adInstances.get(adId);
             if (!ad) {
                 ad = ttApi.createRewardedVideoAd({ adUnitId: adId });
+                // 真机排查唯一线索：广告位 ID 无效、无填充（errCode 1004）等都只从这里报出来
+                ad.onError((err: any) => {
+                    console.warn(`[DouyinSDK] rewarded ad "${adId}" onError: errCode=${err?.errCode}, ${err?.errMsg ?? err}`);
+                });
                 this.adInstances.set(adId, ad);
             }
 
             const onClose = (res: any) => {
                 ad.offClose(onClose);
+                console.log(`[DouyinSDK] rewarded ad "${adId}" closed, isEnded=${res?.isEnded}`);
                 resolve(res?.isEnded ?? false);
             };
 
             ad.onClose(onClose);
-            ad.show().catch(() => {
+            ad.show().catch((err: any) => {
+                console.warn(`[DouyinSDK] rewarded ad "${adId}" show() fail, retrying via load():`, err?.errMsg ?? err);
                 ad.load()
                     .then(() => ad.show())
-                    .catch(() => resolve(false));
+                    .catch((err2: any) => {
+                        console.warn(`[DouyinSDK] rewarded ad "${adId}" load/show retry fail:`, err2?.errMsg ?? err2);
+                        ad.offClose(onClose);
+                        resolve(false);
+                    });
             });
         });
     }

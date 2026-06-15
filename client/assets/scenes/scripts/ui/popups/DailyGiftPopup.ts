@@ -4,6 +4,7 @@ import {
 import { PopupManager } from '../PopupManager';
 import { GameState } from '../../data/GameState';
 import { DouyinSDK } from '../../platform/DouyinSDK';
+import { AD_UNIT_IDS } from '../../platform/AdConfig';
 import { TOKENS } from '../DesignTokens';
 import { drawRoundedRect, makeButton, makeLabel, POPUP_COLORS } from './PopupUIHelper';
 import { GlobalFontManager } from '../GlobalFontManager';
@@ -85,7 +86,7 @@ export class DailyGiftPopup extends Component {
 
     private async onDouble(): Promise<void> {
         if (this.claimedToday) return;
-        const ok = await DouyinSDK.showRewardedAd('home_daily_gift');
+        const ok = await DouyinSDK.showRewardedAd(AD_UNIT_IDS.dailyGift);
         if (ok) this.grant(DOUBLED_REWARD);
     }
 

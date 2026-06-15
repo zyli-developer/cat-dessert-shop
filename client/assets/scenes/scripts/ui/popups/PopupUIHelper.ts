@@ -68,6 +68,11 @@ function variantFor(c: Color): JellyVariantName {
     return 'primary';
 }
 
+/** 千分位格式化（win.html 数字展示样式：5120 → 5,120）。 */
+export function formatNumber(n: number): string {
+    return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
 /** 在节点上画圆角矩形背景 */
 export function drawRoundedRect(
     node: Node, w: number, h: number,
@@ -96,48 +101,51 @@ export function drawRoundedRect(
  */
 function buildJelly(btn: Node, text: string, variant: JellyVariantName, w: number, h: number): void {
     const v = JELLY_VARIANTS[variant];
-    const radius = h / 2;
+    // 圆角矩形（非整圆胶囊）—— UI 设计中按钮多为长方形带柔圆角，固定 ~28（呼应 --r-lg），
+    // 小按钮回落到 h/2 以免溢出。
+    const radius = Math.min(28, h / 2);
 
     let ut = btn.getComponent(UITransform);
     if (!ut) ut = btn.addComponent(UITransform);
     ut.setContentSize(w, h);
 
-    const frame = JELLY_FRAMES[variant];
+    // 全部用 Graphics 绘制（厚底 + 面 + 顶高光）。
+    // 不用烘焙好的九宫格贴图：贴图固定 320×200、左右各 92px 圆角，窄/矮按钮会被撑大、
+    // 圆角半径也不随尺寸缩放；Graphics 的 radius=h/2 与设计稿 CSS `border-radius:999px`
+    // 行为一致，任意尺寸 / 任意数量按钮都能正确铺排。
     const face = new Node('Face');
     face.layer = Layers.Enum.UI_2D;
     face.parent = btn;
     face.setPosition(0, 0, 0);
     face.addComponent(UITransform).setContentSize(w, h);
 
-    if (frame) {
-        // 烘焙贴图：单层九宫格已含渐变面 + 顶高光 + 厚底，无需 Shadow/TopHi
-        const sp = face.addComponent(Sprite);
-        sp.spriteFrame = frame;
-        sp.type = Sprite.Type.SLICED;
-        sp.sizeMode = Sprite.SizeMode.CUSTOM;
+    // 厚底（下沉 8px 露出果冻底色）
+    const shadow = new Node('Shadow');
+    shadow.layer = Layers.Enum.UI_2D;
+    shadow.parent = btn;
+    shadow.setPosition(0, -8, 0);
+    shadow.setSiblingIndex(0);
+    shadow.addComponent(UITransform).setContentSize(w, h);
+    drawRoundedRect(shadow, w, h, v.shadow, undefined, 0, radius);
+
+    // 面（幽灵按钮带砂色柔描边，呼应 CSS inset 0 0 0 2px line-2）
+    if (variant === 'ghost') {
+        drawRoundedRect(face, w, h, v.face, TOKENS.line2, 2, radius);
     } else {
-        // 回退：Graphics 平涂（厚底 + 面 + 顶高光）
-        const shadow = new Node('Shadow');
-        shadow.layer = Layers.Enum.UI_2D;
-        shadow.parent = btn;
-        shadow.setPosition(0, -8, 0);
-        shadow.setSiblingIndex(0);
-        shadow.addComponent(UITransform).setContentSize(w, h);
-        drawRoundedRect(shadow, w, h, v.shadow, undefined, 0, radius);
-
         drawRoundedRect(face, w, h, v.face, undefined, 0, radius);
-
-        const hiH = Math.max(6, h * 0.42);
-        const hi = new Node('TopHi');
-        hi.layer = Layers.Enum.UI_2D;
-        hi.parent = face;
-        hi.addComponent(UITransform).setContentSize(w - 12, hiH);
-        hi.setPosition(0, h / 2 - hiH / 2 - 4, 0);
-        const hiColor = new Color(v.faceHi.r, v.faceHi.g, v.faceHi.b, 150);
-        drawRoundedRect(hi, w - 12, hiH, hiColor, undefined, 0, hiH / 2);
     }
 
-    // Label —— 文字（渲染在最上层）
+    // 顶部高光条
+    const hiH = Math.max(6, h * 0.40);
+    const hi = new Node('TopHi');
+    hi.layer = Layers.Enum.UI_2D;
+    hi.parent = face;
+    hi.addComponent(UITransform).setContentSize(w - 16, hiH);
+    hi.setPosition(0, h / 2 - hiH / 2 - 5, 0);
+    const hiColor = new Color(v.faceHi.r, v.faceHi.g, v.faceHi.b, 150);
+    drawRoundedRect(hi, w - 16, hiH, hiColor, undefined, 0, hiH / 2);
+
+    // Label —— 文字（渲染在最上层）；字号随按钮高度走，贴近设计稿的粗体大字
     const labelNode = new Node('BtnLabel');
     labelNode.layer = Layers.Enum.UI_2D;
     labelNode.parent = face;
@@ -145,7 +153,7 @@ function buildJelly(btn: Node, text: string, variant: JellyVariantName, w: numbe
 
     const label = labelNode.addComponent(Label);
     label.string = text;
-    label.fontSize = 28;
+    label.fontSize = Math.max(26, Math.min(34, Math.round(h * 0.33)));
     label.lineHeight = h;
     label.horizontalAlign = Label.HorizontalAlign.CENTER;
     label.verticalAlign = Label.VerticalAlign.CENTER;

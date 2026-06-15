@@ -241,6 +241,18 @@ export class ApiClient {
     return request<UserProfile>('/api/user/profile');
   }
 
+  /** 上报抖音昵称/头像（登录授权后调用）。服务端对空值不覆盖。 */
+  static updateProfile(info: { nickname?: string; avatar?: string }): Promise<{ openId: string; nickname: string; avatar: string }> {
+    if (this.isOfflineMode()) {
+      return Promise.resolve({
+        openId: this.OFFLINE_OPEN_ID,
+        nickname: info.nickname ?? '离线玩家',
+        avatar: info.avatar ?? '',
+      });
+    }
+    return request('/api/user/profile', 'POST', info);
+  }
+
   static updateProgress(round: number, score: number, stars: number, catCoinsEarned?: number): Promise<any> {
     if (this.isOfflineMode()) {
       return Promise.resolve({
