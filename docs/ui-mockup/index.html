@@ -43,7 +43,7 @@
   .notch{ position:absolute; top:9px; left:50%; transform:translateX(-50%); width:120px; height:24px;
     background:#3A2D22; border-radius:0 0 18px 18px; z-index:3; }
   .screen{ position:relative; width:282px; height:500px; border-radius:42px; overflow:hidden; background:#FFF7EC; }
-  .screen iframe{ width:750px; height:1334px; border:0; transform:scale(.376); transform-origin:top left; pointer-events:none; }
+  .screen iframe{ width:720px; height:1280px; border:0; transform:scale(.39); transform-origin:top left; pointer-events:none; }
   .open{ position:absolute; inset:0; z-index:4; display:grid; place-items:end center; padding-bottom:16px;
     opacity:0; transition:opacity .18s; text-decoration:none; }
   .device:hover .open{ opacity:1; }
@@ -60,7 +60,7 @@
   <div class="head">
     <div class="kicker">Redesign · 治愈手绘烘焙风</div>
     <h1>猫咪甜品店 · UI 改版稿</h1>
-    <p class="sub">复用现有插画（背景 / 猫咪 / 甜点 / Logo），统一 UI 外壳 · 750×1334 竖屏 · 点任意屏看大图</p>
+    <p class="sub">复用现有插画（背景 / 猫咪 / 甜点 / Logo），统一 UI 外壳 · <b>720×1280 竖屏（与 Cocos 工程一致）</b> · 点任意屏看大图，单独打开可切「真机裁切 / 全画布安全区」预览</p>
   </div>
 
   <!-- 设计系统 -->
@@ -163,15 +163,82 @@
     <span style="font-size:40px">🐱</span>
     <span style="flex:1">
       <span style="display:block;font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:30px;color:#5A4636">猫咪顾客品种目录 · 30 种 ↗</span>
-      <span style="display:block;font-size:20px;color:#8A7259;margin-top:4px">全球最受欢迎 30 品种规划 · 标注已有 3 / 待生成 27 · 90 条生成 prompt 见 <code>cat-asset-prompts.md</code></span>
+      <span style="display:block;font-size:20px;color:#8A7259;margin-top:4px">全球最受欢迎 30 品种规划 · 已有 10 / 待生成 20 · 90 条生成 prompt 见下方文档区</span>
     </span>
     <span style="font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:24px;color:#D9596F">打开 →</span>
   </a>
 
+  <!-- 文档区 · 所有 .md 都在此有入口 -->
+  <h2 style="font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:30px;color:#5A4636;
+     margin:46px 0 18px;text-align:center">📄 文档 · Docs</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:16px">
+
+    <a href="../使用说明.md" target="_blank" style="display:flex;align-items:center;gap:16px;padding:22px 26px;
+       border-radius:22px;text-decoration:none;background:linear-gradient(135deg,#FFFDF8,#E2F6EC);
+       box-shadow:inset 0 0 0 3px #fff,0 0 0 3px #DCC197,0 10px 24px rgba(120,80,40,.14)">
+      <span style="font-size:34px">📖</span>
+      <span style="flex:1">
+        <span style="display:block;font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:22px;color:#5A4636">使用说明 ↗</span>
+        <span style="display:block;font-size:15px;color:#8A7259;margin-top:3px">总纲入口 · 真机尺寸 / 安全区 / 字体三件事怎么用怎么守</span>
+      </span>
+    </a>
+
+    <a href="README.md" target="_blank" style="display:flex;align-items:center;gap:16px;padding:22px 26px;
+       border-radius:22px;text-decoration:none;background:linear-gradient(135deg,#FFFDF8,#FFF1D9);
+       box-shadow:inset 0 0 0 3px #fff,0 0 0 3px #DCC197,0 10px 24px rgba(120,80,40,.14)">
+      <span style="font-size:34px">📋</span>
+      <span style="flex:1">
+        <span style="display:block;font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:22px;color:#5A4636">README ↗</span>
+        <span style="display:block;font-size:15px;color:#8A7259;margin-top:3px">改版稿说明 · 720×1280 画布 / 安全带 [84,636] / token 速查</span>
+      </span>
+    </a>
+
+    <a href="prefab-spec.md" target="_blank" style="display:flex;align-items:center;gap:16px;padding:22px 26px;
+       border-radius:22px;text-decoration:none;background:linear-gradient(135deg,#FFFDF8,#FFE6EB);
+       box-shadow:inset 0 0 0 3px #fff,0 0 0 3px #DCC197,0 10px 24px rgba(120,80,40,.14)">
+      <span style="font-size:34px">📐</span>
+      <span style="flex:1">
+        <span style="display:block;font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:22px;color:#5A4636">Prefab 规格 (Markdown) ↗</span>
+        <span style="display:block;font-size:15px;color:#8A7259;margin-top:3px">控件尺寸/分层/数值表的文本版 · 可视版见上方 <code>prefab-spec.html</code></span>
+      </span>
+    </a>
+
+    <a href="cat-asset-prompts.md" target="_blank" style="display:flex;align-items:center;gap:16px;padding:22px 26px;
+       border-radius:22px;text-decoration:none;background:linear-gradient(135deg,#FFFDF8,#FFE6EB);
+       box-shadow:inset 0 0 0 3px #fff,0 0 0 3px #DCC197,0 10px 24px rgba(120,80,40,.14)">
+      <span style="font-size:34px">🐾</span>
+      <span style="flex:1">
+        <span style="display:block;font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:22px;color:#5A4636">猫咪生成 Prompt · 90 条 ↗</span>
+        <span style="display:block;font-size:15px;color:#8A7259;margin-top:3px">30 品种 × 3 表情 · 沿用 Style Base · 配 <code>cat-asset-prompts-batch1.md</code></span>
+      </span>
+    </a>
+
+    <a href="cat-asset-prompts-batch1.md" target="_blank" style="display:flex;align-items:center;gap:16px;padding:22px 26px;
+       border-radius:22px;text-decoration:none;background:linear-gradient(135deg,#FFFDF8,#E2F6EC);
+       box-shadow:inset 0 0 0 3px #fff,0 0 0 3px #DCC197,0 10px 24px rgba(120,80,40,.14)">
+      <span style="font-size:34px">🗂️</span>
+      <span style="flex:1">
+        <span style="display:block;font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:22px;color:#5A4636">猫咪 Prompt · 批次 1 ↗</span>
+        <span style="display:block;font-size:15px;color:#8A7259;margin-top:3px">首批已出图品种的生成记录与参数</span>
+      </span>
+    </a>
+
+    <a href="blocker-dessert-spec.md" target="_blank" style="display:flex;align-items:center;gap:16px;padding:22px 26px;
+       border-radius:22px;text-decoration:none;background:linear-gradient(135deg,#FFFDF8,#F3E3D3);
+       box-shadow:inset 0 0 0 3px #fff,0 0 0 3px #DCC197,0 10px 24px rgba(120,80,40,.14)">
+      <span style="font-size:34px">🍪</span>
+      <span style="flex:1">
+        <span style="display:block;font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:22px;color:#5A4636">焦糊曲奇规格书 ↗</span>
+        <span style="display:block;font-size:15px;color:#8A7259;margin-top:3px">占位甜品（blocker）美术规格 · 自包含可直接给美术 / AI 生图 · 含提示词与验收清单</span>
+      </span>
+    </a>
+
+  </div>
+
   <div class="foot">
-    高保真改版稿 · 所有插画来自你现有工程（<code>dessert_lv1–8</code> / 三只猫三态 / 门脸·厨房背景 / Logo）<br>
-    ③ 落 Cocos 已就绪：图标切图见 <code>icons-export/</code>，控件规格见 <code>prefab-spec.html / .md</code>，色值/几何见 <code>cocos-mapping.md</code><br>
-    待办（你拍板后做）：① 仍冲突的扁平图标 <code>buttons-sheet</code> 整体替换 ② 清理重复目录 <code>lv1–8_*</code> 旧贴纸
+    高保真改版稿 · 所有插画来自你现有工程（<code>dessert_lv1–8</code> / 猫咪 10 品种三态 / 门脸·厨房背景 / Logo）<br>
+    ③ 落 Cocos 已就绪：图标切图见 <code>icons-export/</code>，控件规格见 <code>prefab-spec.html / .md</code>，安全区改法见 Cocos 工程 <code>docs/安全区适配说明.md</code><br>
+    清理已完成：① 扁平图标 <code>buttons-sheet</code> 已移除 ② 重复目录 <code>lv1–8_*</code> 旧贴纸已清理
   </div>
 </div>
 </body>
