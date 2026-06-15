@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User } from './schemas/user.schema';
 import { ProgressDto } from './dto/progress.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 
 const CAT_COIN_REWARDS: Record<number, number> = { 1: 5, 2: 10, 3: 20 };
 
@@ -12,6 +13,26 @@ export class UserService {
 
   async getProfile(openId: string): Promise<User | null> {
     return this.userModel.findOne({ openId });
+  }
+
+  /** 更新抖音昵称/头像（登录后客户端经 tt.getUserInfo 授权获取并上报）。空值不覆盖已有数据。 */
+  async updateInfo(openId: string, dto: UpdateProfileDto) {
+    const user = await this.userModel.findOne({ openId });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const nickname = dto.nickname?.trim();
+    const avatar = dto.avatar?.trim();
+    if (nickname) user.nickname = nickname;
+    if (avatar) user.avatar = avatar;
+    await user.save();
+
+    return {
+      openId: user.openId,
+      nickname: user.nickname,
+      avatar: user.avatar,
+    };
   }
 
   async updateProgress(openId: string, dto: ProgressDto) {

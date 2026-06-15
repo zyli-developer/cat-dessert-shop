@@ -52,6 +52,42 @@ describe('UserService', () => {
     });
   });
 
+  describe('updateInfo', () => {
+    it('should write nickname and avatar', async () => {
+      const mockUser = createMockUser({ nickname: '', avatar: '' });
+      mockUserModel.findOne.mockResolvedValue(mockUser);
+
+      const result = await service.updateInfo('abc', {
+        nickname: '  喵喵  ',
+        avatar: 'https://p3.douyinpic.com/a.jpg',
+      });
+
+      expect(mockUser.save).toHaveBeenCalled();
+      expect(result).toEqual({
+        openId: 'abc',
+        nickname: '喵喵',
+        avatar: 'https://p3.douyinpic.com/a.jpg',
+      });
+    });
+
+    it('should not overwrite existing values with empty/whitespace input', async () => {
+      const mockUser = createMockUser({ nickname: '旧名', avatar: 'old.jpg' });
+      mockUserModel.findOne.mockResolvedValue(mockUser);
+
+      const result = await service.updateInfo('abc', { nickname: '   ', avatar: '' });
+
+      expect(result.nickname).toBe('旧名');
+      expect(result.avatar).toBe('old.jpg');
+    });
+
+    it('should throw NotFoundException for unknown user', async () => {
+      mockUserModel.findOne.mockResolvedValue(null);
+      await expect(service.updateInfo('nope', { nickname: 'x' })).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+  });
+
   describe('updateProgress', () => {
     it('should update progress and award cat coins for new stars', async () => {
       const mockUser = createMockUser();
