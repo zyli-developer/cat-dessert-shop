@@ -3,6 +3,7 @@ import { _decorator, Component, Label, Node, Sprite, SpriteFrame, UITransform,
 import { ApiClient } from '../net/ApiClient';
 import { GameState } from '../data/GameState';
 import { LevelData } from '../data/GameTypes';
+import { buildLevels } from '../data/LevelGenerator';
 import { DouyinSDK } from '../platform/DouyinSDK';
 import { GlobalFontManager } from './GlobalFontManager';
 import { TOKENS, applyInkOutline } from './DesignTokens';
@@ -444,7 +445,9 @@ export class LoadingScene extends Component {
         return new Promise((resolve, reject) => {
             resources.load('configs/levels', JsonAsset, (err, asset) => {
                 if (err) { reject(err); return; }
-                GameState.instance.allLevels = (asset as JsonAsset).json as LevelData[];
+                const curated = (asset as JsonAsset).json as LevelData[];
+                // 手工关之后由生成器按公式补足到 TOTAL_ROUNDS 关（近乎无限关卡）
+                GameState.instance.allLevels = buildLevels(curated);
                 resolve();
             });
         });

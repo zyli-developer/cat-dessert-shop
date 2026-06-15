@@ -55,10 +55,14 @@ export class WinPopup extends Component {
 
         // 顺序对齐 win.html：三星(上) → 标题 → 副标题
         this.buildStars(344);
-        makeLabel(this.node, '营业成功！', 272, 58, TITLE_PINK);
+        // 通关最终关：给战役一个明确的庆祝终点（区别于普通关的「营业成功！」）
+        const title = this.data.isLastRound ? '甜品店圆满营业！' : '营业成功！';
+        makeLabel(this.node, title, 272, 58, TITLE_PINK);
         const count = this.data.customerCount ?? 0;
-        makeLabel(this.node, count > 0 ? `${count} 位猫客都满意啦~` : '猫客都满意啦~',
-            218, 27, POPUP_COLORS.textDim);
+        const subtitle = this.data.isLastRound
+            ? `恭喜通关全部 ${this.data.round} 关，了不起的甜品大师~`
+            : count > 0 ? `${count} 位猫客都满意啦~` : '猫客都满意啦~';
+        makeLabel(this.node, subtitle, 218, 27, POPUP_COLORS.textDim);
 
         // 本关得分 + 猫币奖励（左右两块）
         this.buildScoreRow(130);
