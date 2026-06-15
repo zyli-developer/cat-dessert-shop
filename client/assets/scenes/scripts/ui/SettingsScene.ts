@@ -8,6 +8,7 @@ import { TOKENS } from './DesignTokens';
 import { drawRoundedRect, makeLabel, POPUP_COLORS } from './popups/PopupUIHelper';
 import { GlobalFontManager } from './GlobalFontManager';
 import { SafeArea } from '../platform/SafeArea';
+import { showPrivacyPolicy } from './PrivacyPolicy';
 const { ccclass } = _decorator;
 
 const PANEL_W = 560;     // 面板宽（落在水平安全带 ±280 内）
@@ -54,19 +55,18 @@ export class SettingsScene extends Component {
             () => AudioManager.instance.isVibrationEnabled(),
             (on) => AudioManager.instance.setVibrationEnabled(on));
 
-        // 帮助与反馈
+        // 帮助与反馈（客服对纯广告变现游戏非必接，且 navigateToScene 仅支持 sidebar，
+        // 故先隐藏「联系客服」，面板重排为两行）
         const sec2Y = sec1Y - 28 - 232 - 44;
         this.buildSection('帮助与反馈', sec2Y);
-        const p2 = this.buildPanel(sec2Y - 28 - 116, 232);
-        this.buildLinkRow(p2, 74, 'icon_chat', '联系客服', '问题反馈与游戏帮助',
-            () => void DouyinSDK.navigateToScene('customerService'));
-        this.buildLinkRow(p2, 0, 'icon_star', '给个好评', '喜欢的话鼓励一下~',
+        const p2 = this.buildPanel(sec2Y - 28 - 79, 158);
+        this.buildLinkRow(p2, 37, 'icon_star', '给个好评', '喜欢的话鼓励一下~',
             () => void DouyinSDK.navigateToScene('feedback'), TOKENS.star);
-        this.buildLinkRow(p2, -74, 'icon_info', '隐私政策', '数据使用与权限说明',
-            () => console.log('[Settings] 隐私政策'));
+        this.buildLinkRow(p2, -37, 'icon_info', '隐私政策', '数据使用与权限说明',
+            () => showPrivacyPolicy(this.node));
 
         // 版本号（固定在底部，避让 Home 指示条）
-        const ver = makeLabel(this.node, '猫咪甜品店 · v1.0.0', -(640 - 60 - safe.bottom), 24, POPUP_COLORS.textDim);
+        const ver = makeLabel(this.node, '一起开猫店 · v1.0.0', -(640 - 60 - safe.bottom), 24, POPUP_COLORS.textDim);
         ver.node.getComponent(UITransform)?.setContentSize(400, 32);
     }
 

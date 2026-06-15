@@ -167,13 +167,13 @@ export class RankPopup extends Component {
 
         const friends = this.board === 'friends';
         makeLabel(box, friends ? '本周还没有好友上榜' : '暂时无法加载榜单', -10, 32, POPUP_COLORS.textLight);
-        makeLabel(box, friends ? '邀请好友一起开甜品店，比比谁的猫客更多~' : '网络开小差，请稍后再试',
+        makeLabel(box, friends ? '邀请好友一起开猫店，比比谁的猫客更多~' : '网络开小差，请稍后再试',
             -64, 24, POPUP_COLORS.textDim);
 
         if (friends) {
             const invite = makeJellyButton(box, '邀请好友', -160, 'primary', 320, 84);
             invite.on(Node.EventType.TOUCH_END, () => {
-                void DouyinSDK.share('一起来猫咪甜品店开店吧，比比谁的猫客更多！', '', 'from=rank_invite');
+                void DouyinSDK.share('一起来开猫店吧，比比谁的猫客更多！', '', 'from=rank_invite');
             }, this);
         }
     }

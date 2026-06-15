@@ -1,4 +1,4 @@
-# 猫咪甜品店（cat-shop）家园功能 — 文档包总览（README）
+# 一起开猫店（cat-shop）家园功能 — 文档包总览（README）
 
 > 本文档包是 cat-shop 项目"家园功能"从设计讨论到落地规划的完整产出。
 > 项目：抖音小游戏，Cocos Creator + TypeScript，工程路径 `D:\workspace\tiktok\mini-game\client`。

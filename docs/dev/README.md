@@ -1,4 +1,4 @@
-# 猫咪甜品店 — 开发计划
+# 一起开猫店 — 开发计划
 
 > 需求文档：[docs/plans/README.md](../plans/README.md)
 > 日期：2026-04-03

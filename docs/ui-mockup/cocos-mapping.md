@@ -1,4 +1,4 @@
-# Cocos 落地对照表 — 猫咪甜品店 UI 改版稿
+# Cocos 落地对照表 — 一起开猫店 UI 改版稿
 
 > 把 `docs/ui-mockup/` 里的 HTML 高保真设计稿，翻译成 Cocos Creator 3.x 里能照着调的**数值规范**。
 > HTML/CSS **不能**直接导入 Cocos——本表是给你 / 程序在编辑器里调 `Sprite` / `Label` / `Layout` / `prefab` 时的对齐依据。

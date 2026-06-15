@@ -56,7 +56,7 @@ export class WinPopup extends Component {
         // 顺序对齐 win.html：三星(上) → 标题 → 副标题
         this.buildStars(344);
         // 通关最终关：给战役一个明确的庆祝终点（区别于普通关的「营业成功！」）
-        const title = this.data.isLastRound ? '甜品店圆满营业！' : '营业成功！';
+        const title = this.data.isLastRound ? '猫店圆满营业！' : '营业成功！';
         makeLabel(this.node, title, 272, 58, TITLE_PINK);
         const count = this.data.customerCount ?? 0;
         const subtitle = this.data.isLastRound
@@ -339,7 +339,7 @@ export class WinPopup extends Component {
     private async onShareClicked(): Promise<void> {
         const { round, stars } = this.data;
         await DouyinSDK.share(
-            `我在猫咪甜品店第 ${round} 关获得了 ${'⭐'.repeat(stars)}，快来挑战！`,
+            `我在「一起开猫店」第 ${round} 关获得了 ${'⭐'.repeat(stars)}，快来挑战！`,
             '',
             `round=${round}&stars=${stars}`,
         );

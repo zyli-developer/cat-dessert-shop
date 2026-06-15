@@ -488,7 +488,7 @@
       "b": 124,
       "a": 255
     },
-    "_string": "猫咪甜品店",
+    "_string": "一起开猫店",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
     "_actualFontSize": 77,
@@ -2336,7 +2336,7 @@
       "b": 128,
       "a": 255
     },
-    "_string": "猫咪甜品店 · v1.0.0",
+    "_string": "一起开猫店 · v1.0.0",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
     "_actualFontSize": 23,

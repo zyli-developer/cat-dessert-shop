@@ -1,4 +1,4 @@
-# 猫咪甜品店 / Cat Bakery
+# 一起开猫店 / Cat Bakery
 
 抖音小游戏 — 合成类玩法（拖放/合并甜品以满足顾客订单）。全栈项目：Cocos Creator 客户端 + NestJS / MongoDB 服务端。
 

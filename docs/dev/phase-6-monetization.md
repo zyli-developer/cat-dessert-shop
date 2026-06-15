@@ -59,7 +59,7 @@
 **内容**：
 - 通关结算页"分享"按钮
 - 调用 `tt.shareAppMessage`：
-  - title："我在猫咪甜品店第 N 关获得了 ⭐⭐⭐，快来挑战！"
+  - title："我在一起开猫店第 N 关获得了 ⭐⭐⭐，快来挑战！"
   - imageUrl：游戏截图或预设分享图
   - query：`round=N&score=XXX`（用于追踪来源）
 - Dev 环境 fallback：console.log 分享内容
