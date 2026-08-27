@@ -8,7 +8,10 @@ client/local/
 client/temp/
 client/build/
 client/profiles/
+# Cocos asset metadata stores stable UUIDs and must be versioned with source assets.
 *.meta
+!client/assets/*.meta
+!client/assets/**/*.meta
 
 # IDE
 .idea/

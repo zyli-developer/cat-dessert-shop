@@ -1,0 +1,134 @@
+{
+  "ver": "1.0.27",
+  "importer": "image",
+  "imported": true,
+  "uuid": "05afdf45-a317-4948-895a-5b27387a20c7",
+  "files": [
+    ".json",
+    ".png"
+  ],
+  "subMetas": {
+    "6c48a": {
+      "importer": "texture",
+      "uuid": "05afdf45-a317-4948-895a-5b27387a20c7@6c48a",
+      "displayName": "dessert_lv8_cream_cake",
+      "id": "6c48a",
+      "name": "texture",
+      "userData": {
+        "wrapModeS": "clamp-to-edge",
+        "wrapModeT": "clamp-to-edge",
+        "imageUuidOrDatabaseUri": "05afdf45-a317-4948-895a-5b27387a20c7",
+        "isUuid": true,
+        "visible": false,
+        "minfilter": "linear",
+        "magfilter": "linear",
+        "mipfilter": "none",
+        "anisotropy": 0
+      },
+      "ver": "1.0.22",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "f9941": {
+      "importer": "sprite-frame",
+      "uuid": "05afdf45-a317-4948-895a-5b27387a20c7@f9941",
+      "displayName": "dessert_lv8_cream_cake",
+      "id": "f9941",
+      "name": "spriteFrame",
+      "userData": {
+        "trimThreshold": 1,
+        "rotated": false,
+        "offsetX": -0.5,
+        "offsetY": 0.5,
+        "trimX": 15,
+        "trimY": 11,
+        "width": 157,
+        "height": 165,
+        "rawWidth": 188,
+        "rawHeight": 188,
+        "borderTop": 0,
+        "borderBottom": 0,
+        "borderLeft": 0,
+        "borderRight": 0,
+        "packable": true,
+        "pixelsToUnit": 100,
+        "pivotX": 0.5,
+        "pivotY": 0.5,
+        "meshType": 0,
+        "vertices": {
+          "rawPosition": [
+            -78.5,
+            -82.5,
+            0,
+            78.5,
+            -82.5,
+            0,
+            -78.5,
+            82.5,
+            0,
+            78.5,
+            82.5,
+            0
+          ],
+          "indexes": [
+            0,
+            1,
+            2,
+            2,
+            1,
+            3
+          ],
+          "uv": [
+            15,
+            177,
+            172,
+            177,
+            15,
+            12,
+            172,
+            12
+          ],
+          "nuv": [
+            0.0797872340425532,
+            0.06382978723404255,
+            0.9148936170212766,
+            0.06382978723404255,
+            0.0797872340425532,
+            0.9414893617021277,
+            0.9148936170212766,
+            0.9414893617021277
+          ],
+          "minPos": [
+            -78.5,
+            -82.5,
+            0
+          ],
+          "maxPos": [
+            78.5,
+            82.5,
+            0
+          ]
+        },
+        "isUuid": true,
+        "imageUuidOrDatabaseUri": "05afdf45-a317-4948-895a-5b27387a20c7@6c48a",
+        "atlasUuid": "",
+        "trimType": "auto"
+      },
+      "ver": "1.0.12",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    }
+  },
+  "userData": {
+    "type": "sprite-frame",
+    "fixAlphaTransparencyArtifacts": false,
+    "hasAlpha": true,
+    "redirect": "05afdf45-a317-4948-895a-5b27387a20c7@6c48a"
+  }
+}

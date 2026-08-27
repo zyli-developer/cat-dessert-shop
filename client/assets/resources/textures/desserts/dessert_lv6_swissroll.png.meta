@@ -1,0 +1,134 @@
+{
+  "ver": "1.0.27",
+  "importer": "image",
+  "imported": true,
+  "uuid": "8f6cc3f3-106b-46a6-95ec-669ddcb19bbd",
+  "files": [
+    ".json",
+    ".png"
+  ],
+  "subMetas": {
+    "6c48a": {
+      "importer": "texture",
+      "uuid": "8f6cc3f3-106b-46a6-95ec-669ddcb19bbd@6c48a",
+      "displayName": "dessert_lv6_swissroll",
+      "id": "6c48a",
+      "name": "texture",
+      "userData": {
+        "wrapModeS": "clamp-to-edge",
+        "wrapModeT": "clamp-to-edge",
+        "imageUuidOrDatabaseUri": "8f6cc3f3-106b-46a6-95ec-669ddcb19bbd",
+        "isUuid": true,
+        "visible": false,
+        "minfilter": "linear",
+        "magfilter": "linear",
+        "mipfilter": "none",
+        "anisotropy": 0
+      },
+      "ver": "1.0.22",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "f9941": {
+      "importer": "sprite-frame",
+      "uuid": "8f6cc3f3-106b-46a6-95ec-669ddcb19bbd@f9941",
+      "displayName": "dessert_lv6_swissroll",
+      "id": "f9941",
+      "name": "spriteFrame",
+      "userData": {
+        "trimThreshold": 1,
+        "rotated": false,
+        "offsetX": 0,
+        "offsetY": 0.5,
+        "trimX": 9,
+        "trimY": 8,
+        "width": 118,
+        "height": 119,
+        "rawWidth": 136,
+        "rawHeight": 136,
+        "borderTop": 0,
+        "borderBottom": 0,
+        "borderLeft": 0,
+        "borderRight": 0,
+        "packable": true,
+        "pixelsToUnit": 100,
+        "pivotX": 0.5,
+        "pivotY": 0.5,
+        "meshType": 0,
+        "vertices": {
+          "rawPosition": [
+            -59,
+            -59.5,
+            0,
+            59,
+            -59.5,
+            0,
+            -59,
+            59.5,
+            0,
+            59,
+            59.5,
+            0
+          ],
+          "indexes": [
+            0,
+            1,
+            2,
+            2,
+            1,
+            3
+          ],
+          "uv": [
+            9,
+            128,
+            127,
+            128,
+            9,
+            9,
+            127,
+            9
+          ],
+          "nuv": [
+            0.0661764705882353,
+            0.0661764705882353,
+            0.9338235294117647,
+            0.0661764705882353,
+            0.0661764705882353,
+            0.9411764705882353,
+            0.9338235294117647,
+            0.9411764705882353
+          ],
+          "minPos": [
+            -59,
+            -59.5,
+            0
+          ],
+          "maxPos": [
+            59,
+            59.5,
+            0
+          ]
+        },
+        "isUuid": true,
+        "imageUuidOrDatabaseUri": "8f6cc3f3-106b-46a6-95ec-669ddcb19bbd@6c48a",
+        "atlasUuid": "",
+        "trimType": "auto"
+      },
+      "ver": "1.0.12",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    }
+  },
+  "userData": {
+    "type": "sprite-frame",
+    "fixAlphaTransparencyArtifacts": false,
+    "hasAlpha": true,
+    "redirect": "8f6cc3f3-106b-46a6-95ec-669ddcb19bbd@6c48a"
+  }
+}
