@@ -86,6 +86,8 @@ npm --workspace e2e run build:tt:release
 
 `build:tt`（包括命中缓存时）会自动把 `audio`、`main` Bundle 整理为抖音分包；
 后处理检测到主包仍超过 4 MB 时会立即失败，禁止继续预览或上传。
+执行 `FORCE=1` 无头重建前请关闭同一项目的 Creator；脚本检测到 MCP 端口 `3334`
+已被 GUI 占用时会提前退出，避免第二个 Editor 损坏项目缓存。
 
 `server/`：
 

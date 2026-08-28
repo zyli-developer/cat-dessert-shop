@@ -10,6 +10,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { isTcpPortOpen } from './port-check.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DIST = path.resolve(__dirname, '../dist/bytedance-mini-game');
@@ -17,6 +18,7 @@ const MARKER = path.join(DIST, 'game.json');
 const COCOS = process.env.COCOS_CREATOR_PATH;
 const FORCE = process.env.FORCE === '1';
 const RELEASE = process.env.RELEASE === '1' || process.argv.includes('--release');
+const COCOS_MCP_PORT = Number(process.env.COCOS_MCP_PORT ?? 3334);
 const POSTBUILD = path.resolve(__dirname, '../../scripts/postbuild_subpackage.mjs');
 const RELEASE_CHECK = path.resolve(__dirname, '../../scripts/release-config.mjs');
 
@@ -65,6 +67,13 @@ const args = [
   '--build',
   `platform=bytedance-mini-game;buildPath=${outputDir}`,
 ];
+
+if (await isTcpPortOpen(COCOS_MCP_PORT)) {
+  console.error(`[build:tt] Cocos MCP port ${COCOS_MCP_PORT} is already in use.`);
+  console.error('[build:tt] The project is probably open in Cocos Creator.');
+  console.error('[build:tt] Build from the open editor, or close it before running FORCE=1.');
+  process.exit(1);
+}
 
 console.log('[build:tt] invoking Cocos Creator');
 console.log('[build:tt]   bin :', COCOS);
