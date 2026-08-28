@@ -34,6 +34,10 @@ interface Slot {
     totals: Map<number, number>;
     catType: string;
     active: boolean;
+    /** 槽位换客版本；旧顾客的异步资源回调不得写入新顾客。 */
+    revision: number;
+    catRequest: number;
+    bubbleRequest: number;
 }
 
 @ccclass('CustomerManager')
@@ -140,6 +144,7 @@ export class CustomerManager extends Component {
         return {
             root, catSprite: cat, dessertSprite: dsp, needLabel: need,
             demands: new Map(), totals: new Map(), catType: '', active: false,
+            revision: 0, catRequest: 0, bubbleRequest: 0,
         };
     }
 
@@ -147,6 +152,7 @@ export class CustomerManager extends Component {
 
     private fillSlot(i: number): void {
         const slot = this.slots[i];
+        slot.revision++;
         if (this.queueIndex >= this.queue.length) {
             slot.active = false;
             slot.root.active = false;
@@ -252,8 +258,13 @@ export class CustomerManager extends Component {
         if (slot.needLabel?.isValid) slot.needLabel.string = `${fulfilled}/${total}`;
 
         const sp = slot.dessertSprite;
+        const revision = slot.revision;
+        const request = ++slot.bubbleRequest;
         resources.load(`${dessert.texture}/spriteFrame`, SpriteFrame, (e, f) => {
-            if (!e && f && sp?.isValid) sp.spriteFrame = f;
+            if (
+                !e && f && sp?.isValid && slot.active &&
+                slot.revision === revision && slot.bubbleRequest === request
+            ) sp.spriteFrame = f;
         });
     }
 
@@ -266,9 +277,16 @@ export class CustomerManager extends Component {
     }
 
     private loadCatExpr(slot: Slot, expr: string): void {
-        const path = `textures/character/cat_${slot.catType}_${expr}/spriteFrame`;
+        const catType = slot.catType;
+        const revision = slot.revision;
+        const request = ++slot.catRequest;
+        const path = `textures/character/cat_${catType}_${expr}/spriteFrame`;
         resources.load(path, SpriteFrame, (err, sf) => {
-            if (err || !slot.catSprite.isValid) return;
+            if (
+                err || !slot.catSprite.isValid || !slot.active ||
+                slot.revision !== revision || slot.catRequest !== request ||
+                slot.catType !== catType
+            ) return;
             slot.catSprite.spriteFrame = sf;
         });
     }
@@ -306,6 +324,11 @@ export class CustomerManager extends Component {
         this.queueIndex = 0;
         this.servedCount = 0;
         this.roundDone = false;
-        this.slots.forEach(s => { s.demands.clear(); s.totals.clear(); s.active = false; });
+        this.slots.forEach(s => {
+            s.revision++;
+            s.demands.clear();
+            s.totals.clear();
+            s.active = false;
+        });
     }
 }

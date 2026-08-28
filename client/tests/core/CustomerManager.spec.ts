@@ -20,7 +20,7 @@
 
 import { CustomerManager, CAT_TYPES } from '../../assets/scenes/scripts/core/CustomerManager';
 import { CustomerData } from '../../assets/scenes/scripts/data/GameTypes';
-import { Label } from 'cc';
+import { Label, resources } from 'cc';
 
 function makeManager(): CustomerManager {
   const cm = new CustomerManager();
@@ -125,5 +125,29 @@ describe('CustomerManager (3-customer model)', () => {
     cm.initRound([customer([2, 1])]);
     cm.reset();
     expect(cm.getCurrentDemands().size).toBe(0);
+  });
+
+  it('ignores an older cat-expression load that finishes after a newer one', () => {
+    const pending: Array<{ path: string; cb: Function }> = [];
+    (resources.load as jest.Mock).mockImplementation((path: string, _type: unknown, cb: Function) => {
+      pending.push({ path, cb });
+    });
+
+    const cm = makeManager();
+    cm.initRound([customer([2, 2])]);
+    const slot = slotsOf(cm)[0];
+    slot.catSprite.isValid = true; // Cocos Component has isValid; the lightweight test shim does not.
+    pending.length = 0;
+
+    (cm as any).loadCatExpr(slot, 'happy');
+    (cm as any).loadCatExpr(slot, 'bye');
+    const happy = pending.find(item => item.path.includes('_happy/'))!;
+    const bye = pending.find(item => item.path.includes('_bye/'))!;
+    const happyFrame = { name: 'happy' };
+    const byeFrame = { name: 'bye' };
+
+    bye.cb(null, byeFrame);
+    happy.cb(null, happyFrame);
+    expect(slot.catSprite.spriteFrame).toBe(byeFrame);
   });
 });
