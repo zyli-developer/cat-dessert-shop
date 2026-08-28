@@ -23,6 +23,7 @@ enum ItemMode { None, Hammer }
 
 @ccclass('ItemManager')
 export class ItemManager extends Component {
+    private adInProgress = false;
     @property(Node)
     containerNode: Node | null = null;
 
@@ -137,12 +138,18 @@ export class ItemManager extends Component {
     }
 
     async onAdClicked(): Promise<void> {
-        const success = await DouyinSDK.showRewardedAd(AD_UNIT_IDS.gameGold);
-        if (success) {
-            this.state.addGold(AD_GOLD_REWARD);
-            Toast.show(`+${AD_GOLD_REWARD} 金币`, false, 'icon_coin');   // states.html A4
-        } else {
-            Toast.show('广告君打了个盹，稍后再来~', true, 'icon_ad');     // states.html D3（无填充/失败）
+        if (this.adInProgress) return;
+        this.adInProgress = true;
+        try {
+            const success = await DouyinSDK.showRewardedAd(AD_UNIT_IDS.gameGold);
+            if (success) {
+                this.state.addGold(AD_GOLD_REWARD);
+                Toast.show(`+${AD_GOLD_REWARD} 金币`, false, 'icon_coin');
+            } else {
+                Toast.show('广告君打了个盹，稍后再来~', true, 'icon_ad');
+            }
+        } finally {
+            this.adInProgress = false;
         }
     }
 

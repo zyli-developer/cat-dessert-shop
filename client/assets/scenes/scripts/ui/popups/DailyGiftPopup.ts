@@ -24,6 +24,7 @@ export class DailyGiftPopup extends Component {
     private btnClaim: Node | null = null;
     private btnDouble: Node | null = null;
     private claimedToday = false;
+    private claimInProgress = false;
 
     init(): void {
         for (const child of this.node.children) child.active = false;
@@ -85,9 +86,14 @@ export class DailyGiftPopup extends Component {
     }
 
     private async onDouble(): Promise<void> {
-        if (this.claimedToday) return;
-        const ok = await DouyinSDK.showRewardedAd(AD_UNIT_IDS.dailyGift);
-        if (ok) this.grant(DOUBLED_REWARD);
+        if (this.claimedToday || this.claimInProgress) return;
+        this.claimInProgress = true;
+        try {
+            const ok = await DouyinSDK.showRewardedAd(AD_UNIT_IDS.dailyGift);
+            if (ok) this.grant(DOUBLED_REWARD);
+        } finally {
+            this.claimInProgress = false;
+        }
     }
 
     private lockButtons(claimText = '今日已领取'): void {

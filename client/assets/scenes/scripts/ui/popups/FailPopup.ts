@@ -32,6 +32,7 @@ const HEART_RED = new Color(192, 54, 75, 255);
 export class FailPopup extends Component {
     private data: FailPopupData | null = null;
     private hasRevived = false;
+    private adInProgress = false;
 
     init(data: FailPopupData): void {
         this.data = data;
@@ -172,12 +173,17 @@ export class FailPopup extends Component {
     // --- 回调 ---
 
     private async onReviveClicked(): Promise<void> {
-        if (this.hasRevived) return;
-        const success = await DouyinSDK.showRewardedAd(AD_UNIT_IDS.failRevive);
-        if (!success) { Toast.show('广告君打了个盹，稍后再来~', true, 'icon_ad'); return; }
-        this.hasRevived = true;
-        PopupManager.close();
-        this.data?.onRevive();
+        if (this.hasRevived || this.adInProgress) return;
+        this.adInProgress = true;
+        try {
+            const success = await DouyinSDK.showRewardedAd(AD_UNIT_IDS.failRevive);
+            if (!success) { Toast.show('广告君打了个盹，稍后再来~', true, 'icon_ad'); return; }
+            this.hasRevived = true;
+            PopupManager.close();
+            this.data?.onRevive();
+        } finally {
+            this.adInProgress = false;
+        }
     }
 
     private onRetry(): void {

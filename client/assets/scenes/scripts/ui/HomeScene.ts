@@ -14,6 +14,7 @@ const { ccclass, property } = _decorator;
 export class HomeScene extends Component {
     private viewingRound: number = 1;
     private _ready = false;
+    private adClaimInProgress = false;
 
     // 运行时查找的节点引用
     private roundLabel: Label | null = null;
@@ -415,13 +416,19 @@ export class HomeScene extends Component {
     }
 
     private async onAdCatCoinClicked(): Promise<void> {
-        const success = await DouyinSDK.showRewardedAd(AD_UNIT_IDS.homeCatCoin);
-        if (success) {
-            const state = GameState.instance;
-            if (state.userProfile) {
-                state.userProfile.catCoins += 10;
+        if (this.adClaimInProgress) return;
+        this.adClaimInProgress = true;
+        try {
+            const success = await DouyinSDK.showRewardedAd(AD_UNIT_IDS.homeCatCoin);
+            if (success) {
+                const state = GameState.instance;
+                if (state.userProfile) {
+                    state.userProfile.catCoins += 10;
+                }
+                this.updateDisplay();
             }
-            this.updateDisplay();
+        } finally {
+            this.adClaimInProgress = false;
         }
     }
 

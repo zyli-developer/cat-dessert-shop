@@ -34,6 +34,7 @@ interface WinData {
 export class WinPopup extends Component {
     private data!: WinData;
     private hasDoubled = false;
+    private adInProgress = false;
     private catCoinLabel: Label | null = null;
     private friendPanel: Node | null = null;
 
@@ -324,16 +325,21 @@ export class WinPopup extends Component {
     }
 
     private async onDoubleClicked(btn: Node): Promise<void> {
-        if (this.hasDoubled) return;
-        const success = await DouyinSDK.showRewardedAd(AD_UNIT_IDS.winDouble);
-        if (!success) { Toast.show('广告君打了个盹，稍后再来~', true, 'icon_ad'); return; }
-        this.hasDoubled = true;
-        const bonus = this.data.catCoins;
-        if (this.catCoinLabel) this.catCoinLabel.string = `+${this.data.catCoins + bonus}`;
-        if (btn.isValid) btn.active = false;
-        const profile = GameState.instance.userProfile;
-        if (profile) profile.catCoins += bonus;
-        this.data.onDoubled?.(bonus);
+        if (this.hasDoubled || this.adInProgress) return;
+        this.adInProgress = true;
+        try {
+            const success = await DouyinSDK.showRewardedAd(AD_UNIT_IDS.winDouble);
+            if (!success) { Toast.show('广告君打了个盹，稍后再来~', true, 'icon_ad'); return; }
+            this.hasDoubled = true;
+            const bonus = this.data.catCoins;
+            if (this.catCoinLabel) this.catCoinLabel.string = `+${this.data.catCoins + bonus}`;
+            if (btn.isValid) btn.active = false;
+            const profile = GameState.instance.userProfile;
+            if (profile) profile.catCoins += bonus;
+            this.data.onDoubled?.(bonus);
+        } finally {
+            this.adInProgress = false;
+        }
     }
 
     private async onShareClicked(): Promise<void> {
