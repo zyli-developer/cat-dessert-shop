@@ -21,7 +21,7 @@ import { createTestApp, login, authed, TestSession } from './helpers';
  *    So the "submit" half of TC-SEC-001 / TC-RANK-006 maps to /api/user/progress,
  *    while the "read" half (TC-RANK-002) maps to /api/rank/friends?round=N.
  *
- *  ProgressDto negative-score validation is covered by later hardening work.
+ *  ProgressDto rejects negative scores and derives stars from score thresholds.
  *
  *  DB-isolation: this spec uses openids 4/5/6 (test-code-4/5/6), distinct from
  *  user.e2e-spec which uses openid-1. All submissions here use round 5, which
@@ -29,7 +29,7 @@ import { createTestApp, login, authed, TestSession } from './helpers';
  *  prevent cross-contamination of global User fields like `highScore` and
  *  `currentRound` between specs.
  */
-const RANK_SPEC_ROUND = 5;
+const RANK_SPEC_ROUND = 1;
 
 describe('Rank (e2e)', () => {
   let app: INestApplication;
@@ -61,7 +61,7 @@ describe('Rank (e2e)', () => {
       const submitRes = await authed(
         request(app.getHttpServer()).post('/api/user/progress'),
         session,
-      ).send({ round: RANK_SPEC_ROUND, score: s.score, stars: 2 });
+      ).send({ round: RANK_SPEC_ROUND, score: s.score, stars: s.score >= 550 ? 2 : 1 });
       if (submitRes.status >= 400) {
         throw new Error(`progress failed: ${JSON.stringify(submitRes.body)}`);
       }
@@ -93,7 +93,7 @@ describe('Rank (e2e)', () => {
     expect(res.status).toBe(401);
   });
 
-  it.skip('TC-RANK-006 rejects negative score via DTO (server gap: ProgressDto.score has no @Min(0))', async () => {
+  it('TC-RANK-006 rejects negative score via DTO', async () => {
     const session = await login(app, 'test-code-4');
     const res = await authed(
       request(app.getHttpServer()).post('/api/user/progress'),

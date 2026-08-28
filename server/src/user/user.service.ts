@@ -5,6 +5,7 @@ import { User } from './schemas/user.schema';
 import { ProgressDto } from './dto/progress.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ClaimRewardDto, RewardKind } from './dto/claim-reward.dto';
+import { calculateStars } from '../game/level-rules';
 
 const CAT_COIN_REWARDS: Record<number, number> = { 1: 5, 2: 10, 3: 20 };
 const HOME_AD_REWARD = 10;
@@ -45,6 +46,14 @@ export class UserService {
     const user = await this.userModel.findOne({ openId });
     if (!user) {
       throw new NotFoundException('User not found');
+    }
+
+    if (dto.round > user.currentRound) {
+      throw new BadRequestException('Round is not unlocked');
+    }
+    const calculatedStars = calculateStars(dto.round, dto.score);
+    if (dto.stars !== calculatedStars) {
+      throw new BadRequestException('Stars do not match the submitted score');
     }
 
     const roundKey = String(dto.round);

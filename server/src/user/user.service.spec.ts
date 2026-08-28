@@ -99,11 +99,11 @@ describe('UserService', () => {
       const mockUser = createMockUser();
       mockUserModel.findOne.mockResolvedValue(mockUser);
 
-      const result = await service.updateProgress('abc', { round: 1, score: 100, stars: 3 });
+      const result = await service.updateProgress('abc', { round: 1, score: 1000, stars: 3 });
 
       expect(mockUser.stars.get('1')).toBe(3);
-      expect(mockUser.roundScores.get('1')).toBe(100);
-      expect(mockUser.highScore).toBe(100);
+      expect(mockUser.roundScores.get('1')).toBe(1000);
+      expect(mockUser.highScore).toBe(1000);
       expect(mockUser.currentRound).toBe(2);
       expect(mockUser.catCoins).toBe(20);
       expect(result.isNewBest).toBe(true);
@@ -141,7 +141,7 @@ describe('UserService', () => {
     it('should be idempotent: repeated submission with same stars does not award extra coins', async () => {
       const mockUser = createMockUser({
         stars: new Map([['1', 2]]),
-        roundScores: new Map([['1', 500]]),
+        roundScores: new Map([['1', 600]]),
         catCoins: 10,
         highScore: 500,
         currentRound: 2,
@@ -149,7 +149,7 @@ describe('UserService', () => {
       mockUserModel.findOne.mockResolvedValue(mockUser);
 
       // Submit same stars=2 again
-      await service.updateProgress('abc', { round: 1, score: 400, stars: 2 });
+      await service.updateProgress('abc', { round: 1, score: 600, stars: 2 });
 
       expect(mockUser.catCoins).toBe(10); // no change
     });
@@ -161,10 +161,28 @@ describe('UserService', () => {
       });
       mockUserModel.findOne.mockResolvedValue(mockUser);
 
-      await service.updateProgress('abc', { round: 1, score: 200, stars: 2 });
+      await service.updateProgress('abc', { round: 1, score: 600, stars: 2 });
 
       // 2 stars = 10, minus old 1 star = 5, so +5
       expect(mockUser.catCoins).toBe(10);
+    });
+
+    it('should reject progress for a locked round', async () => {
+      const mockUser = createMockUser({ currentRound: 1 });
+      mockUserModel.findOne.mockResolvedValue(mockUser);
+
+      await expect(
+        service.updateProgress('abc', { round: 2, score: 50, stars: 1 }),
+      ).rejects.toThrow('Round is not unlocked');
+    });
+
+    it('should reject stars that do not match the score thresholds', async () => {
+      const mockUser = createMockUser();
+      mockUserModel.findOne.mockResolvedValue(mockUser);
+
+      await expect(
+        service.updateProgress('abc', { round: 1, score: 100, stars: 3 }),
+      ).rejects.toThrow('Stars do not match');
     });
 
     it('should only advance currentRound, never go backwards', async () => {
