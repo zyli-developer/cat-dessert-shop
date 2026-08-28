@@ -17,10 +17,18 @@ client/profiles/
 .idea/
 .vscode/
 *.iml
+.codex/
 
 # OS
 .DS_Store
 Thumbs.db
+
+# Local recovery and generated helper files
+.git-repair-backup-*.zip
+__pycache__/
+*.py[cod]
+/bundle-config.d.ts
+/bundle-utils.ccc
 
 # Env
 .env
