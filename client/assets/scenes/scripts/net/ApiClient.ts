@@ -1,4 +1,4 @@
-import { UserProfile, RankItem } from './ApiTypes';
+import { UserProfile, RankItem, AuthSession } from './ApiTypes';
 import { DouyinSDK } from '../platform/DouyinSDK';
 import { API_BASE_URL } from './ApiConfig';
 
@@ -18,12 +18,12 @@ interface ApiResponse<T> {
 }
 
 function request<T>(path: string, method: string = 'GET', body?: unknown): Promise<T> {
-  const openId = ApiClient.getOpenId();
+  const accessToken = ApiClient.getAccessToken();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
-  if (openId) {
-    headers['X-Open-Id'] = openId;
+  if (accessToken) {
+    headers.Authorization = `Bearer ${accessToken}`;
   }
 
   const base = API_BASE_URL.replace(/\/$/, '');
@@ -32,11 +32,12 @@ function request<T>(path: string, method: string = 'GET', body?: unknown): Promi
 
   const reqId = Math.random().toString(36).slice(2, 8);
   const startedAt = Date.now();
-  // body 可能含 code/anonymousCode 等敏感串，截断展示防止 console 刷屏
-  const bodyPreview = body === undefined ? '<none>' : JSON.stringify(body).slice(0, 200);
+  const bodyPreview = path === '/api/auth/login'
+    ? '<login-credentials-redacted>'
+    : body === undefined ? '<none>' : JSON.stringify(body).slice(0, 200);
   console.log(
     `[ApiClient][${reqId}] → ${method} ${url}` +
-    `  openId=${openId || '<none>'}  body=${bodyPreview}`
+    `  authenticated=${!!accessToken}  body=${bodyPreview}`
   );
 
   return new Promise<T>((resolve, reject) => {
@@ -194,6 +195,7 @@ function request<T>(path: string, method: string = 'GET', body?: unknown): Promi
     (err) => {
       const dur = Date.now() - startedAt;
       const msg = err instanceof Error ? err.message : String((err as any)?.errMsg ?? err);
+      if (/\b(?:status|code)=401\b/.test(msg)) ApiClient.clearSession();
       console.warn(`[ApiClient][${reqId}] ✗ ${method} ${path} ${dur}ms: ${msg}`);
       throw err;
     }
@@ -202,10 +204,26 @@ function request<T>(path: string, method: string = 'GET', body?: unknown): Promi
 
 export class ApiClient {
   private static _openId: string = '';
+  private static _accessToken: string = '';
   private static readonly OFFLINE_OPEN_ID = 'dev-offline';
 
   static setOpenId(id: string): void {
     this._openId = id;
+    if (!id || id === this.OFFLINE_OPEN_ID) this._accessToken = '';
+  }
+
+  static setSession(openId: string, accessToken: string): void {
+    this._openId = openId;
+    this._accessToken = accessToken;
+  }
+
+  static getAccessToken(): string {
+    return this._accessToken;
+  }
+
+  static clearSession(): void {
+    this._openId = '';
+    this._accessToken = '';
   }
 
   /** Injectable fetch seam (test-only). Forwards to module-level `setFetchImpl`. */
@@ -221,8 +239,8 @@ export class ApiClient {
     return this._openId === this.OFFLINE_OPEN_ID;
   }
 
-  static login(credentials: { code?: string; anonymousCode?: string }): Promise<UserProfile> {
-    return request<UserProfile>('/api/auth/login', 'POST', credentials);
+  static login(credentials: { code?: string; anonymousCode?: string }): Promise<AuthSession> {
+    return request<AuthSession>('/api/auth/login', 'POST', credentials);
   }
 
   static getProfile(): Promise<UserProfile> {

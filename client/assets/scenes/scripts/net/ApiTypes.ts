@@ -9,6 +9,11 @@ export interface UserProfile {
   roundScores: Record<string, number>;
 }
 
+export interface AuthSession {
+  user: UserProfile;
+  accessToken: string;
+}
+
 export interface RankItem {
   nickname: string;
   avatar: string;

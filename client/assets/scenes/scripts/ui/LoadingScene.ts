@@ -206,11 +206,14 @@ export class LoadingScene extends Component {
 
             console.log('[LoadingScene] [Step 2/4] 调用 ApiClient.login() → POST /api/auth/login');
             let user;
+            let accessToken: string;
             try {
-                user = await ApiClient.login({
+                const session = await ApiClient.login({
                     code: loginResult.code,
                     anonymousCode: loginResult.anonymousCode,
                 });
+                user = session.user;
+                accessToken = session.accessToken;
                 console.log('[LoadingScene] [Step 2/4] ✓ 后端返回 user:', {
                     openId: user.openId,
                     nickname: user.nickname,
@@ -224,7 +227,7 @@ export class LoadingScene extends Component {
             }
 
             console.log('[LoadingScene] [Step 3/4] 写入 GameState（openId / userProfile / currentRound）');
-            ApiClient.setOpenId(user.openId);
+            ApiClient.setSession(user.openId, accessToken);
             GameState.instance.userProfile = user;
             GameState.instance.currentRound = user.currentRound;
 
