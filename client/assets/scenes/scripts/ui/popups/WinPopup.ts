@@ -346,6 +346,7 @@ export class WinPopup extends Component {
                 const profile = GameState.instance.userProfile;
                 if (profile) {
                     profile.catCoins += bonus;
+                    GameState.instance.persistOfflineProfile();
                     GameState.instance.events.emit('profile-changed');
                 }
             } else {

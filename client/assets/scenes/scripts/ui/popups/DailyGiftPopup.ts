@@ -68,6 +68,7 @@ export class DailyGiftPopup extends Component {
             const profile = GameState.instance.userProfile;
             if (profile) {
                 profile.catCoins += amount;
+                GameState.instance.persistOfflineProfile();
                 GameState.instance.events.emit('profile-changed');
             }
         }

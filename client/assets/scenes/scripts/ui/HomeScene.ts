@@ -432,6 +432,7 @@ export class HomeScene extends Component {
             if (ApiClient.isOfflineMode()) {
                 if (state.userProfile) {
                     state.userProfile.catCoins += 10;
+                    state.persistOfflineProfile();
                     state.events.emit('profile-changed');
                 }
             } else {

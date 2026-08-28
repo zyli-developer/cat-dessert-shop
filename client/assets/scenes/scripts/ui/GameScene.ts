@@ -540,25 +540,25 @@ export class GameScene extends Component {
         winRound: number, score: number, stars: number, notify = true,
     ): Promise<boolean> {
         if (ApiClient.isOfflineMode()) return true;
+        const openId = ApiClient.getOpenId() || this.state.userProfile?.openId || '';
+        if (!openId) {
+            if (notify) Toast.show('登录状态已失效 · 进度将在重新登录后同步', true, 'icon_wifioff');
+            return false;
+        }
+
+        this.state.queuePendingProgress(openId, winRound, score, stars);
         const maxTries = 3;
         for (let i = 0; i < maxTries; i++) {
-            try {
-                const data = await ApiClient.updateProgress(winRound, score, stars);
-                if (data && typeof data === 'object' && 'catCoins' in data) {
-                    GameState.instance.applyProgressFromApi(data as {
-                        catCoins: number; currentRound: number; highScore: number;
-                        stars: Record<string, number>; roundScores: Record<string, number>;
-                    });
-                }
+            const result = await ApiClient.syncPendingProgress();
+            if (!this.state.hasPendingProgress(openId, winRound)) {
                 if (notify && i > 0) Toast.show('进度已保存，放心', false, 'icon_bell');
                 return true;
-            } catch (e) {
-                console.error(`[GameScene] save progress failed (try ${i + 1}/${maxTries})`, e);
-                if (notify && i === 0) Toast.show('网络开小差，正在重连…', true, 'icon_wifioff');
-                if (i < maxTries - 1) await this.delay(1.2 * (i + 1));
             }
+            console.warn(`[GameScene] progress remains queued (try ${i + 1}/${maxTries})`, result);
+            if (notify && i === 0) Toast.show('网络开小差，正在重连…', true, 'icon_wifioff');
+            if (i < maxTries - 1) await this.delay(1.2 * (i + 1));
         }
-        if (notify) Toast.show('网络仍未恢复 · 进度已本地保存~', true, 'icon_wifioff');
+        if (notify) Toast.show('网络仍未恢复 · 进度已安全排队，登录后自动同步', true, 'icon_wifioff');
         return false;
     }
 
@@ -580,6 +580,7 @@ export class GameScene extends Component {
         profile.highScore = Math.max(profile.highScore ?? 0, score);
 
         this.state.events.emit('profile-changed');
+        this.state.persistOfflineProfile();
     }
 
     // --- Lose (C1 fix: pass revive callback) ---

@@ -1,6 +1,7 @@
 import { UserProfile, RankItem, AuthSession, RewardClaimResult, RewardKind } from './ApiTypes';
 import { DouyinSDK } from '../platform/DouyinSDK';
 import { API_BASE_URL } from './ApiConfig';
+import { GameState } from '../data/GameState';
 
 const TIMEOUT = 8000;
 
@@ -209,7 +210,8 @@ export class ApiClient {
 
   static setOpenId(id: string): void {
     this._openId = id;
-    if (!id || id === this.OFFLINE_OPEN_ID) this._accessToken = '';
+    // An openId without a freshly issued matching token is never authenticated.
+    this._accessToken = '';
   }
 
   static setSession(openId: string, accessToken: string): void {
@@ -302,6 +304,32 @@ export class ApiClient {
       score,
       stars,
     });
+  }
+
+  /** Replay durable progress in round order, re-reading after every acknowledgement. */
+  static async syncPendingProgress(): Promise<{ synced: number; remaining: number }> {
+    const openId = this._openId;
+    const state = GameState.instance;
+    if (!openId || this.isOfflineMode() || !this._accessToken) {
+      return { synced: 0, remaining: openId ? state.getPendingProgress(openId).length : 0 };
+    }
+
+    let synced = 0;
+    const maxBatch = 120;
+    for (let attempt = 0; attempt < maxBatch; attempt++) {
+      const entry = state.getPendingProgress(openId)[0];
+      if (!entry) break;
+      try {
+        const result = await this.updateProgress(entry.round, entry.score, entry.stars);
+        state.acknowledgePendingProgress(entry);
+        state.applyProgressFromApi(result);
+        synced++;
+      } catch (error) {
+        console.warn(`[ApiClient] pending progress sync stopped at round ${entry.round}`, error);
+        break;
+      }
+    }
+    return { synced, remaining: state.getPendingProgress(openId).length };
   }
 
   static claimReward(kind: RewardKind, claimId: string, round?: number): Promise<RewardClaimResult> {

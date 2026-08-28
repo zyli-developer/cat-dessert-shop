@@ -7,17 +7,11 @@
  *   - mutators: resetRound, addGold, spendGold, addScore, addMerge
  *   - selectors: getCurrentLevel, calcStars, getCatCoinReward, getTotalStarsCount
  *   - API glue: applyProgressFromApi
- *   - KVStorage seam: `setStorage(s)` replaces the internal `storage` field;
- *     however GameState does NOT currently read/write storage anywhere in
- *     production code. The seam is scaffolding only.
+ *   - offline persistence: loadOfflineProfile / persistOfflineProfile
  *
  * TC mapping:
- *   - TC-STATE-001 persistence round-trip → SKIPPED (product gap: GameState
- *     does not currently persist via `tt.*Sync` / `this.storage`; KVStorage
- *     seam is unused scaffolding from T2-03. Re-enable once persistence is
- *     implemented).
- *   - TC-STATE-002 offline score queue → SKIPPED (product gap: no
- *     `queueOfflineScore` / `retryUploadQueue` on GameState).
+ *   - TC-STATE-001 persistence round-trip
+ *   - TC-STATE-002 durable online progress queue
  *
  * Scoring/reset/stars/addScore duplicate ScoreManager.spec.ts — not repeated.
  * The tests below cover GameState's OTHER unique surface: spendGold,
@@ -58,27 +52,102 @@ function makeMemStorage(): KVStorage & { data: Map<string, string> } {
 }
 
 describe('GameState (T2-10)', () => {
+  let storage: ReturnType<typeof makeMemStorage>;
+
   beforeEach(() => {
     const gs = GameState.instance;
+    storage = makeMemStorage();
+    gs.setStorage(storage);
     gs.resetRound();
     gs.userProfile = null;
     gs.allLevels = [];
     gs.currentRound = 1;
   });
 
-  // SKIP-REASON: FU-T2-01 — GameState.storage seam wired but no production
-  // code path writes to it yet. Unskip once GameState persists userProfile
-  // or currentRound on mutation.
-  it.skip('TC-STATE-001 persistence round-trip (product gap: GameState.storage currently unused)', () => {
-    // Scaffolding verification — seam is wired, but no production code path
-    // currently writes to `this.storage`. Unskip once GameState persists,
-    // e.g. saves `userProfile` or `currentRound` on mutation.
+  it('TC-STATE-001 persists and restores the offline profile', () => {
+    const gs = GameState.instance;
+    gs.userProfile = {
+      ...baseProfile(), openId: 'dev-offline', nickname: '本地猫', catCoins: 35,
+      currentRound: 4, highScore: 880, stars: { '1': 3 }, roundScores: { '1': 880 },
+    };
+    gs.persistOfflineProfile();
+
+    const restored = gs.loadOfflineProfile();
+    expect(restored).toEqual(gs.userProfile);
+    expect(storage.data.size).toBe(1);
   });
 
-  // SKIP-REASON: FU-T2-02 — GameState has no queueOfflineScore / retryUploadQueue
-  // surface yet. Unskip once that API lands.
-  it.skip('TC-STATE-002 offline score queue (product gap: no queueOfflineScore/retryUploadQueue)', () => {
-    // Unskip once GameState grows an offline queue API.
+  it('ignores corrupt offline storage and clamps invalid values', () => {
+    const gs = GameState.instance;
+    storage.set('catbakery_offline_profile_v1', '{broken');
+    expect(gs.loadOfflineProfile().currentRound).toBe(1);
+
+    storage.set('catbakery_offline_profile_v1', JSON.stringify({
+      catCoins: -10, currentRound: 2.9, highScore: Number.NaN,
+      stars: { '1': 99, bad: 2 }, roundScores: { '1': 12.8 },
+    }));
+    const restored = gs.loadOfflineProfile();
+    expect(restored.catCoins).toBe(0);
+    expect(restored.currentRound).toBe(2);
+    expect(restored.stars).toEqual({ '1': 3 });
+    expect(restored.roundScores).toEqual({ '1': 12 });
+  });
+
+  it('TC-STATE-002 persists pending online progress and restores it in round order', () => {
+    const gs = GameState.instance;
+    gs.queuePendingProgress('u1', 3, 900, 3);
+    gs.queuePendingProgress('u1', 1, 300, 2);
+
+    expect(gs.getPendingProgress('u1').map(({ round, score, stars }) => ({ round, score, stars })))
+      .toEqual([
+        { round: 1, score: 300, stars: 2 },
+        { round: 3, score: 900, stars: 3 },
+      ]);
+    expect(storage.data.has('catbakery_pending_progress_v1')).toBe(true);
+  });
+
+  it('pending progress is isolated by user and cannot be downgraded', () => {
+    const gs = GameState.instance;
+    gs.queuePendingProgress('u1', 1, 500, 2);
+    gs.queuePendingProgress('u1', 1, 300, 1);
+    gs.queuePendingProgress('u2', 1, 700, 3);
+
+    expect(gs.getPendingProgress('u1')).toHaveLength(1);
+    expect(gs.getPendingProgress('u1')[0].score).toBe(500);
+    expect(gs.getPendingProgress('u2')[0].score).toBe(700);
+  });
+
+  it('acknowledging an older upload keeps a better result queued mid-request', () => {
+    const gs = GameState.instance;
+    gs.queuePendingProgress('u1', 1, 500, 2);
+    const submitted = gs.getPendingProgress('u1')[0];
+
+    gs.queuePendingProgress('u1', 1, 800, 3);
+    gs.acknowledgePendingProgress(submitted);
+    expect(gs.hasPendingProgress('u1', 1)).toBe(true);
+    expect(gs.getPendingProgress('u1')[0].score).toBe(800);
+
+    gs.acknowledgePendingProgress(gs.getPendingProgress('u1')[0]);
+    expect(gs.hasPendingProgress('u1', 1)).toBe(false);
+    expect(storage.data.has('catbakery_pending_progress_v1')).toBe(false);
+  });
+
+  it('ignores malformed pending queue records and invalid enqueue input', () => {
+    const gs = GameState.instance;
+    storage.set('catbakery_pending_progress_v1', JSON.stringify([
+      null,
+      { openId: '', round: 1, score: 1, stars: 1 },
+      { openId: 'u1', round: 0, score: 1, stars: 1 },
+      { openId: 'u1', round: 1, score: -1, stars: 1 },
+      { openId: 'u1', round: 1, score: 1, stars: 4 },
+      { openId: 'u1', round: 2, score: 20, stars: 1, updatedAt: 'bad' },
+    ]));
+    gs.queuePendingProgress('dev-offline', 1, 100, 1);
+    gs.queuePendingProgress('u1', 1.5, 100, 1);
+
+    expect(gs.getPendingProgress('u1')).toEqual([
+      { openId: 'u1', round: 2, score: 20, stars: 1, updatedAt: 0 },
+    ]);
   });
 
   it('setStorage replaces the internal KVStorage seam (structural check)', () => {

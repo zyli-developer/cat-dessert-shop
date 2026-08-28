@@ -231,6 +231,15 @@ export class LoadingScene extends Component {
             GameState.instance.userProfile = user;
             GameState.instance.currentRound = user.currentRound;
 
+            const pendingSync = await ApiClient.syncPendingProgress();
+            if (pendingSync.synced > 0) {
+                GameState.instance.currentRound = GameState.instance.userProfile?.currentRound ?? user.currentRound;
+                console.log(`[LoadingScene] 已补传 ${pendingSync.synced} 条本地进度`);
+            }
+            if (pendingSync.remaining > 0) {
+                console.warn(`[LoadingScene] 仍有 ${pendingSync.remaining} 条进度等待下次同步`);
+            }
+
             // 异步补全抖音昵称/头像（首次会弹授权窗），失败/拒绝不阻塞进游戏
             this.syncProfileFromDouyin(user.nickname, user.avatar);
 
@@ -422,17 +431,9 @@ export class LoadingScene extends Component {
 
     private async enterOfflineMode(): Promise<void> {
         ApiClient.setOpenId('dev-offline');
-        GameState.instance.userProfile = {
-            openId: 'dev-offline',
-            nickname: '离线玩家',
-            avatar: '',
-            catCoins: 0,
-            currentRound: 1,
-            highScore: 0,
-            stars: {},
-            roundScores: {},
-        };
-        GameState.instance.currentRound = 1;
+        const profile = GameState.instance.loadOfflineProfile();
+        GameState.instance.userProfile = profile;
+        GameState.instance.currentRound = profile.currentRound;
 
         this.setStatus('离线模式已启动');
         this.scheduleOnce(() => this.gotoHome(), 0.2);
