@@ -110,4 +110,40 @@ describe('User Progress (e2e)', () => {
     // The test app sets whitelist + forbidNonWhitelisted, so unknown props -> 400.
     expect(res.status).toBe(400);
   });
+
+  it('rejects client-controlled cat coin rewards in progress submissions', async () => {
+    const res = await postProgress({
+      round: 16,
+      stars: 1,
+      score: 10,
+      catCoinsEarned: 999_999,
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('awards a fixed home-ad reward once and replays the same claim idempotently', async () => {
+    const claimId = 'home_reward_000001';
+    const first = await authed(
+      request(app.getHttpServer()).post('/api/user/rewards/claim'),
+      session,
+    ).send({ kind: 'home_ad', claimId });
+    expect([200, 201]).toContain(first.status);
+    expect(first.body.data.awarded).toBe(10);
+
+    const replay = await authed(
+      request(app.getHttpServer()).post('/api/user/rewards/claim'),
+      session,
+    ).send({ kind: 'home_ad', claimId });
+    expect([200, 201]).toContain(replay.status);
+    expect(replay.body.data.alreadyClaimed).toBe(true);
+    expect(replay.body.data.catCoins).toBe(first.body.data.catCoins);
+  });
+
+  it('rejects client-supplied reward fields', async () => {
+    const res = await authed(
+      request(app.getHttpServer()).post('/api/user/rewards/claim'),
+      session,
+    ).send({ kind: 'daily_gift', claimId: 'daily_reward_0001', amount: 999_999 });
+    expect(res.status).toBe(400);
+  });
 });

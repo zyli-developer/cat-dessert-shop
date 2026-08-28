@@ -12,6 +12,11 @@ function createMockUser(overrides: any = {}) {
     currentRound: 1,
     stars: new Map<string, number>(),
     roundScores: new Map<string, number>(),
+    rewardClaimIds: [],
+    adRewardDailyCounts: new Map<string, number>(),
+    adRewardLastClaimAt: new Map<string, number>(),
+    doubledRounds: [],
+    dailyGiftDate: '',
     save: jest.fn(),
   };
   const user = { ...defaults, ...overrides };
@@ -23,6 +28,7 @@ describe('UserService', () => {
   let service: UserService;
   const mockUserModel = {
     findOne: jest.fn(),
+    findOneAndUpdate: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -161,16 +167,6 @@ describe('UserService', () => {
       expect(mockUser.catCoins).toBe(10);
     });
 
-    it('should add catCoinsEarned from ads', async () => {
-      const mockUser = createMockUser({ catCoins: 5 });
-      mockUserModel.findOne.mockResolvedValue(mockUser);
-
-      await service.updateProgress('abc', { round: 1, score: 50, stars: 1, catCoinsEarned: 10 });
-
-      // 5 (existing) + 5 (1 star) + 10 (ads) = 20
-      expect(mockUser.catCoins).toBe(20);
-    });
-
     it('should only advance currentRound, never go backwards', async () => {
       const mockUser = createMockUser({ currentRound: 5 });
       mockUserModel.findOne.mockResolvedValue(mockUser);
@@ -185,6 +181,62 @@ describe('UserService', () => {
       await expect(
         service.updateProgress('unknown', { round: 1, score: 10, stars: 1 }),
       ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('claimReward', () => {
+    it('returns an idempotent result for an existing claimId', async () => {
+      const user = createMockUser({ rewardClaimIds: ['home_123456789012'] });
+      mockUserModel.findOne.mockResolvedValue(user);
+
+      const result = await service.claimReward('abc', {
+        kind: 'home_ad' as any,
+        claimId: 'home_123456789012',
+      });
+
+      expect(result.alreadyClaimed).toBe(true);
+      expect(result.awarded).toBe(0);
+      expect(mockUserModel.findOneAndUpdate).not.toHaveBeenCalled();
+    });
+
+    it('awards a fixed home-ad amount through an atomic update', async () => {
+      const user = createMockUser();
+      const updated = createMockUser({ catCoins: 10, rewardClaimIds: ['home_123456789012'] });
+      mockUserModel.findOne.mockResolvedValue(user);
+      mockUserModel.findOneAndUpdate.mockResolvedValue(updated);
+
+      const result = await service.claimReward('abc', {
+        kind: 'home_ad' as any,
+        claimId: 'home_123456789012',
+      });
+
+      expect(result.awarded).toBe(10);
+      expect(result.catCoins).toBe(10);
+      expect(mockUserModel.findOneAndUpdate).toHaveBeenCalled();
+    });
+
+    it('derives win-double reward from server-side stored stars', async () => {
+      const user = createMockUser({
+        stars: new Map([['1', 3]]),
+        currentRound: 2,
+      });
+      const updated = createMockUser({
+        stars: new Map([['1', 3]]),
+        currentRound: 2,
+        catCoins: 40,
+        doubledRounds: [1],
+      });
+      mockUserModel.findOne.mockResolvedValue(user);
+      mockUserModel.findOneAndUpdate.mockResolvedValue(updated);
+
+      const result = await service.claimReward('abc', {
+        kind: 'win_double' as any,
+        claimId: 'win_1234567890123',
+        round: 1,
+      });
+
+      expect(result.awarded).toBe(20);
+      expect(mockUserModel.findOneAndUpdate.mock.calls[0][1].$inc.catCoins).toBe(20);
     });
   });
 });

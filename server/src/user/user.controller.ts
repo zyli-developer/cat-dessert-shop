@@ -4,6 +4,7 @@ import { ProgressDto } from './dto/progress.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { SessionAuthGuard } from '../auth/session-auth.guard';
 import { CurrentOpenId } from '../auth/current-open-id.decorator';
+import { ClaimRewardDto } from './dto/claim-reward.dto';
 
 @Controller('api/user')
 @UseGuards(SessionAuthGuard)
@@ -31,6 +32,15 @@ export class UserController {
     @Body() dto: ProgressDto,
   ) {
     const result = await this.userService.updateProgress(openId, dto);
+    return { code: 0, data: result };
+  }
+
+  @Post('rewards/claim')
+  async claimReward(
+    @CurrentOpenId() openId: string,
+    @Body() dto: ClaimRewardDto,
+  ) {
+    const result = await this.userService.claimReward(openId, dto);
     return { code: 0, data: result };
   }
 }
