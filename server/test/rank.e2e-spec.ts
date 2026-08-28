@@ -1,6 +1,6 @@
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { createTestApp, login, authed } from './helpers';
+import { createTestApp, login, authed, TestSession } from './helpers';
 
 /**
  * Discovered Rank API contract (Step-1 notes for T1-07):
@@ -10,7 +10,7 @@ import { createTestApp, login, authed } from './helpers';
  *      `highScore` DESC. Each entry: { nickname, avatar, highScore, currentRound }.
  *
  *  - GET  /api/rank/friends?round=N
- *      Requires `X-Open-Id` header (401 if missing).
+ *      Requires a signed Bearer session token (401 if missing).
  *      Returns `{ code: 0, data: { list, myRank } }`.
  *      When `round` is provided: list entries are { nickname, avatar, score }
  *      derived from `User.roundScores[round]`, sorted DESC.
@@ -21,10 +21,7 @@ import { createTestApp, login, authed } from './helpers';
  *    So the "submit" half of TC-SEC-001 / TC-RANK-006 maps to /api/user/progress,
  *    while the "read" half (TC-RANK-002) maps to /api/rank/friends?round=N.
  *
- *  Server-side gap noted (NOT fixed in T1):
- *    ProgressDto.score has only @IsNumber — no @Min(0). Negative scores are
- *    accepted by validation. TC-RANK-006 is therefore skipped with a comment,
- *    consistent with how TC-USER-004 was skipped in T1-06.
+ *  ProgressDto negative-score validation is covered by later hardening work.
  *
  *  DB-isolation: this spec uses openids 4/5/6 (test-code-4/5/6), distinct from
  *  user.e2e-spec which uses openid-1. All submissions here use round 5, which
@@ -32,7 +29,7 @@ import { createTestApp, login, authed } from './helpers';
  *  prevent cross-contamination of global User fields like `highScore` and
  *  `currentRound` between specs.
  */
-const RANK_SPEC_ROUND = 5; // distinct from user.e2e-spec rounds 11-15; update test/README.md if conventions change
+const RANK_SPEC_ROUND = 5;
 
 describe('Rank (e2e)', () => {
   let app: INestApplication;
@@ -57,13 +54,13 @@ describe('Rank (e2e)', () => {
     ];
     const seededScores = new Set(submissions.map((s) => s.score));
 
-    let firstOpenId = '';
+    let firstSession: TestSession | null = null;
     for (const s of submissions) {
-      const oid = await login(app, s.code);
-      if (!firstOpenId) firstOpenId = oid;
+      const session = await login(app, s.code);
+      if (!firstSession) firstSession = session;
       const submitRes = await authed(
         request(app.getHttpServer()).post('/api/user/progress'),
-        oid,
+        session,
       ).send({ round: RANK_SPEC_ROUND, score: s.score, stars: 2 });
       if (submitRes.status >= 400) {
         throw new Error(`progress failed: ${JSON.stringify(submitRes.body)}`);
@@ -73,7 +70,7 @@ describe('Rank (e2e)', () => {
     // Rank reads via /api/rank/friends?round=5 (round-scoped leaderboard).
     const res = await authed(
       request(app.getHttpServer()).get(`/api/rank/friends?round=${RANK_SPEC_ROUND}`),
-      firstOpenId,
+      firstSession!,
     );
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('code', 0);
@@ -88,7 +85,7 @@ describe('Rank (e2e)', () => {
     expect(ours).toEqual([700, 500, 300]);
   });
 
-  it('TC-SEC-001 rejects rank/friends read without X-Open-Id', async () => {
+  it('TC-SEC-001 rejects rank/friends read without a Bearer token', async () => {
     // /api/rank/friends is the protected rank endpoint (the closest analogue
     // to "rank submit" in this codebase, since rank ingestion goes through
     // /api/user/progress which is already covered by user.e2e-spec TC-USER-001).
@@ -96,16 +93,11 @@ describe('Rank (e2e)', () => {
     expect(res.status).toBe(401);
   });
 
-  // TC-RANK-006: ProgressDto.score is the only path scores can enter the rank
-  // system, but it currently has just @IsNumber — no @Min(0). The server therefore
-  // accepts negative scores. Skipped (server-side gap), mirroring how TC-USER-004
-  // was skipped in T1-06.
-  // SKIP-REASON: FU-T1-06/07 — ProgressDto.score bounds not yet enforced.
   it.skip('TC-RANK-006 rejects negative score via DTO (server gap: ProgressDto.score has no @Min(0))', async () => {
-    const oid = await login(app, 'test-code-4');
+    const session = await login(app, 'test-code-4');
     const res = await authed(
       request(app.getHttpServer()).post('/api/user/progress'),
-      oid,
+      session,
     ).send({ round: RANK_SPEC_ROUND, score: -1, stars: 2 });
     expect(res.status).toBe(400);
   });

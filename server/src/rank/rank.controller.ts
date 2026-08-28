@@ -1,5 +1,7 @@
-import { Controller, Get, Query, Headers, UnauthorizedException } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { RankService } from './rank.service';
+import { SessionAuthGuard } from '../auth/session-auth.guard';
+import { CurrentOpenId } from '../auth/current-open-id.decorator';
 
 @Controller('api/rank')
 export class RankController {
@@ -12,11 +14,11 @@ export class RankController {
   }
 
   @Get('friends')
+  @UseGuards(SessionAuthGuard)
   async getFriendsRank(
-    @Headers('x-open-id') openId: string,
+    @CurrentOpenId() openId: string,
     @Query('round') round?: string,
   ) {
-    if (!openId) throw new UnauthorizedException('Missing X-Open-Id header');
     const roundNum = round ? parseInt(round, 10) : undefined;
     const result = await this.rankService.getFriendsRank(openId, roundNum);
     return { code: 0, data: result };

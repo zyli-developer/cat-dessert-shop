@@ -4,12 +4,16 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { User, UserSchema } from '../user/schemas/user.schema';
 import { CODE_EXCHANGER, StubCodeExchanger, DouyinCodeExchanger } from './code-exchanger';
+import { SessionTokenService } from './session-token.service';
+import { SessionAuthGuard } from './session-auth.guard';
 
 @Module({
   imports: [MongooseModule.forFeature([{ name: User.name, schema: UserSchema }])],
   controllers: [AuthController],
   providers: [
     AuthService,
+    SessionTokenService,
+    SessionAuthGuard,
     {
       provide: CODE_EXCHANGER,
       useFactory: () =>
@@ -28,5 +32,6 @@ import { CODE_EXCHANGER, StubCodeExchanger, DouyinCodeExchanger } from './code-e
           : new DouyinCodeExchanger(),
     },
   ],
+  exports: [SessionTokenService, SessionAuthGuard],
 })
 export class AuthModule {}

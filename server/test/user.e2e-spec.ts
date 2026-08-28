@@ -1,12 +1,12 @@
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { createTestApp, login, authed } from './helpers';
+import { createTestApp, login, authed, TestSession } from './helpers';
 
 /**
  * Discovered API contract (see Step-1 notes in T1-06 task):
  *  - POST /api/user/progress         body: ProgressDto { round, score, stars(1..3), catCoinsEarned? }
  *  - GET  /api/user/profile          returns full user document
- *  - Both are protected by header `X-Open-Id` (no JWT yet)
+ *  - Both are protected by a signed Bearer session token.
  *  - Controllers wrap success responses as { code: 0, data: <payload> }
  *  - Service stores progress as Map<string, number> on the User doc:
  *      stars[round]        -> highest star rating ever achieved (max-keep)
@@ -15,26 +15,18 @@ import { createTestApp, login, authed } from './helpers';
  *  - currentRound is monotonic-increasing (next-round pointer)
  *  - "No-downgrade" for both stars and score IS implemented in updateProgress.
  *
- * DTO validation gaps observed (NOT fixed in T1, only flagged):
- *  - `round` has @IsNumber but NO @Min/@Max -> any positive integer is accepted,
- *    so TC-USER-004 (invalid level) cannot pass without server changes; skipped.
- *  - `score` has @IsNumber only, no bounds.
- *  - `stars` is bounded @Min(1) @Max(3) -> validation works for that field.
- *
- * server/src/main.ts uses ValidationPipe({ transform: true }) ONLY (no whitelist).
- * The e2e test app explicitly opts-in to whitelist + forbidNonWhitelisted so
- * TC-VALID-001 can verify the desired behavior. If/when production main.ts is
- * tightened to match, the test will continue to pass.
+ * DTO validation gaps observed (covered by later hardening work): round and
+ * score do not yet have complete server-side bounds in the baseline contract.
  */
 describe('User Progress (e2e)', () => {
   let app: INestApplication;
-  let openId: string;
+  let session: TestSession;
 
   beforeAll(async () => {
     app = await createTestApp();
-    // Login via auth to obtain (and auto-provision) the openId that protects user endpoints.
-    openId = await login(app, 'test-code-1');
-    expect(openId).toBe('openid-1');
+    // Login via auth to obtain a signed session and auto-provision the user.
+    session = await login(app, 'test-code-1');
+    expect(session.user.openId).toBe('openid-1');
   }, 60_000);
 
   afterAll(async () => {
@@ -42,9 +34,9 @@ describe('User Progress (e2e)', () => {
   });
 
   const postProgress = (body: Record<string, unknown>) =>
-    authed(request(app.getHttpServer()).post('/api/user/progress'), openId).send(body);
+    authed(request(app.getHttpServer()).post('/api/user/progress'), session).send(body);
 
-  const getProfile = () => authed(request(app.getHttpServer()).get('/api/user/profile'), openId);
+  const getProfile = () => authed(request(app.getHttpServer()).get('/api/user/profile'), session);
 
   it('TC-USER-001 updates and retrieves progress', async () => {
     const post = await postProgress({ round: 11, stars: 2, score: 450 });
@@ -101,11 +93,6 @@ describe('User Progress (e2e)', () => {
     expect(read.body.data.highScore).toBeGreaterThanOrEqual(600);
   });
 
-  // TC-USER-004: ProgressDto.round currently has only @IsNumber (no @Min/@Max),
-  // so the server accepts arbitrary round numbers. This is a server-side gap to
-  // be addressed in a separate ticket — T1 is test-authoring only, not fixing
-  // server logic. Skipping per task instruction.
-  // SKIP-REASON: FU-T1-06/07 — ProgressDto.round bounds not yet enforced.
   it.skip('TC-USER-004 rejects invalid level (server gap: ProgressDto.round has no @Min/@Max)', async () => {
     const res = await postProgress({ round: 99, stars: 1, score: 10 });
     expect(res.status).toBe(400);
@@ -121,8 +108,6 @@ describe('User Progress (e2e)', () => {
   it('TC-VALID-001 ValidationPipe rejects unknown fields with forbidNonWhitelisted', async () => {
     const res = await postProgress({ round: 15, stars: 2, score: 450, malicious: 'drop table' });
     // The test app sets whitelist + forbidNonWhitelisted, so unknown props -> 400.
-    // NOTE: production main.ts only uses { transform: true } today, so this test
-    // documents the desired behaviour rather than the current production behaviour.
     expect(res.status).toBe(400);
   });
 });
