@@ -7,28 +7,56 @@ const { ccclass } = _decorator;
 export class PopupManager {
     private static _currentPopup: Node | null = null;
     private static _maskNode: Node | null = null;
+    private static _loading = false;
+    private static _requestVersion = 0;
 
     /** 显示弹窗（从 resources/prefabs/popups/ 加载） */
     static show(popupName: string, data?: any): Promise<Node | null> {
         return new Promise((resolve) => {
-            if (this._currentPopup) {
+            if (this._currentPopup || this._loading) {
                 console.warn(`[PopupManager] Blocked: "${popupName}" — already showing a popup`);
                 resolve(null);
                 return;
             }
+            this._loading = true;
+            const requestVersion = ++this._requestVersion;
+            const requestedScene = director.getScene();
+            const finish = (node: Node | null): void => {
+                if (requestVersion === this._requestVersion) this._loading = false;
+                resolve(node);
+            };
             console.log(`[PopupManager] Loading popup: ${popupName}`);
 
             const path = `prefabs/popups/${popupName}`;
             resources.load(path, Prefab, (err, prefab) => {
                 if (err) {
                     console.error(`[PopupManager] Failed to load ${path}`, err);
-                    resolve(null);
+                    finish(null);
                     return;
                 }
                 console.log(`[PopupManager] Prefab loaded: ${popupName}`);
 
                 // 果冻贴图就绪后再 init（弹窗按钮内部同步构建，需贴图先到位）
-                void ensurePopupKit().then(() => this._build(popupName, prefab, data, resolve));
+                void ensurePopupKit().then(() => {
+                    if (
+                        requestVersion !== this._requestVersion ||
+                        director.getScene() !== requestedScene ||
+                        this._currentPopup
+                    ) {
+                        finish(null);
+                        return;
+                    }
+                    try {
+                        finish(this._build(popupName, prefab, data));
+                    } catch (buildError) {
+                        console.error(`[PopupManager] Failed to build ${popupName}`, buildError);
+                        this.closeImmediate();
+                        finish(null);
+                    }
+                }).catch((kitError) => {
+                    console.error('[PopupManager] Failed to prepare popup UI kit', kitError);
+                    finish(null);
+                });
             });
         });
     }
@@ -36,19 +64,16 @@ export class PopupManager {
     /** 实例化弹窗 + 传数据 + 弹出动画（贴图就绪后调用）。 */
     private static _build(
         popupName: string, prefab: Prefab, data: any,
-        resolve: (n: Node | null) => void,
-    ): void {
+    ): Node | null {
         {
                 const scene = director.getScene();
                 if (!scene) {
-                    resolve(null);
-                    return;
+                    return null;
                 }
 
                 const canvas = scene.getChildByName('Canvas');
                 if (!canvas) {
-                    resolve(null);
-                    return;
+                    return null;
                 }
 
                 // 创建遮罩
@@ -76,12 +101,14 @@ export class PopupManager {
                     .to(0.08, { scale: new Vec3(1, 1, 1) })
                     .start();
 
-                resolve(popup);
+                return popup;
         }
     }
 
     /** 关闭当前弹窗 */
     static close(): void {
+        this._requestVersion++;
+        this._loading = false;
         if (this._currentPopup) {
             tween(this._currentPopup)
                 .to(0.15, { scale: new Vec3(0, 0, 1) })
@@ -115,6 +142,8 @@ export class PopupManager {
      * 否则场景卸载时 tween 仍操作已销毁节点，会触发 targetOff / 生命周期异常。
      */
     static closeImmediate(): void {
+        this._requestVersion++;
+        this._loading = false;
         if (this._currentPopup) {
             this._currentPopup.destroy();
             this._currentPopup = null;
@@ -127,7 +156,7 @@ export class PopupManager {
 
     /** 是否有弹窗正在显示 */
     static get isShowing(): boolean {
-        return this._currentPopup !== null;
+        return this._currentPopup !== null || this._loading;
     }
 
     private static setLayerRecursive(node: Node, layer: number): void {
