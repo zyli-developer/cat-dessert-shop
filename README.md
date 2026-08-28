@@ -120,6 +120,16 @@ npm --workspace e2e run build:tt:release
 
 ---
 
+## 2026-08-28 Review 修复记录
+
+- API 改为服务端签名 Bearer 会话；401 清理客户端会话，生产环境必须配置 `AUTH_TOKEN_SECRET`。
+- 奖励改为服务端固定金额、原子幂等和频率限制；稳定 claim ID 支持丢失回包后的安全重试。
+- 进度接口拒绝越界、跳关和伪造星级；离线档案及按账号隔离的补传队列可持久恢复。
+- 修复异步资源旧回调、暂停弹窗失败卡死、失败态溢出检测继续运行和构建并发问题。
+- 全量回归通过：server unit 41、server e2e 21、client 132、scripts 43，共 237 条测试。
+
+---
+
 ## 提交规范
 
 约定式提交（Conventional Commits）：`feat:`、`fix:`、`refactor:`、`chore:`、`test:`、`docs:` …
