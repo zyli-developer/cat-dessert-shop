@@ -6,7 +6,7 @@
 // Honours cache: if index of a Cocos build already exists, skips unless FORCE=1.
 // Requires env: COCOS_CREATOR_PATH (absolute path to CocosCreator.exe).
 
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -16,8 +16,22 @@ const DIST = path.resolve(__dirname, '../dist/bytedance-mini-game');
 const MARKER = path.join(DIST, 'game.json');
 const COCOS = process.env.COCOS_CREATOR_PATH;
 const FORCE = process.env.FORCE === '1';
+const RELEASE = process.env.RELEASE === '1' || process.argv.includes('--release');
+const RELEASE_CHECK = path.resolve(__dirname, '../../scripts/release-config.mjs');
+
+function runReleaseCheck(dist) {
+  const result = spawnSync(
+    process.execPath,
+    [RELEASE_CHECK, ...(dist ? ['--dist', dist] : [])],
+    { stdio: 'inherit' },
+  );
+  if (result.status !== 0) process.exit(result.status ?? 1);
+}
+
+if (RELEASE) runReleaseCheck();
 
 if (!FORCE && fs.existsSync(MARKER)) {
+  if (RELEASE) runReleaseCheck(DIST);
   console.log('[build:tt] cached bytedance-mini-game exists, skipping (FORCE=1 to rebuild)');
   process.exit(0);
 }
@@ -51,6 +65,7 @@ p.on('exit', (code) => {
   // subprocesses) even after writing the build artifact successfully.
   // Trust the file marker over the exit code.
   if (fs.existsSync(MARKER)) {
+    if (RELEASE) runReleaseCheck(DIST);
     console.log(`[build:tt] build complete in ${dt}s → ${DIST} (cocos exit=${code})`);
     process.exit(0);
   }

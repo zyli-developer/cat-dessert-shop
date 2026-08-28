@@ -11,17 +11,37 @@
  *
  * ⚠⚠ 上线/提审前必须改回 false，否则用户看不到广告但能白拿奖励。
  */
-export const MOCK_REWARDED_ADS = true;
+export const MOCK_REWARDED_ADS = false;
+
+/** 抖音激励视频是全局单例，所有奖励入口共用同一个正式广告位。 */
+export const REWARDED_AD_UNIT_ID = 'rewarded_video_ad';
 
 export const AD_UNIT_IDS = {
     /** Game 场景道具栏：看广告 +10 金币 */
-    gameGold: 'game_ad_gold',
+    gameGold: REWARDED_AD_UNIT_ID,
     /** 胜利结算弹窗：奖励翻倍 */
-    winDouble: 'win_double',
+    winDouble: REWARDED_AD_UNIT_ID,
     /** 失败结算弹窗：看广告复活 */
-    failRevive: 'fail_revive',
+    failRevive: REWARDED_AD_UNIT_ID,
     /** Home 场景：看广告领猫币 */
-    homeCatCoin: 'home_catcoin',
+    homeCatCoin: REWARDED_AD_UNIT_ID,
     /** 每日礼包弹窗：看广告翻倍领取 */
-    dailyGift: 'home_daily_gift',
+    dailyGift: REWARDED_AD_UNIT_ID,
 } as const;
+
+const DEVELOPMENT_AD_UNIT_IDS = new Set<string>([
+    'game_ad_gold',
+    'win_double',
+    'fail_revive',
+    'home_catcoin',
+    'home_daily_gift',
+    'rewarded_video_ad',
+]);
+
+/** 真机调用广告 SDK 前的最后一道保护；非正式 ID 不会传给 tt。 */
+export function isConfiguredAdUnitId(adUnitId: string): boolean {
+    const normalized = adUnitId.trim().toLowerCase();
+    return !!normalized &&
+        !DEVELOPMENT_AD_UNIT_IDS.has(normalized) &&
+        !/(?:placeholder|test[-_]?ad|your[-_]?ad|demo|xxx)/.test(normalized);
+}

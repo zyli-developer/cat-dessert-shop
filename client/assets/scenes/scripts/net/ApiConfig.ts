@@ -15,4 +15,6 @@
 //   真机预览/调试: node scripts/set_api_base.mjs --tunnel   （cloudflared HTTPS 隧道→localhost:3333；真机禁明文 HTTP，局域网 IP 无效）
 //   浏览器/模拟器: node scripts/set_api_base.mjs --lan      （自动探测本机 IPv4）
 //   正式上线:     node scripts/set_api_base.mjs --url <https 域名>
-export const API_BASE_URL = 'https://plymouth-starring-eve-paintball.trycloudflare.com';
+// 仓库只保留稳定的开发默认值；临时隧道和正式域名由 set_api_base.mjs 按需写入。
+// 上传前 scripts/release-config.mjs 会拒绝 localhost、临时隧道和非 HTTPS 地址。
+export const API_BASE_URL = 'http://localhost:3333';

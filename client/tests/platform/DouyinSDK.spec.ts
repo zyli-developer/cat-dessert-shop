@@ -18,6 +18,12 @@ describe('DouyinSDK (TC-PLAT-SDK-004 non-Douyin fallbacks)', () => {
     delete (globalThis as any).GameGlobal;
   });
 
+  afterEach(() => {
+    delete (globalThis as any).tt;
+    delete (globalThis as any).GameGlobal;
+    jest.restoreAllMocks();
+  });
+
   it('isDouyinMiniGameRuntime returns false when tt global is absent', () => {
     expect(DouyinSDK.isDouyinMiniGameRuntime()).toBe(false);
   });
@@ -46,5 +52,15 @@ describe('DouyinSDK (TC-PLAT-SDK-004 non-Douyin fallbacks)', () => {
     // login — auth must fail loudly outside Douyin so callers don't silently
     // proceed with a fake session. This anchor pins that contract.
     await expect(DouyinSDK.login()).rejects.toThrow(/非抖音小游戏运行时/);
+  });
+
+  it('does not call tt.createRewardedVideoAd with a placeholder ID', async () => {
+    const createRewardedVideoAd = jest.fn();
+    (globalThis as any).tt = { login: jest.fn(), createRewardedVideoAd };
+    const error = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    await expect(DouyinSDK.showRewardedAd('game_ad_gold')).resolves.toBe(false);
+    expect(createRewardedVideoAd).not.toHaveBeenCalled();
+    expect(error).toHaveBeenCalledWith(expect.stringMatching(/开发占位值/));
   });
 });

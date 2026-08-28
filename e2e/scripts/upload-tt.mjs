@@ -13,6 +13,7 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DIST = path.resolve(__dirname, '../dist/bytedance-mini-game');
 const QR_OUT = path.resolve(__dirname, '../dist/bytedance-mini-game.upload.png');
+const RELEASE_CHECK = path.resolve(__dirname, '../../scripts/release-config.mjs');
 
 const [, , version, changelog] = process.argv;
 if (!version) {
@@ -25,8 +26,18 @@ if (!fs.existsSync(path.join(DIST, 'game.json'))) {
   console.log('[upload:tt] no build found, running build-bytedance first');
   const build = spawnSync(process.execPath, [path.join(__dirname, 'build-bytedance.mjs')], {
     stdio: 'inherit',
+    env: { ...process.env, RELEASE: '1' },
   });
   if (build.status !== 0) process.exit(build.status ?? 1);
+}
+
+// 上传必须同时验证源码配置与产物中的实际字符串，防止缓存旧包被误传。
+const configCheck = spawnSync(process.execPath, [RELEASE_CHECK, '--dist', DIST], {
+  stdio: 'inherit',
+});
+if (configCheck.status !== 0) {
+  console.error('[upload:tt] 正式配置或构建新鲜度检查失败，已取消上传');
+  process.exit(configCheck.status ?? 1);
 }
 
 console.log('[upload:tt] running tmg upload');

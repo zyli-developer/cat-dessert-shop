@@ -66,6 +66,24 @@ docker-compose up
 | `npm run build:e2e-bundle` | 构建 e2e 测试用 bundle |
 | `npm run lint:skips` | 校验 test.skip 是否携带原因 |
 
+## 抖音正式配置与发布门禁
+
+仓库中的客户端配置默认用于开发：`API_BASE_URL` 指向 `http://localhost:3333`，
+`REWARDED_AD_UNIT_ID` 是不可投放的占位值。不要把临时隧道地址提交为默认配置。
+
+正式构建前先写入已加入抖音合法域名白名单的 HTTPS API，并在
+`client/assets/scenes/scripts/platform/AdConfig.ts` 中填写一个真实激励视频广告位：
+
+```bash
+node scripts/set_api_base.mjs --url https://api.example.cn
+npm run config:check:release
+npm --workspace e2e run build:tt:release
+```
+
+`config:check:release` 会拒绝 HTTP、localhost、私网/临时隧道、模拟广告及广告占位值。
+正式构建还会校验产物是否包含当前配置，防止上传缓存旧包。`npm --workspace e2e run upload:tt -- <version> "<changelog>"`
+会重复执行该检查，失败时不会调用 `tmg upload`。
+
 `server/`：
 
 | 命令 | 说明 |

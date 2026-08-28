@@ -1,5 +1,5 @@
 import { sys } from 'cc';
-import { MOCK_REWARDED_ADS } from './AdConfig';
+import { isConfiguredAdUnitId, MOCK_REWARDED_ADS } from './AdConfig';
 
 /**
  * 解析抖音宿主提供的 tt 对象。
@@ -375,6 +375,21 @@ export class DouyinSDK {
                 } else {
                     resolve(true);
                 }
+                return;
+            }
+
+            if (!isConfiguredAdUnitId(adId)) {
+                console.error(
+                    `[DouyinSDK] 激励视频广告位 "${adId}" 仍是开发占位值；` +
+                    '请在 AdConfig.ts 配置抖音开放平台创建的真实广告位 ID。',
+                );
+                resolve(false);
+                return;
+            }
+
+            if (typeof ttApi?.createRewardedVideoAd !== 'function') {
+                console.warn('[DouyinSDK] 当前抖音宿主不支持 tt.createRewardedVideoAd');
+                resolve(false);
                 return;
             }
 
