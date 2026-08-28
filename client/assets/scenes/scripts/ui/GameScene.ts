@@ -60,7 +60,6 @@ export class GameScene extends Component {
 
     private state = GameState.instance;
     private hasRevived = false;
-    private adCatCoinsEarned = 0;
 
     /** 订单面板：进度计数 + 动态进度条 */
     private orderProgressLabel: Label | null = null;
@@ -519,6 +518,8 @@ export class GameScene extends Component {
         this.applyLocalUnlockAfterWin(winRound, this.state.score, stars);
 
         const progress = this.customerManager?.getProgress() ?? { served: 0, total: 0 };
+        const winScore = this.state.score;
+        const progressReady = this.saveProgressWithRetry(winRound, winScore, stars);
         PopupManager.show('WinPopup', {
             stars,
             score: this.state.score,
@@ -526,41 +527,39 @@ export class GameScene extends Component {
             round: winRound,
             customerCount: progress.total,
             isLastRound: winRound >= this.state.allLevels.length,
-            onDoubled: (bonus: number) => {
-                this.adCatCoinsEarned += bonus;
-            },
+            progressReady,
+            retryProgress: () => this.saveProgressWithRetry(winRound, winScore, stars, false),
         });
-
-        void this.saveProgressWithRetry(winRound, stars);
     }
 
     /**
      * 上传进度（D2：自动重连 + 双 toast）。失败本地已落盘，不阻断对局。
      * 首次失败 →「正在重连…」；重连成功 →「进度已保存」；多次仍失败 → 本地保存提示。
      */
-    private async saveProgressWithRetry(winRound: number, stars: number): Promise<void> {
-        if (ApiClient.isOfflineMode()) return; // 离线模式无需联网
+    private async saveProgressWithRetry(
+        winRound: number, score: number, stars: number, notify = true,
+    ): Promise<boolean> {
+        if (ApiClient.isOfflineMode()) return true;
         const maxTries = 3;
         for (let i = 0; i < maxTries; i++) {
             try {
-                const data = await ApiClient.updateProgress(
-                    winRound, this.state.score, stars, this.adCatCoinsEarned,
-                );
+                const data = await ApiClient.updateProgress(winRound, score, stars);
                 if (data && typeof data === 'object' && 'catCoins' in data) {
                     GameState.instance.applyProgressFromApi(data as {
                         catCoins: number; currentRound: number; highScore: number;
                         stars: Record<string, number>; roundScores: Record<string, number>;
                     });
                 }
-                if (i > 0) Toast.show('进度已保存，放心', false, 'icon_bell');     // D2 第二条：重连成功
-                return;
+                if (notify && i > 0) Toast.show('进度已保存，放心', false, 'icon_bell');
+                return true;
             } catch (e) {
                 console.error(`[GameScene] save progress failed (try ${i + 1}/${maxTries})`, e);
-                if (i === 0) Toast.show('网络开小差，正在重连…', true, 'icon_wifioff'); // D2 第一条
+                if (notify && i === 0) Toast.show('网络开小差，正在重连…', true, 'icon_wifioff');
                 if (i < maxTries - 1) await this.delay(1.2 * (i + 1));
             }
         }
-        Toast.show('网络仍未恢复 · 进度已本地保存~', true, 'icon_wifioff');
+        if (notify) Toast.show('网络仍未恢复 · 进度已本地保存~', true, 'icon_wifioff');
+        return false;
     }
 
     /** scheduleOnce 包成 Promise 的延时（用于重连退避）。 */

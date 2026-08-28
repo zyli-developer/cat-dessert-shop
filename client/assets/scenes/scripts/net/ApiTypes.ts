@@ -14,6 +14,13 @@ export interface AuthSession {
   accessToken: string;
 }
 
+export type RewardKind = 'home_ad' | 'win_double' | 'daily_gift' | 'daily_gift_double';
+
+export interface RewardClaimResult extends UserProfile {
+  awarded: number;
+  alreadyClaimed: boolean;
+}
+
 export interface RankItem {
   nickname: string;
   avatar: string;

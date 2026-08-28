@@ -8,6 +8,8 @@ import { AD_UNIT_IDS } from '../../platform/AdConfig';
 import { TOKENS } from '../DesignTokens';
 import { drawRoundedRect, makeButton, makeLabel, POPUP_COLORS } from './PopupUIHelper';
 import { GlobalFontManager } from '../GlobalFontManager';
+import { ApiClient } from '../../net/ApiClient';
+import { Toast } from '../../utils/Toast';
 const { ccclass } = _decorator;
 
 const BASE_REWARD = 20;
@@ -15,8 +17,7 @@ const DOUBLED_REWARD = 40;
 
 /**
  * 每日礼包弹窗（PRD/审计 M3：每日免费 +20 猫币，看广告翻倍至 +40）。
- * 当前为客户端本地按日防重复（localStorage 日期键）；server-authoritative
- * 按 CST 0 点刷新留待后端 Phase5 接口落地后替换 claim 逻辑。
+ * 在线奖励由服务端按 UTC+8 日期幂等发放；localStorage 仅用于本机 UI 状态与离线模式。
  */
 @ccclass('DailyGiftPopup')
 export class DailyGiftPopup extends Component {
@@ -25,6 +26,8 @@ export class DailyGiftPopup extends Component {
     private btnDouble: Node | null = null;
     private claimedToday = false;
     private claimInProgress = false;
+    private adCompleted = false;
+    private doubleClaimId = '';
 
     init(): void {
         for (const child of this.node.children) child.active = false;
@@ -57,16 +60,16 @@ export class DailyGiftPopup extends Component {
     }
 
     private todayKey(): string {
-        const d = new Date();
-        const ymd = `${d.getFullYear()}${d.getMonth() + 1}${d.getDate()}`;
-        return `daily_gift_${ymd}`;
+        return `daily_${ApiClient.createDailyClaimId('gift')}`;
     }
 
-    private grant(amount: number): void {
-        const profile = GameState.instance.userProfile;
-        if (profile) {
-            profile.catCoins += amount;
-            GameState.instance.events.emit('profile-changed');
+    private grant(amount: number, applyLocally: boolean): void {
+        if (applyLocally) {
+            const profile = GameState.instance.userProfile;
+            if (profile) {
+                profile.catCoins += amount;
+                GameState.instance.events.emit('profile-changed');
+            }
         }
         sys.localStorage.setItem(this.todayKey(), '1');
         this.claimedToday = true;
@@ -80,17 +83,47 @@ export class DailyGiftPopup extends Component {
         this.lockButtons('已领取');
     }
 
-    private onClaim(): void {
-        if (this.claimedToday) return;
-        this.grant(BASE_REWARD);
+    private async onClaim(): Promise<void> {
+        if (this.claimedToday || this.claimInProgress) return;
+        this.claimInProgress = true;
+        try {
+            if (ApiClient.isOfflineMode()) {
+                this.grant(BASE_REWARD, true);
+                return;
+            }
+            const result = await ApiClient.claimReward(
+                'daily_gift', ApiClient.createDailyClaimId('gift'),
+            );
+            GameState.instance.applyProgressFromApi(result);
+            this.grant(result.awarded || BASE_REWARD, false);
+        } catch (e) {
+            console.warn('[DailyGiftPopup] claim failed:', e);
+            Toast.show('礼包领取失败，请稍后重试~', true, 'icon_wifioff');
+        } finally {
+            this.claimInProgress = false;
+        }
     }
 
     private async onDouble(): Promise<void> {
         if (this.claimedToday || this.claimInProgress) return;
         this.claimInProgress = true;
         try {
-            const ok = await DouyinSDK.showRewardedAd(AD_UNIT_IDS.dailyGift);
-            if (ok) this.grant(DOUBLED_REWARD);
+            if (!this.adCompleted) {
+                const ok = await DouyinSDK.showRewardedAd(AD_UNIT_IDS.dailyGift);
+                if (!ok) return;
+                this.adCompleted = true;
+                this.doubleClaimId = ApiClient.createDailyClaimId('gift2');
+            }
+            if (ApiClient.isOfflineMode()) {
+                this.grant(DOUBLED_REWARD, true);
+                return;
+            }
+            const result = await ApiClient.claimReward('daily_gift_double', this.doubleClaimId);
+            GameState.instance.applyProgressFromApi(result);
+            this.grant(result.awarded || DOUBLED_REWARD, false);
+        } catch (e) {
+            console.warn('[DailyGiftPopup] double claim failed:', e);
+            Toast.show('奖励保存失败，点击可重试~', true, 'icon_wifioff');
         } finally {
             this.claimInProgress = false;
         }

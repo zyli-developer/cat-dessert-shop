@@ -188,10 +188,39 @@ describe('ApiClient (T2-12)', () => {
     const fake = jest.fn();
     ApiClient.setFetch(fake as unknown as typeof fetch);
 
-    const resp = await ApiClient.updateProgress(2, 500, 3, 20);
+    const resp = await ApiClient.updateProgress(2, 500, 3);
     expect(resp.offline).toBe(true);
     expect(resp.currentRound).toBe(2);
     expect(fake).not.toHaveBeenCalled();
+  });
+
+  it('claimReward sends only the server-controlled kind, claim id, and round', async () => {
+    ApiClient.setSession('open-xyz', 'signed-token');
+    const fake = jest.fn().mockResolvedValue(jsonResponse({
+      code: 0,
+      data: {
+        openId: 'open-xyz', nickname: '', avatar: '', catCoins: 20,
+        currentRound: 2, highScore: 1000, stars: { '1': 3 },
+        roundScores: { '1': 1000 }, awarded: 20, alreadyClaimed: false,
+      },
+    }));
+    ApiClient.setFetch(fake as unknown as typeof fetch);
+
+    await ApiClient.claimReward('win_double', 'win_double_1', 1);
+    const [, init] = fake.mock.calls[0];
+    expect(JSON.parse(String(init?.body))).toEqual({
+      kind: 'win_double', claimId: 'win_double_1', round: 1,
+    });
+  });
+
+  it('uses stable daily and round claim ids so a lost response can be replayed', () => {
+    const beforeCstMidnight = Date.UTC(2026, 7, 28, 15, 59, 59);
+    const afterCstMidnight = Date.UTC(2026, 7, 28, 16, 0, 1);
+
+    expect(ApiClient.createDailyClaimId('gift', beforeCstMidnight)).toBe('gift_20260828');
+    expect(ApiClient.createDailyClaimId('gift', beforeCstMidnight)).toBe('gift_20260828');
+    expect(ApiClient.createDailyClaimId('gift', afterCstMidnight)).toBe('gift_20260829');
+    expect(ApiClient.createRoundClaimId(1)).toBe('win_double_1');
   });
 
 });

@@ -1,4 +1,4 @@
-import { UserProfile, RankItem, AuthSession } from './ApiTypes';
+import { UserProfile, RankItem, AuthSession, RewardClaimResult, RewardKind } from './ApiTypes';
 import { DouyinSDK } from '../platform/DouyinSDK';
 import { API_BASE_URL } from './ApiConfig';
 
@@ -226,6 +226,20 @@ export class ApiClient {
     this._accessToken = '';
   }
 
+  static createClaimId(scope: string): string {
+    const random = Math.random().toString(36).slice(2, 12);
+    return `${scope}_${Date.now().toString(36)}_${random}`.slice(0, 64);
+  }
+
+  static createDailyClaimId(scope: 'gift' | 'gift2', now = Date.now()): string {
+    const utc8 = new Date(now + 8 * 60 * 60 * 1000).toISOString().slice(0, 10).replace(/-/g, '');
+    return `${scope}_${utc8}`;
+  }
+
+  static createRoundClaimId(round: number): string {
+    return `win_double_${round}`;
+  }
+
   /** Injectable fetch seam (test-only). Forwards to module-level `setFetchImpl`. */
   static setFetch(fn: typeof fetch): void {
     setFetchImpl(fn);
@@ -271,7 +285,7 @@ export class ApiClient {
     return request('/api/user/profile', 'POST', info);
   }
 
-  static updateProgress(round: number, score: number, stars: number, catCoinsEarned?: number): Promise<any> {
+  static updateProgress(round: number, score: number, stars: number): Promise<any> {
     if (this.isOfflineMode()) {
       return Promise.resolve({
         catCoins: 0,
@@ -287,7 +301,14 @@ export class ApiClient {
       round,
       score,
       stars,
-      catCoinsEarned,
+    });
+  }
+
+  static claimReward(kind: RewardKind, claimId: string, round?: number): Promise<RewardClaimResult> {
+    return request<RewardClaimResult>('/api/user/rewards/claim', 'POST', {
+      kind,
+      claimId,
+      ...(round === undefined ? {} : { round }),
     });
   }
 

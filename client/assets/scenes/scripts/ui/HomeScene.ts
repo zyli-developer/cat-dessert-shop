@@ -8,6 +8,7 @@ import { AD_UNIT_IDS } from '../platform/AdConfig';
 import { GlobalFontManager } from './GlobalFontManager';
 import { TOKENS, applyInkOutline } from './DesignTokens';
 import { SafeArea } from '../platform/SafeArea';
+import { ApiClient } from '../net/ApiClient';
 const { ccclass, property } = _decorator;
 
 @ccclass('HomeScene')
@@ -15,6 +16,8 @@ export class HomeScene extends Component {
     private viewingRound: number = 1;
     private _ready = false;
     private adClaimInProgress = false;
+    private adCompleted = false;
+    private adClaimId = '';
 
     // 运行时查找的节点引用
     private roundLabel: Label | null = null;
@@ -419,14 +422,29 @@ export class HomeScene extends Component {
         if (this.adClaimInProgress) return;
         this.adClaimInProgress = true;
         try {
-            const success = await DouyinSDK.showRewardedAd(AD_UNIT_IDS.homeCatCoin);
-            if (success) {
-                const state = GameState.instance;
+            if (!this.adCompleted) {
+                const success = await DouyinSDK.showRewardedAd(AD_UNIT_IDS.homeCatCoin);
+                if (!success) return;
+                this.adCompleted = true;
+                this.adClaimId = ApiClient.createClaimId('home');
+            }
+            const state = GameState.instance;
+            if (ApiClient.isOfflineMode()) {
                 if (state.userProfile) {
                     state.userProfile.catCoins += 10;
+                    state.events.emit('profile-changed');
                 }
-                this.updateDisplay();
+            } else {
+                const result = await ApiClient.claimReward(
+                    'home_ad', this.adClaimId,
+                );
+                state.applyProgressFromApi(result);
             }
+            this.adCompleted = false;
+            this.adClaimId = '';
+            this.updateDisplay();
+        } catch (e) {
+            console.warn('[HomeScene] claim ad reward failed:', e);
         } finally {
             this.adClaimInProgress = false;
         }

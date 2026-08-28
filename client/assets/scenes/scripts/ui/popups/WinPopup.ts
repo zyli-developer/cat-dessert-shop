@@ -27,7 +27,8 @@ interface WinData {
     /** 本关猫客总数（用于副标题文案） */
     customerCount?: number;
     isLastRound: boolean;
-    onDoubled?: (bonus: number) => void;
+    progressReady?: Promise<boolean>;
+    retryProgress?: () => Promise<boolean>;
 }
 
 @ccclass('WinPopup')
@@ -35,6 +36,8 @@ export class WinPopup extends Component {
     private data!: WinData;
     private hasDoubled = false;
     private adInProgress = false;
+    private adCompleted = false;
+    private doubleClaimId = '';
     private catCoinLabel: Label | null = null;
     private friendPanel: Node | null = null;
 
@@ -328,15 +331,45 @@ export class WinPopup extends Component {
         if (this.hasDoubled || this.adInProgress) return;
         this.adInProgress = true;
         try {
-            const success = await DouyinSDK.showRewardedAd(AD_UNIT_IDS.winDouble);
-            if (!success) { Toast.show('广告君打了个盹，稍后再来~', true, 'icon_ad'); return; }
+            if (!this.adCompleted) {
+                const success = await DouyinSDK.showRewardedAd(AD_UNIT_IDS.winDouble);
+                if (!success) {
+                    Toast.show('广告君打了个盹，稍后再来~', true, 'icon_ad');
+                    return;
+                }
+                this.adCompleted = true;
+                this.doubleClaimId = ApiClient.createRoundClaimId(this.data.round);
+            }
+
+            let bonus = this.data.catCoins;
+            if (ApiClient.isOfflineMode()) {
+                const profile = GameState.instance.userProfile;
+                if (profile) {
+                    profile.catCoins += bonus;
+                    GameState.instance.events.emit('profile-changed');
+                }
+            } else {
+                let progressSaved = await (this.data.progressReady ?? Promise.resolve(true));
+                if (!progressSaved && this.data.retryProgress) {
+                    progressSaved = await this.data.retryProgress();
+                }
+                if (!progressSaved) {
+                    Toast.show('通关进度仍在排队，联网后再点一次即可领奖~', true, 'icon_wifioff');
+                    return;
+                }
+                const result = await ApiClient.claimReward(
+                    'win_double', this.doubleClaimId, this.data.round,
+                );
+                GameState.instance.applyProgressFromApi(result);
+                bonus = result.awarded || bonus;
+            }
+
             this.hasDoubled = true;
-            const bonus = this.data.catCoins;
             if (this.catCoinLabel) this.catCoinLabel.string = `+${this.data.catCoins + bonus}`;
             if (btn.isValid) btn.active = false;
-            const profile = GameState.instance.userProfile;
-            if (profile) profile.catCoins += bonus;
-            this.data.onDoubled?.(bonus);
+        } catch (e) {
+            console.warn('[WinPopup] claim win double failed:', e);
+            Toast.show('奖励保存失败，点击可重试~', true, 'icon_wifioff');
         } finally {
             this.adInProgress = false;
         }
