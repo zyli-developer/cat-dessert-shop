@@ -594,6 +594,7 @@ export class GameScene extends Component {
     // --- Lose (C1 fix: pass revive callback) ---
     private onLose(): void {
         this.dropController?.setEnabled(false);
+        this.overflowDetector?.setEnabled(false);
         const progress = this.customerManager?.getProgress() ?? { served: 0, total: 0 };
         PopupManager.show('FailPopup', {
             score: this.state.score,
