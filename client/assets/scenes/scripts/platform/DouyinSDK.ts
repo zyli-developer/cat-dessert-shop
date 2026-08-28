@@ -56,6 +56,7 @@ function normalizeLoginResult(res: any): { code?: string; anonymousCode?: string
 
 export class DouyinSDK {
     private static adInstances: Map<string, any> = new Map();
+    private static adInFlight = false;
 
     /** 供 ApiClient 等使用，与 resolveTT 一致 */
     static getTT(): any {
@@ -353,7 +354,19 @@ export class DouyinSDK {
      * @param adId 广告位标识（用于缓存实例）
      * @returns true=观看完成，false=关闭/失败
      */
-    static showRewardedAd(adId: string): Promise<boolean> {
+    static async showRewardedAd(adId: string): Promise<boolean> {
+        // 抖音激励视频是全局单例；任一入口展示期间都拒绝新的请求，
+        // 防止快速连点或两个弹窗重叠时重复展示、重复发奖。
+        if (this.adInFlight) return false;
+        this.adInFlight = true;
+        try {
+            return await this.showRewardedAdOnce(adId);
+        } finally {
+            this.adInFlight = false;
+        }
+    }
+
+    private static showRewardedAdOnce(adId: string): Promise<boolean> {
         return new Promise((resolve) => {
             if (!this.isDouyinMiniGameRuntime()) {
                 console.log(`[DouyinSDK] Dev mode: rewarded ad "${adId}" → simulated success`);

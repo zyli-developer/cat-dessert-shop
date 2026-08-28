@@ -63,4 +63,21 @@ describe('DouyinSDK (TC-PLAT-SDK-004 non-Douyin fallbacks)', () => {
     expect(createRewardedVideoAd).not.toHaveBeenCalled();
     expect(error).toHaveBeenCalledWith(expect.stringMatching(/开发占位值/));
   });
+
+  it('allows only one rewarded-ad request globally until it settles', async () => {
+    let finish!: (value: boolean) => void;
+    const pending = new Promise<boolean>((resolve) => { finish = resolve; });
+    const showOnce = jest.spyOn(DouyinSDK as any, 'showRewardedAdOnce')
+      .mockReturnValueOnce(pending)
+      .mockResolvedValueOnce(true);
+
+    const first = DouyinSDK.showRewardedAd('real-ad-unit-a');
+    await expect(DouyinSDK.showRewardedAd('real-ad-unit-b')).resolves.toBe(false);
+    expect(showOnce).toHaveBeenCalledTimes(1);
+
+    finish(true);
+    await expect(first).resolves.toBe(true);
+    await expect(DouyinSDK.showRewardedAd('real-ad-unit-b')).resolves.toBe(true);
+    expect(showOnce).toHaveBeenCalledTimes(2);
+  });
 });
