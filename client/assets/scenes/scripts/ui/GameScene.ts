@@ -60,6 +60,7 @@ export class GameScene extends Component {
 
     private state = GameState.instance;
     private hasRevived = false;
+    private pausePending = false;
 
     /** 订单面板：进度计数 + 动态进度条 */
     private orderProgressLabel: Label | null = null;
@@ -493,15 +494,22 @@ export class GameScene extends Component {
     }
 
     // --- Pause (C2 fix: pass onResume callback) ---
-    onPauseClicked(): void {
+    async onPauseClicked(): Promise<void> {
+        if (this.pausePending || PopupManager.isShowing) return;
+        this.pausePending = true;
         this.dropController?.setEnabled(false);
         this.overflowDetector?.setEnabled(false);
-        PopupManager.show('PausePopup', {
+        const popup = await PopupManager.show('PausePopup', {
             onResume: () => {
                 this.dropController?.setEnabled(true);
                 this.overflowDetector?.setEnabled(true);
             },
         });
+        this.pausePending = false;
+        if (!popup && this.node?.isValid) {
+            this.dropController?.setEnabled(true);
+            this.overflowDetector?.setEnabled(true);
+        }
     }
 
     // --- Win (C4 fix: send catCoinsEarned to server) ---
