@@ -84,6 +84,9 @@ npm --workspace e2e run build:tt:release
 正式构建还会校验产物是否包含当前配置，防止上传缓存旧包。`npm --workspace e2e run upload:tt -- <version> "<changelog>"`
 会重复执行该检查，失败时不会调用 `tmg upload`。
 
+`build:tt`（包括命中缓存时）会自动把 `audio`、`main` Bundle 整理为抖音分包；
+后处理检测到主包仍超过 4 MB 时会立即失败，禁止继续预览或上传。
+
 `server/`：
 
 | 命令 | 说明 |

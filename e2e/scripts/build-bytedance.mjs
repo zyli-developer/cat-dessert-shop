@@ -17,7 +17,20 @@ const MARKER = path.join(DIST, 'game.json');
 const COCOS = process.env.COCOS_CREATOR_PATH;
 const FORCE = process.env.FORCE === '1';
 const RELEASE = process.env.RELEASE === '1' || process.argv.includes('--release');
+const POSTBUILD = path.resolve(__dirname, '../../scripts/postbuild_subpackage.mjs');
 const RELEASE_CHECK = path.resolve(__dirname, '../../scripts/release-config.mjs');
+
+function runPostbuild() {
+  const result = spawnSync(
+    process.execPath,
+    [POSTBUILD, DIST, 'audio', 'main'],
+    { stdio: 'inherit' },
+  );
+  if (result.status !== 0) {
+    console.error(`[build:tt] subpackage postbuild failed (exit=${result.status ?? -1})`);
+    process.exit(result.status ?? 1);
+  }
+}
 
 function runReleaseCheck(dist) {
   const result = spawnSync(
@@ -31,6 +44,7 @@ function runReleaseCheck(dist) {
 if (RELEASE) runReleaseCheck();
 
 if (!FORCE && fs.existsSync(MARKER)) {
+  runPostbuild();
   if (RELEASE) runReleaseCheck(DIST);
   console.log('[build:tt] cached bytedance-mini-game exists, skipping (FORCE=1 to rebuild)');
   process.exit(0);
@@ -65,6 +79,7 @@ p.on('exit', (code) => {
   // subprocesses) even after writing the build artifact successfully.
   // Trust the file marker over the exit code.
   if (fs.existsSync(MARKER)) {
+    runPostbuild();
     if (RELEASE) runReleaseCheck(DIST);
     console.log(`[build:tt] build complete in ${dt}s → ${DIST} (cocos exit=${code})`);
     process.exit(0);

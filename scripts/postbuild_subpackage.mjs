@@ -113,4 +113,9 @@ if (changed) {
     fs.writeFileSync(settingsPath, JSON.stringify(settings));
 }
 
-console.log(`[postbuild] 主包大小 ≈ ${(mainPackageSize(buildDir) / 1048576).toFixed(3)} MB（上限 4 MB）`);
+const mainBytes = mainPackageSize(buildDir);
+console.log(`[postbuild] 主包大小 ≈ ${(mainBytes / 1048576).toFixed(3)} MB（上限 4 MB）`);
+if (mainBytes > 4 * 1048576) {
+    console.error('[postbuild] 主包仍超过 4 MB，拒绝继续预览或上传');
+    process.exit(1);
+}
