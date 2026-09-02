@@ -19,7 +19,7 @@ function hashAssets() {
       const st = statSync(p);
       if (st.isDirectory()) walk(p);
       else {
-        h.update(relative(CLIENT, p));
+        h.update(relative(CLIENT, p).replaceAll('\\', '/'));
         h.update(readFileSync(p));
       }
     }
