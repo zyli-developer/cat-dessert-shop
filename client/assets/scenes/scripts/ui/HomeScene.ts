@@ -1,5 +1,6 @@
 import { _decorator, Component, Label, Node, Sprite, SpriteFrame, resources, director,
-         Color, Graphics, UITransform, Layers, UIOpacity, Button, tween, Vec3 } from 'cc';
+         Color, Graphics, UITransform, Layers, UIOpacity, Button, BlockInputEvents,
+         tween, Vec3 } from 'cc';
 import { GameState } from '../data/GameState';
 import type { UserProfile } from '../net/ApiTypes';
 import { PopupManager } from './PopupManager';
@@ -33,6 +34,9 @@ export class HomeScene extends Component {
     private btnAdCatCoin: Node | null = null;
     private btnShare: Node | null = null;
     private btnGift: Node | null = null;
+    private btnSidebar: Node | null = null;
+    private sidebarGuide: Node | null = null;
+    private disposeOnShow: (() => void) | null = null;
 
     onLoad(): void {
         console.log('[HomeScene] === onLoad ===');
@@ -62,6 +66,16 @@ export class HomeScene extends Component {
         this.ensureAdCatCoinHint();
         this.ensureGiftBadge();
         this.createHomelandPlaceholder();
+        this.btnSidebar = this.createSidebarButton();
+        this.btnSidebar.active = false;
+        void DouyinSDK.checkScene('sidebar').then((supported) => {
+            if (this.btnSidebar?.isValid) this.btnSidebar.active = supported;
+        });
+        this.disposeOnShow = DouyinSDK.onShow((options) => {
+            if (DouyinSDK.isSidebarLaunch(options)) {
+                this.showToast('欢迎从首页侧边栏回来~');
+            }
+        });
         this.setupLevelCard();
         this.applySafeArea();
 
@@ -85,7 +99,7 @@ export class HomeScene extends Component {
             this.bindBtn(this.btnRank, this.onRankClicked);
             this.bindBtn(this.btnSettings, this.onSettingsClicked);
             this.bindBtn(this.btnAdCatCoin, this.onAdCatCoinClicked);
-            this.bindBtn(this.btnShare, this.onSidebarClicked);
+            this.bindBtn(this.btnShare, this.onShareClicked);
             this.bindBtn(this.btnGift, this.onGiftClicked);
             this._ready = true;
             console.log('[HomeScene] Touch events bound, ready=true');
@@ -105,7 +119,7 @@ export class HomeScene extends Component {
 
         const coin = ['CoinIcon', 'ChipBg', 'CatCoinLabel']
             .map(n => this.findNode(n)).filter((n): n is Node => !!n);
-        const right = ['BtnShare', 'BtnSettings']
+        const right = ['BtnSidebar', 'BtnShare', 'BtnSettings']
             .map(n => this.findNode(n)).filter((n): n is Node => !!n);
 
         // 整行下移到胶囊下方
@@ -180,33 +194,234 @@ export class HomeScene extends Component {
     }
 
     /**
-     * 顶部右上角创建一个「+ 添加到侧边栏」小按钮。
-     * 唯一目的：满足抖音小游戏审核硬指标「侧边栏复访」 —— 必须在 bundle 里调用 tt.navigateToScene。
-     * 同时是真实可用功能：玩家点了能把游戏加到自己抖音侧边栏，下次能直接进。
+     * 抖音侧边栏复访入口。
+     * 作为顶部 HUD 的次级胶囊按钮存在，避免悬浮长条遮挡 Logo 和首页主视觉；
+     * 入口仅在 tt.checkScene 确认当前宿主支持时显示。
      */
-    private createSidebarButton(): void {
+    private createSidebarButton(): Node {
         const btn = new Node('BtnSidebar');
         btn.layer = Layers.Enum.UI_2D;
         btn.parent = this.node;
         const ut = btn.addComponent(UITransform);
-        ut.setContentSize(180, 56);
-        btn.setPosition(220, 480, 0);
+        const W = 148, H = 60;
+        ut.setContentSize(W, H);
+        // 与分享、设置同属顶部右侧组；applySafeArea 会按真机胶囊和水平安全区统一校正。
+        btn.setPosition(117, 582, 0);
 
-        const label = btn.addComponent(Label);
-        label.string = '+ 加到侧边栏';
+        const g = btn.addComponent(Graphics);
+        // 轻微厚底与首页果冻按钮语言一致，但使用幽灵色降低视觉权级。
+        g.fillColor = TOKENS.ghostShadow;
+        g.roundRect(-W / 2, -H / 2 - 5, W, H, 24);
+        g.fill();
+        g.fillColor = TOKENS.paper2;
+        g.roundRect(-W / 2, -H / 2, W, H, 24);
+        g.fill();
+        g.lineWidth = 2;
+        g.strokeColor = TOKENS.line2;
+        g.roundRect(-W / 2, -H / 2, W, H, 24);
+        g.stroke();
+        g.fillColor = TOKENS.pinkSf;
+        g.circle(-48, 1, 21);
+        g.fill();
+
+        // 首页线性图标，避免让平台能力看起来像新的游戏主功能。
+        this.makeIconSprite(btn, 'textures/ui/icon_home', -48, 1, 28, TOKENS.pinkDp);
+
+        const labelNode = new Node('Label');
+        labelNode.layer = Layers.Enum.UI_2D;
+        labelNode.parent = btn;
+        labelNode.setPosition(24, 1, 0);
+        labelNode.addComponent(UITransform).setContentSize(92, H);
+        const label = labelNode.addComponent(Label);
+        label.string = '去侧边栏';
         label.fontSize = 22;
-        label.lineHeight = 28;
+        label.lineHeight = H;
         label.horizontalAlign = Label.HorizontalAlign.CENTER;
         label.verticalAlign = Label.VerticalAlign.CENTER;
-        label.color = TOKENS.white;
+        label.color = TOKENS.ink;
         label.isBold = true;
-        applyInkOutline(label, 220, 3);
+        GlobalFontManager.applyFont(labelNode);
 
+        const press = () => btn.setScale(0.96, 0.96, 1);
+        const release = () => btn.setScale(1, 1, 1);
+        btn.on(Node.EventType.TOUCH_START, press, this);
+        btn.on(Node.EventType.TOUCH_END, release, this);
+        btn.on(Node.EventType.TOUCH_CANCEL, release, this);
         btn.on(Node.EventType.TOUCH_END, this.onSidebarClicked, this);
+        return btn;
     }
 
-    private async onSidebarClicked(): Promise<void> {
-        await DouyinSDK.navigateToSidebar();
+    private onSidebarClicked(): void {
+        if (this.sidebarGuide?.isValid) return;
+        this.showSidebarGuide();
+    }
+
+    /**
+     * 用渐进披露承载平台说明：首页只保留轻入口，具体操作放在可关闭的引导卡中。
+     */
+    private showSidebarGuide(): void {
+        const overlay = new Node('SidebarGuide');
+        overlay.layer = Layers.Enum.UI_2D;
+        overlay.parent = this.node;
+        overlay.setSiblingIndex(999);
+        overlay.addComponent(UITransform).setContentSize(720, 1280);
+        overlay.addComponent(BlockInputEvents);
+        this.sidebarGuide = overlay;
+
+        const mask = overlay.addComponent(Graphics);
+        mask.fillColor = new Color(74, 55, 40, 112);
+        mask.rect(-360, -640, 720, 1280);
+        mask.fill();
+
+        const card = new Node('GuideCard');
+        card.layer = Layers.Enum.UI_2D;
+        card.parent = overlay;
+        card.setPosition(0, -18, 0);
+        card.addComponent(UITransform).setContentSize(560, 500);
+        const cardG = card.addComponent(Graphics);
+        cardG.fillColor = TOKENS.sand2;
+        cardG.roundRect(-280, -258, 560, 500, 34);
+        cardG.fill();
+        cardG.fillColor = TOKENS.paper2;
+        cardG.roundRect(-280, -250, 560, 500, 34);
+        cardG.fill();
+        cardG.lineWidth = 3;
+        cardG.strokeColor = TOKENS.line2;
+        cardG.roundRect(-280, -250, 560, 500, 34);
+        cardG.stroke();
+
+        const emblem = new Node('Emblem');
+        emblem.layer = Layers.Enum.UI_2D;
+        emblem.parent = card;
+        emblem.setPosition(0, 218, 0);
+        emblem.addComponent(UITransform).setContentSize(92, 92);
+        const emblemG = emblem.addComponent(Graphics);
+        emblemG.fillColor = TOKENS.pinkSf;
+        emblemG.circle(0, 0, 46);
+        emblemG.fill();
+        emblemG.lineWidth = 3;
+        emblemG.strokeColor = TOKENS.pink;
+        emblemG.circle(0, 0, 46);
+        emblemG.stroke();
+        this.makeIconSprite(emblem, 'textures/ui/icon_home', 0, 0, 48, TOKENS.pinkDp);
+
+        this.makeSidebarGuideLabel(card, '常用入口', 145, 38, TOKENS.ink, 440);
+        this.makeSidebarGuideLabel(
+            card, '下次从抖音首页侧边栏，快速回到猫店', 98, 23, TOKENS.inkSoft, 480,
+        );
+
+        const steps = [
+            '1  点击下方按钮，前往首页侧边栏',
+            '2  找到「一起开猫店」',
+            '3  点击游戏图标，继续营业',
+        ];
+        steps.forEach((text, index) => {
+            this.makeSidebarGuideLabel(card, text, 34 - index * 52, 24, TOKENS.ink, 430, true);
+        });
+
+        const go = new Node('BtnGoSidebar');
+        go.layer = Layers.Enum.UI_2D;
+        go.parent = card;
+        go.setPosition(0, -177, 0);
+        go.addComponent(UITransform).setContentSize(400, 72);
+        const goG = go.addComponent(Graphics);
+        goG.fillColor = TOKENS.pinkDp;
+        goG.roundRect(-200, -42, 400, 72, 28);
+        goG.fill();
+        goG.fillColor = TOKENS.pink;
+        goG.roundRect(-200, -36, 400, 72, 28);
+        goG.fill();
+        this.makeSidebarGuideLabel(go, '去首页侧边栏', 1, 29, TOKENS.white, 400);
+        const pressGo = () => go.setScale(0.97, 0.97, 1);
+        const releaseGo = () => go.setScale(1, 1, 1);
+        go.on(Node.EventType.TOUCH_START, pressGo, this);
+        go.on(Node.EventType.TOUCH_CANCEL, releaseGo, this);
+        go.on(Node.EventType.TOUCH_END, () => {
+            releaseGo();
+            this.closeSidebarGuide(true);
+            void this.navigateToSidebar();
+        }, this);
+
+        const close = new Node('BtnClose');
+        close.layer = Layers.Enum.UI_2D;
+        close.parent = card;
+        close.setPosition(238, 208, 0);
+        close.addComponent(UITransform).setContentSize(56, 56);
+        const closeG = close.addComponent(Graphics);
+        closeG.fillColor = TOKENS.paper2;
+        closeG.circle(0, 0, 28);
+        closeG.fill();
+        closeG.lineWidth = 2;
+        closeG.strokeColor = TOKENS.line2;
+        closeG.circle(0, 0, 28);
+        closeG.stroke();
+        this.makeIconSprite(close, 'textures/ui/icon_close', 0, 0, 25, TOKENS.inkSoft);
+        close.on(Node.EventType.TOUCH_END, () => this.closeSidebarGuide(), this);
+
+        const opacity = overlay.addComponent(UIOpacity);
+        opacity.opacity = 0;
+        card.setScale(0.94, 0.94, 1);
+        tween(opacity).to(0.16, { opacity: 255 }).start();
+        tween(card).to(0.18, { scale: new Vec3(1, 1, 1) }, { easing: 'quadOut' }).start();
+    }
+
+    private makeSidebarGuideLabel(
+        parent: Node, text: string, y: number, fontSize: number,
+        color: Color, width: number, alignLeft = false,
+    ): Label {
+        const node = new Node('Label');
+        node.layer = Layers.Enum.UI_2D;
+        node.parent = parent;
+        node.setPosition(0, y, 0);
+        node.addComponent(UITransform).setContentSize(width, fontSize + 14);
+        const label = node.addComponent(Label);
+        label.string = text;
+        label.fontSize = fontSize;
+        label.lineHeight = fontSize + 10;
+        label.horizontalAlign = alignLeft ? Label.HorizontalAlign.LEFT : Label.HorizontalAlign.CENTER;
+        label.verticalAlign = Label.VerticalAlign.CENTER;
+        label.color = color;
+        label.isBold = true;
+        if (color === TOKENS.white) applyInkOutline(label, 150, 2);
+        GlobalFontManager.applyFont(node);
+        return label;
+    }
+
+    private closeSidebarGuide(immediate = false): void {
+        const overlay = this.sidebarGuide;
+        if (!overlay?.isValid) {
+            this.sidebarGuide = null;
+            return;
+        }
+        this.sidebarGuide = null;
+        if (immediate) {
+            overlay.destroy();
+            return;
+        }
+        const opacity = overlay.getComponent(UIOpacity);
+        if (!opacity) {
+            overlay.destroy();
+            return;
+        }
+        tween(opacity).to(0.14, { opacity: 0 }).call(() => {
+            if (overlay.isValid) overlay.destroy();
+        }).start();
+    }
+
+    private async navigateToSidebar(): Promise<void> {
+        const result = await DouyinSDK.navigateToSidebar();
+        if (!result.ok) this.showToast('侧边栏暂时无法打开，请稍后再试~');
+    }
+
+    private async onShareClicked(): Promise<void> {
+        const result = await DouyinSDK.share({
+            title: '一起来开猫店吧！',
+            desc: '合成甜品，招待可爱的猫咪客人~',
+            query: 'from=home_share',
+        });
+        if (result.status === 'success') this.showToast('分享成功，等你一起开店~');
+        else if (result.status === 'cancelled') this.showToast('已取消分享');
+        else if (result.status !== 'busy') this.showToast('分享暂时不可用，请稍后再试~');
     }
 
     /**
@@ -528,6 +743,9 @@ export class HomeScene extends Component {
 
     onDestroy(): void {
         GameState.instance.events.off('profile-changed', this.updateDisplay, this);
+        this.closeSidebarGuide(true);
+        this.disposeOnShow?.();
+        this.disposeOnShow = null;
     }
 
     /** 隐藏时仍占位（opacity=0），避免 ButtonsContainer 的 Layout 重排导致主按钮不居中 */

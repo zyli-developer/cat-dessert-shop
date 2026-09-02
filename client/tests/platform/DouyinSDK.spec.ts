@@ -16,6 +16,8 @@ describe('DouyinSDK (TC-PLAT-SDK-004 non-Douyin fallbacks)', () => {
     // Guard against test pollution: ensure no stray tt global.
     delete (globalThis as any).tt;
     delete (globalThis as any).GameGlobal;
+    (DouyinSDK as any).shareInFlight = false;
+    (DouyinSDK as any).shareMenuInitialized = false;
   });
 
   afterEach(() => {
@@ -43,8 +45,9 @@ describe('DouyinSDK (TC-PLAT-SDK-004 non-Douyin fallbacks)', () => {
     expect(() => DouyinSDK.showInterstitialAd('interstitial-home')).not.toThrow();
   });
 
-  it('share resolves cleanly in dev mode', async () => {
-    await expect(DouyinSDK.share('title', 'http://img', 'from=test')).resolves.toBeUndefined();
+  it('share reports unavailable in dev mode instead of pretending to succeed', async () => {
+    await expect(DouyinSDK.share({ title: 'title', query: 'from=test' }))
+      .resolves.toEqual({ status: 'unavailable' });
   });
 
   it('login rejects with an explanatory error when runtime is not Douyin', async () => {
@@ -79,5 +82,101 @@ describe('DouyinSDK (TC-PLAT-SDK-004 non-Douyin fallbacks)', () => {
     await expect(first).resolves.toBe(true);
     await expect(DouyinSDK.showRewardedAd('real-ad-unit-b')).resolves.toBe(true);
     expect(showOnce).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('DouyinSDK share contract', () => {
+  beforeEach(() => {
+    delete (globalThis as any).GameGlobal;
+    (DouyinSDK as any).shareInFlight = false;
+    (DouyinSDK as any).shareMenuInitialized = false;
+  });
+
+  afterEach(() => {
+    delete (globalThis as any).tt;
+    delete (globalThis as any).GameGlobal;
+    jest.restoreAllMocks();
+  });
+
+  it('passes the approved share fields and reports success', async () => {
+    const shareAppMessage = jest.fn((options) => options.success({ data: [{ name: '好友' }] }));
+    (globalThis as any).tt = { login: jest.fn(), shareAppMessage };
+
+    await expect(DouyinSDK.share({
+      channel: 'invite',
+      title: '一起来开猫店吧！',
+      desc: '比比谁的猫客更多',
+      query: 'from=rank_invite',
+      templateId: 'approved-template',
+    })).resolves.toEqual({
+      status: 'success',
+      data: { data: [{ name: '好友' }] },
+    });
+
+    expect(shareAppMessage).toHaveBeenCalledWith(expect.objectContaining({
+      channel: 'invite',
+      title: '一起来开猫店吧！',
+      desc: '比比谁的猫客更多',
+      query: 'from=rank_invite',
+      templateId: 'approved-template',
+      success: expect.any(Function),
+      fail: expect.any(Function),
+    }));
+  });
+
+  it('distinguishes user cancellation from a platform failure', async () => {
+    (globalThis as any).tt = {
+      login: jest.fn(),
+      shareAppMessage: (options: any) => options.fail({ errNo: 10502, errMsg: 'cancel' }),
+    };
+    await expect(DouyinSDK.share({ title: '测试分享' }))
+      .resolves.toEqual(expect.objectContaining({ status: 'cancelled' }));
+
+    (globalThis as any).tt.shareAppMessage = (options: any) => {
+      options.fail({ errNo: 10103, errMsg: 'network unavailable' });
+    };
+    await expect(DouyinSDK.share({ title: '测试分享' }))
+      .resolves.toEqual(expect.objectContaining({ status: 'failed' }));
+  });
+
+  it('prevents repeated taps while the system share panel is pending', async () => {
+    let finish!: (data: unknown) => void;
+    (globalThis as any).tt = {
+      login: jest.fn(),
+      shareAppMessage: (options: any) => { finish = options.success; },
+    };
+
+    const first = DouyinSDK.share({ title: '第一次' });
+    await expect(DouyinSDK.share({ title: '第二次' })).resolves.toEqual({ status: 'busy' });
+    finish({});
+    await expect(first).resolves.toEqual({ status: 'success', data: {} });
+  });
+
+  it('registers custom content for the system share menu once', () => {
+    let passiveHandler!: () => Record<string, unknown>;
+    const onShareAppMessage = jest.fn((handler) => { passiveHandler = handler; });
+    const showShareMenu = jest.fn();
+    (globalThis as any).tt = { login: jest.fn(), onShareAppMessage, showShareMenu };
+
+    DouyinSDK.initializeShareMenu();
+    DouyinSDK.initializeShareMenu();
+
+    expect(onShareAppMessage).toHaveBeenCalledTimes(1);
+    expect(showShareMenu).toHaveBeenCalledTimes(1);
+    expect(passiveHandler()).toEqual(expect.objectContaining({
+      title: '一起开猫店',
+      query: 'from=system_share',
+    }));
+  });
+
+  it('uses only the supported sidebar scene and preserves failures', async () => {
+    const navigateToScene = jest.fn((options) => options.fail({ errMsg: 'auth deny' }));
+    (globalThis as any).tt = { login: jest.fn(), navigateToScene };
+
+    await expect(DouyinSDK.navigateToSidebar()).resolves.toEqual(expect.objectContaining({
+      ok: false,
+      reason: 'failed',
+    }));
+    expect(navigateToScene).toHaveBeenCalledWith(expect.objectContaining({ scene: 'sidebar' }));
   });
 });
