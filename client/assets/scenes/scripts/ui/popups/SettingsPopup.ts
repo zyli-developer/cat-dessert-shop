@@ -4,10 +4,9 @@ import {
 } from 'cc';
 import { PopupManager } from '../PopupManager';
 import { AudioManager } from '../../utils/AudioManager';
-import { DouyinSDK } from '../../platform/DouyinSDK';
 import { TOKENS } from '../DesignTokens';
 import { drawRoundedRect, makeLabel, POPUP_COLORS } from './PopupUIHelper';
-import { showPrivacyPolicy } from '../PrivacyPolicy';
+import { showDeleteAccountDialog, showPrivacyPolicy, showUserAgreement } from '../PrivacyPolicy';
 const { ccclass } = _decorator;
 
 // 与 PausePopup 共用同一套持久化 key
@@ -18,7 +17,7 @@ const STORAGE_KEY_VIBRATE = 'settings_vibration';
 /**
  * 设置弹窗 —— 对齐 docs/ui-mockup/settings.html：
  *   声音与触感（背景音乐 / 音效 / 震动反馈 开关）
- *   帮助与反馈（联系客服 / 给个好评 / 隐私政策）
+ *   关于游戏（隐私政策 / 用户协议 / 删除账号数据）
  *   版本号页脚
  * 运行时组装（隐藏 prefab 空壳子节点），与其余弹窗一致。
  * 旧版依赖 prefab @property Toggle，已弃用。
@@ -54,17 +53,18 @@ export class SettingsPopup extends Component {
             () => sys.localStorage.getItem(STORAGE_KEY_VIBRATE) === 'true',
             (on) => sys.localStorage.setItem(STORAGE_KEY_VIBRATE, String(on)));
 
-        // 帮助与反馈（客服对纯广告变现游戏非必接，且 navigateToScene 仅支持 sidebar，
-        // 故先隐藏「联系客服」，面板重排为两行）
-        this.buildSection('帮助与反馈', 42);
-        const p2 = this.buildPanel(-47, 148);
-        this.buildLinkRow(p2, 37, 'icon_star', '给个好评', '喜欢的话鼓励一下~',
-            () => void DouyinSDK.navigateToScene('feedback'), TOKENS.star);
-        this.buildLinkRow(p2, -37, 'icon_info', '隐私政策', '数据使用与权限说明',
+        // 关于游戏：不展示平台没有对应实现的「给个好评」按钮。
+        this.buildSection('关于游戏', 42);
+        const p2 = this.buildPanel(-102, 232);
+        this.buildLinkRow(p2, 74, 'icon_info', '隐私政策', '数据使用与权限说明',
             () => showPrivacyPolicy(this.node));
+        this.buildLinkRow(p2, 0, 'icon_info', '用户协议', '服务内容与使用规则',
+            () => showUserAgreement(this.node));
+        this.buildLinkRow(p2, -74, 'icon_info', '删除账号数据', '永久删除云端及本机档案',
+            () => showDeleteAccountDialog(this.node), TOKENS.danger);
 
         // 版本号
-        const ver = makeLabel(this.node, '一起开猫店 · v1.0.0', -360, 22, POPUP_COLORS.textDim);
+        const ver = makeLabel(this.node, '一起开猫店 · 1.0.0', -360, 22, POPUP_COLORS.textDim);
         ver.node.getComponent(UITransform)?.setContentSize(400, 30);
     }
 

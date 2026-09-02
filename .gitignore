@@ -33,6 +33,10 @@ __pycache__/
 # Env
 .env
 .env.local
+.env.production
+*.env.production
+!*.env.production.example
+!**/*.env.production.example
 
 # 抖音开发者工具（构建产物）
 **/bytedance-mini-game/

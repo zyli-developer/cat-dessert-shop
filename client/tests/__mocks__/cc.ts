@@ -113,6 +113,9 @@ export class Node {
     walk(this);
     return out;
   }
+  getComponentInChildren<T>(ctor: new () => T): T | null {
+    return this.getComponentsInChildren(ctor)[0] ?? null;
+  }
   addComponent<T extends Component>(ctor: new () => T): T {
     const c = new ctor();
     (c as any).node = this;
@@ -183,8 +186,9 @@ export class Label extends Component {
   static HorizontalAlign = { LEFT: 0, CENTER: 1, RIGHT: 2 };
   static VerticalAlign = { TOP: 0, CENTER: 1, BOTTOM: 2 };
   static CacheMode = { NONE: 0, BITMAP: 1, CHAR: 2 };
+  static Overflow = { NONE: 0, CLAMP: 1, SHRINK: 2, RESIZE_HEIGHT: 3 };
   string = ''; fontSize = 20; color = new Color(); font: any = null;
-  lineHeight = 20; horizontalAlign = 0; verticalAlign = 0; isBold = false;
+  lineHeight = 20; horizontalAlign = 0; verticalAlign = 0; overflow = 0; isBold = false;
 }
 export class Sprite extends Component {
   static Type = { SIMPLE: 0, SLICED: 1, TILED: 2, FILLED: 3 };

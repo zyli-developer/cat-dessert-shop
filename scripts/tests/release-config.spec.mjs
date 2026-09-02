@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {
   parseClientConfig,
+  validateAppIdentity,
   validateBuiltArtifact,
   validateReleaseConfig,
 } from '../release-config.mjs';
@@ -112,5 +113,23 @@ describe('release-config', () => {
     expect(validateBuiltArtifact(dir, config)).toEqual(expect.arrayContaining([
       expect.stringMatching(/可能是旧包/),
     ]));
+  });
+
+  it('requires the backend and built client to use the same Douyin app', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'catbakery-app-id-'));
+    tempDirs.push(root);
+    const dist = path.join(root, 'dist');
+    fs.mkdirSync(dist);
+    fs.writeFileSync(path.join(root, '.env'), 'DOUYIN_APP_ID=ttserverapp\n');
+    fs.writeFileSync(path.join(dist, 'project.config.json'), JSON.stringify({
+      appid: 'ttclientapp',
+      compileType: 'miniGame',
+    }));
+    expect(validateAppIdentity(root, dist)).toEqual([
+      '客户端 App ID 与根目录 .env 的 DOUYIN_APP_ID 不一致',
+    ]);
+
+    fs.writeFileSync(path.join(root, '.env'), 'DOUYIN_APP_ID=ttclientapp\n');
+    expect(validateAppIdentity(root, dist)).toEqual([]);
   });
 });

@@ -213,6 +213,18 @@ describe('ApiClient (T2-12)', () => {
     });
   });
 
+  it('deleteAccount uses the authenticated DELETE endpoint', async () => {
+    ApiClient.setSession('open-xyz', 'signed-token');
+    const fake = jest.fn().mockResolvedValue(jsonResponse({ code: 0, data: { deleted: true } }));
+    ApiClient.setFetch(fake as unknown as typeof fetch);
+
+    await expect(ApiClient.deleteAccount()).resolves.toEqual({ deleted: true });
+    const [url, init] = fake.mock.calls[0];
+    expect(String(url)).toContain('/api/user/account');
+    expect(init?.method).toBe('DELETE');
+    expect((init?.headers as any).Authorization).toBe('Bearer signed-token');
+  });
+
   it('uses stable daily and round claim ids so a lost response can be replayed', () => {
     const beforeCstMidnight = Date.UTC(2026, 7, 28, 15, 59, 59);
     const afterCstMidnight = Date.UTC(2026, 7, 28, 16, 0, 1);

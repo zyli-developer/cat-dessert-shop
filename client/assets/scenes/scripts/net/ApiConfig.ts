@@ -11,10 +11,12 @@
  *
  * 修改后需重新构建小游戏并导入开发者工具。
  */
-// ⚠ 不要手改这一行——用脚本一键切换（写完后仍需 Cocos 重新构建）：
+// ⚠ 此值由根目录 .env 的 CLIENT_API_BASE_URL 生成，不要手改这一行：
+//   修改 .env 后执行: npm run config:sync
+// 也可用脚本一键切换（脚本会同时更新 .env，写完后仍需 Cocos 重新构建）：
 //   真机预览/调试: node scripts/set_api_base.mjs --tunnel   （cloudflared HTTPS 隧道→localhost:3333；真机禁明文 HTTP，局域网 IP 无效）
 //   浏览器/模拟器: node scripts/set_api_base.mjs --lan      （自动探测本机 IPv4）
 //   正式上线:     node scripts/set_api_base.mjs --url <https 域名>
-// 仓库只保留稳定的开发默认值；临时隧道和正式域名由 set_api_base.mjs 按需写入。
+// 临时隧道和正式域名可由 set_api_base.mjs 按需写入。
 // 上传前 scripts/release-config.mjs 会拒绝 localhost、临时隧道和非 HTTPS 地址。
-export const API_BASE_URL = 'http://localhost:3333';
+export const API_BASE_URL = "https://jingjingyeye.vip:8099";

@@ -106,6 +106,34 @@ describe('GameState (T2-10)', () => {
     expect(storage.data.has('catbakery_pending_progress_v1')).toBe(true);
   });
 
+  it('clears local profile and only the deleted account pending queue', () => {
+    const gs = GameState.instance;
+    gs.userProfile = { ...baseProfile(), openId: 'u1', currentRound: 3 };
+    gs.currentRound = 3;
+    storage.set('catbakery_offline_profile_v1', '{"openId":"dev-offline"}');
+    gs.queuePendingProgress('u1', 1, 500, 2);
+    gs.queuePendingProgress('u2', 1, 700, 3);
+
+    gs.clearPersonalData('u1');
+
+    expect(gs.userProfile).toBeNull();
+    expect(gs.currentRound).toBe(1);
+    expect(storage.data.has('catbakery_offline_profile_v1')).toBe(false);
+    expect(gs.getPendingProgress('u1')).toEqual([]);
+    expect(gs.getPendingProgress('u2')).toHaveLength(1);
+  });
+
+  it('clears every local pending record when privacy consent is refused', () => {
+    const gs = GameState.instance;
+    gs.queuePendingProgress('u1', 1, 500, 2);
+    gs.queuePendingProgress('u2', 1, 700, 3);
+
+    gs.clearPersonalData();
+
+    expect(gs.getPendingProgress('u1')).toEqual([]);
+    expect(gs.getPendingProgress('u2')).toEqual([]);
+  });
+
   it('pending progress is isolated by user and cannot be downgraded', () => {
     const gs = GameState.instance;
     gs.queuePendingProgress('u1', 1, 500, 2);

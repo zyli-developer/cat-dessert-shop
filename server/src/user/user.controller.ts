@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Delete, Get, Post, Body, UseGuards } from '@nestjs/common';
 import { UserService } from './user.service';
 import { ProgressDto } from './dto/progress.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
@@ -41,6 +41,13 @@ export class UserController {
     @Body() dto: ClaimRewardDto,
   ) {
     const result = await this.userService.claimReward(openId, dto);
+    return { code: 0, data: result };
+  }
+
+  /** 用户主动注销：删除该抖音账号标识关联的全部游戏数据。 */
+  @Delete('account')
+  async deleteAccount(@CurrentOpenId() openId: string) {
+    const result = await this.userService.deleteAccount(openId);
     return { code: 0, data: result };
   }
 }

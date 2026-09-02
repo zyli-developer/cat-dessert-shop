@@ -14,7 +14,11 @@
     "test:e2e:headed": "npm --workspace e2e run test:headed",
     "build:e2e-bundle": "node scripts/build-e2e-bundle.mjs",
     "check:e2e-bundle": "node scripts/check-e2e-bundle-freshness.mjs",
-    "config:check:release": "node scripts/release-config.mjs",
+    "config:init": "node scripts/sync_env_config.mjs --init",
+    "config:sync": "node scripts/sync_env_config.mjs",
+    "config:check": "node scripts/sync_env_config.mjs --check",
+    "config:check:release": "node scripts/sync_env_config.mjs --check && node scripts/release-config.mjs",
+    "deploy:check": "node scripts/check-production-health.mjs",
     "lint:skips": "node scripts/lint-skip-reasons.mjs",
     "coverage:merge": "nyc merge coverage/raw/server coverage/server.json && nyc merge coverage/raw/server-e2e coverage/server-e2e.json && nyc merge coverage/raw/client coverage/client.json && nyc merge coverage/raw/scripts coverage/scripts.json && nyc report -t coverage --report-dir coverage --reporter=lcov --reporter=text-summary"
   },

@@ -107,6 +107,21 @@ export class GameState {
     }
   }
 
+  /** 删除指定账号，或在拒绝隐私协议时清除全部本机档案与待同步记录。 */
+  clearPersonalData(openId?: string): void {
+    if (openId) {
+      const remaining = this.readPendingProgress().filter((entry) => entry.openId !== openId);
+      this.writePendingProgress(remaining);
+    } else {
+      this.writePendingProgress([]);
+    }
+    this.storage.remove(OFFLINE_PROFILE_KEY);
+    this.userProfile = null;
+    this.currentRound = 1;
+    this.resetRound();
+    this.events.emit('profile-changed');
+  }
+
   /**
    * Persist an online result before attempting the network request. Entries are
    * isolated by openId and de-duplicated by round so a retry cannot downgrade a

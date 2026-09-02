@@ -29,6 +29,7 @@ describe('UserService', () => {
   const mockUserModel = {
     findOne: jest.fn(),
     findOneAndUpdate: jest.fn(),
+    deleteOne: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -58,6 +59,17 @@ describe('UserService', () => {
     });
   });
 
+  describe('deleteAccount', () => {
+    it('deletes all data for the authenticated openId and remains idempotent', async () => {
+      mockUserModel.deleteOne.mockResolvedValue({ deletedCount: 1 });
+      await expect(service.deleteAccount('abc')).resolves.toEqual({ deleted: true });
+      expect(mockUserModel.deleteOne).toHaveBeenCalledWith({ openId: 'abc' });
+
+      mockUserModel.deleteOne.mockResolvedValue({ deletedCount: 0 });
+      await expect(service.deleteAccount('abc')).resolves.toEqual({ deleted: true });
+    });
+  });
+
   describe('updateInfo', () => {
     it('should write nickname and avatar', async () => {
       const mockUser = createMockUser({ nickname: '', avatar: '' });
@@ -80,17 +92,33 @@ describe('UserService', () => {
       const mockUser = createMockUser({ nickname: '旧名', avatar: 'old.jpg' });
       mockUserModel.findOne.mockResolvedValue(mockUser);
 
-      const result = await service.updateInfo('abc', { nickname: '   ', avatar: '' });
+      const result = await service.updateInfo('abc', {
+        nickname: '   ',
+        avatar: '',
+      });
 
       expect(result.nickname).toBe('旧名');
       expect(result.avatar).toBe('old.jpg');
     });
 
+    it('replaces risky nickname and rejects an untrusted avatar URL', async () => {
+      const mockUser = createMockUser({ nickname: '', avatar: '' });
+      mockUserModel.findOne.mockResolvedValue(mockUser);
+
+      const result = await service.updateInfo('abc', {
+        nickname: '加微信abc',
+        avatar: 'https://evil.example/a.jpg',
+      });
+
+      expect(result.nickname).toBe('猫店玩家');
+      expect(result.avatar).toBe('');
+    });
+
     it('should throw NotFoundException for unknown user', async () => {
       mockUserModel.findOne.mockResolvedValue(null);
-      await expect(service.updateInfo('nope', { nickname: 'x' })).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.updateInfo('nope', { nickname: 'x' }),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -99,7 +127,11 @@ describe('UserService', () => {
       const mockUser = createMockUser();
       mockUserModel.findOne.mockResolvedValue(mockUser);
 
-      const result = await service.updateProgress('abc', { round: 1, score: 1000, stars: 3 });
+      const result = await service.updateProgress('abc', {
+        round: 1,
+        score: 1000,
+        stars: 3,
+      });
 
       expect(mockUser.stars.get('1')).toBe(3);
       expect(mockUser.roundScores.get('1')).toBe(1000);
@@ -132,7 +164,11 @@ describe('UserService', () => {
       });
       mockUserModel.findOne.mockResolvedValue(mockUser);
 
-      const result = await service.updateProgress('abc', { round: 1, score: 100, stars: 1 });
+      const result = await service.updateProgress('abc', {
+        round: 1,
+        score: 100,
+        stars: 1,
+      });
 
       expect(mockUser.roundScores.get('1')).toBe(300);
       expect(result.isNewBest).toBe(false);
@@ -219,7 +255,10 @@ describe('UserService', () => {
 
     it('awards a fixed home-ad amount through an atomic update', async () => {
       const user = createMockUser();
-      const updated = createMockUser({ catCoins: 10, rewardClaimIds: ['home_123456789012'] });
+      const updated = createMockUser({
+        catCoins: 10,
+        rewardClaimIds: ['home_123456789012'],
+      });
       mockUserModel.findOne.mockResolvedValue(user);
       mockUserModel.findOneAndUpdate.mockResolvedValue(updated);
 
@@ -254,7 +293,9 @@ describe('UserService', () => {
       });
 
       expect(result.awarded).toBe(20);
-      expect(mockUserModel.findOneAndUpdate.mock.calls[0][1].$inc.catCoins).toBe(20);
+      expect(
+        mockUserModel.findOneAndUpdate.mock.calls[0][1].$inc.catCoins,
+      ).toBe(20);
     });
   });
 });

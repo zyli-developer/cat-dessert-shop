@@ -1,14 +1,17 @@
 import { describe, it, expect } from '@jest/globals';
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { writeFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { fileURLToPath } from 'node:url';
+
+const lintScript = fileURLToPath(new URL('../lint-skip-reasons.mjs', import.meta.url));
 
 function runLint(content) {
   const dir = mkdtempSync(join(tmpdir(), 'lint-skip-'));
   writeFileSync(join(dir, 'fake.spec.ts'), content);
   try {
-    execSync(`node ${process.cwd()}/../lint-skip-reasons.mjs ${dir}`, { stdio: 'pipe' });
+    execFileSync(process.execPath, [lintScript, dir], { stdio: 'pipe' });
     return { exit: 0 };
   } catch (e) {
     return { exit: e.status, stderr: String(e.stderr) };

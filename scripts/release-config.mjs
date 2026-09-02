@@ -2,6 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseEnv } from './env-config.mjs';
 
 export const AD_SLOT_KEYS = [
   'gameGold',
@@ -162,10 +163,38 @@ export function validateBuiltArtifact(distDir, config) {
   return errors;
 }
 
+/** Ensure the client package and the backend credentials belong to the same Douyin app. */
+export function validateAppIdentity(repoRoot, distDir) {
+  const errors = [];
+  const envPath = path.join(repoRoot, '.env');
+  const projectConfigPath = distDir
+    ? path.join(path.resolve(distDir), 'project.config.json')
+    : path.join(repoRoot, 'client', 'build-templates', 'bytedance-mini-game', 'project.config.json');
+
+  if (!fs.existsSync(envPath)) return ['找不到根目录 .env，无法校验抖音 App ID'];
+  if (!fs.existsSync(projectConfigPath)) {
+    return [`找不到抖音项目配置：${projectConfigPath}`];
+  }
+
+  const serverAppId = (parseEnv(fs.readFileSync(envPath, 'utf8')).DOUYIN_APP_ID ?? '').trim();
+  const projectConfig = JSON.parse(fs.readFileSync(projectConfigPath, 'utf8'));
+  const clientAppId = String(projectConfig.appid ?? '').trim();
+  if (!/^tt[a-z0-9]+$/i.test(clientAppId)) errors.push('客户端 project.config.json 缺少有效 App ID');
+  if (!/^tt[a-z0-9]+$/i.test(serverAppId)) errors.push('根目录 .env 缺少有效 DOUYIN_APP_ID');
+  if (clientAppId && serverAppId && clientAppId !== serverAppId) {
+    errors.push('客户端 App ID 与根目录 .env 的 DOUYIN_APP_ID 不一致');
+  }
+  if (projectConfig.compileType !== 'miniGame') {
+    errors.push(`project.config.json compileType 必须为 miniGame，当前为 ${projectConfig.compileType || '<empty>'}`);
+  }
+  return errors;
+}
+
 export function checkReleaseConfig({ repoRoot, distDir } = {}) {
   const resolvedRoot = repoRoot ?? path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
   const config = loadClientConfig(resolvedRoot);
   const errors = validateReleaseConfig(config);
+  errors.push(...validateAppIdentity(resolvedRoot, distDir));
   if (distDir) errors.push(...validateBuiltArtifact(path.resolve(distDir), config));
   return { config, errors };
 }

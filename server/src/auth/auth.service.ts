@@ -43,7 +43,7 @@ export class AuthService {
           highScore: 0,
         },
       },
-      { upsert: true, new: true, setDefaultsOnInsert: true },
+      { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true },
     );
     this.logger.log(`[login] upserted user openId=${this.mask(openId)}`);
     return user;

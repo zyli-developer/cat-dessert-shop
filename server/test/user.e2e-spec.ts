@@ -146,4 +146,17 @@ describe('User Progress (e2e)', () => {
     ).send({ kind: 'daily_gift', claimId: 'daily_reward_0001', amount: 999_999 });
     expect(res.status).toBe(400);
   });
+
+  it('allows the authenticated user to permanently delete account data', async () => {
+    const deleted = await authed(
+      request(app.getHttpServer()).delete('/api/user/account'),
+      session,
+    );
+    expect(deleted.status).toBe(200);
+    expect(deleted.body).toEqual({ code: 0, data: { deleted: true } });
+
+    const read = await getProfile();
+    expect(read.status).toBe(200);
+    expect(read.body.data).toBeNull();
+  });
 });

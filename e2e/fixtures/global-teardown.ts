@@ -4,6 +4,17 @@ export default async function globalTeardown(): Promise<void> {
     await new Promise<void>((r) => srv.staticServer.close(() => r()));
   }
   if (srv?.serverProc) {
-    srv.serverProc.kill('SIGTERM');
+    srv.serverProc.kill();
+    await new Promise<void>((resolve) => {
+      const timer = setTimeout(() => {
+        if (!srv.serverProc.killed) srv.serverProc.kill('SIGKILL');
+        resolve();
+      }, 5_000);
+      srv.serverProc.once('exit', () => {
+        clearTimeout(timer);
+        resolve();
+      });
+    });
   }
+  if (srv?.mongod) await srv.mongod.stop();
 }

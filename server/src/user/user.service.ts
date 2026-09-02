@@ -1,4 +1,11 @@
-import { BadRequestException, ConflictException, HttpException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  HttpException,
+  HttpStatus,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User } from './schemas/user.schema';
@@ -6,6 +13,10 @@ import { ProgressDto } from './dto/progress.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ClaimRewardDto, RewardKind } from './dto/claim-reward.dto';
 import { calculateStars } from '../game/level-rules';
+import {
+  sanitizePublicAvatar,
+  sanitizePublicNickname,
+} from '../common/content-safety';
 
 const CAT_COIN_REWARDS: Record<number, number> = { 1: 5, 2: 10, 3: 20 };
 const HOME_AD_REWARD = 10;
@@ -22,17 +33,22 @@ export class UserService {
     return this.userModel.findOne({ openId });
   }
 
-  /** 更新抖音昵称/头像（登录后客户端经 tt.getUserInfo 授权获取并上报）。空值不覆盖已有数据。 */
+  /** 删除用户文档中的标识、资料、进度、排行榜和奖励记录。接口保持幂等。 */
+  async deleteAccount(openId: string): Promise<{ deleted: boolean }> {
+    await this.userModel.deleteOne({ openId });
+    return { deleted: true };
+  }
+
+  /** 更新公开昵称/头像；仅允许由用户主动授权入口调用。空值不覆盖已有数据。 */
   async updateInfo(openId: string, dto: UpdateProfileDto) {
     const user = await this.userModel.findOne({ openId });
     if (!user) {
       throw new NotFoundException('User not found');
     }
 
-    const nickname = dto.nickname?.trim();
-    const avatar = dto.avatar?.trim();
-    if (nickname) user.nickname = nickname;
-    if (avatar) user.avatar = avatar;
+    if (dto.nickname?.trim())
+      user.nickname = sanitizePublicNickname(dto.nickname);
+    if (dto.avatar?.trim()) user.avatar = sanitizePublicAvatar(dto.avatar);
     await user.save();
 
     return {
@@ -133,7 +149,9 @@ export class UserService {
       {
         openId,
         rewardClaimIds: { $ne: claimId },
-        $expr: { $lt: [{ $ifNull: [`$${countPath}`, 0] }, HOME_AD_DAILY_LIMIT] },
+        $expr: {
+          $lt: [{ $ifNull: [`$${countPath}`, 0] }, HOME_AD_DAILY_LIMIT],
+        },
         $or: [
           { [lastPath]: { $exists: false } },
           { [lastPath]: { $lte: now - HOME_AD_COOLDOWN_MS } },
@@ -148,14 +166,19 @@ export class UserService {
     );
     if (!updated) {
       const latest = await this.userModel.findOne({ openId });
-      if (latest?.rewardClaimIds?.includes(claimId)) return this.rewardResult(latest, 0, true);
-      throw new HttpException('Ad reward cooldown or daily limit reached', HttpStatus.TOO_MANY_REQUESTS);
+      if (latest?.rewardClaimIds?.includes(claimId))
+        return this.rewardResult(latest, 0, true);
+      throw new HttpException(
+        'Ad reward cooldown or daily limit reached',
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
     }
     return this.rewardResult(updated, HOME_AD_REWARD, false);
   }
 
   private async claimWinDouble(user: User, dto: ClaimRewardDto) {
-    if (!dto.round) throw new BadRequestException('round is required for win_double');
+    if (!dto.round)
+      throw new BadRequestException('round is required for win_double');
     const stars = user.stars.get(String(dto.round)) || 0;
     if (!stars) throw new BadRequestException('Round has not been completed');
     if (user.doubledRounds?.includes(dto.round)) {
@@ -179,7 +202,8 @@ export class UserService {
     );
     if (!updated) {
       const latest = await this.userModel.findOne({ openId: user.openId });
-      if (latest?.rewardClaimIds?.includes(dto.claimId)) return this.rewardResult(latest, 0, true);
+      if (latest?.rewardClaimIds?.includes(dto.claimId))
+        return this.rewardResult(latest, 0, true);
       throw new ConflictException('Win reward already doubled for this round');
     }
     return this.rewardResult(updated, reward, false);
@@ -187,9 +211,10 @@ export class UserService {
 
   private async claimDailyGift(openId: string, dto: ClaimRewardDto) {
     const today = this.cstDateKey();
-    const reward = dto.kind === RewardKind.DAILY_GIFT_DOUBLE
-      ? DAILY_GIFT_DOUBLE_REWARD
-      : DAILY_GIFT_REWARD;
+    const reward =
+      dto.kind === RewardKind.DAILY_GIFT_DOUBLE
+        ? DAILY_GIFT_DOUBLE_REWARD
+        : DAILY_GIFT_REWARD;
     const updated = await this.userModel.findOneAndUpdate(
       {
         openId,
@@ -205,7 +230,8 @@ export class UserService {
     );
     if (!updated) {
       const latest = await this.userModel.findOne({ openId });
-      if (latest?.rewardClaimIds?.includes(dto.claimId)) return this.rewardResult(latest, 0, true);
+      if (latest?.rewardClaimIds?.includes(dto.claimId))
+        return this.rewardResult(latest, 0, true);
       throw new ConflictException('Daily gift already claimed');
     }
     return this.rewardResult(updated, reward, false);
@@ -227,6 +253,8 @@ export class UserService {
   }
 
   private cstDateKey(now = new Date()): string {
-    return new Date(now.getTime() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    return new Date(now.getTime() + 8 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10);
   }
 }

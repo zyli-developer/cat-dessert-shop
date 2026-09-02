@@ -13,14 +13,15 @@
  * ⚠ 写入后必须在 Cocos Creator 重新构建（地址会编译进包体）。
  * ⚠ --tunnel 的地址每次重启 cloudflared 都会变；脚本退出后 cloudflared 继续后台运行。
  */
-import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { setEnvValues, syncClientConfig } from './env-config.mjs';
+import fs from 'node:fs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const cfgPath = path.join(repoRoot, 'client', 'assets', 'scenes', 'scripts', 'net', 'ApiConfig.ts');
+const envPath = path.join(repoRoot, '.env');
 
 const argv = process.argv.slice(2);
 const has = (f) => argv.includes(f);
@@ -92,19 +93,18 @@ function startTunnel(targetPort) {
 }
 
 function writeConfig(url) {
-    const src = fs.readFileSync(cfgPath, 'utf8');
-    const re = /export const API_BASE_URL = '[^']*';/;
-    if (!re.test(src)) {
-        console.error(`[set-api-base] ${cfgPath} 中未找到 API_BASE_URL 赋值行，请手动检查`);
+    if (!fs.existsSync(envPath)) {
+        console.error('[set-api-base] 根目录缺少 .env，请先运行 npm run config:init');
         process.exit(1);
     }
-    const next = src.replace(re, `export const API_BASE_URL = '${url}';`);
     if (dryRun) {
-        console.log(`[set-api-base] (dry-run) 将写入：API_BASE_URL = '${url}'`);
+        console.log(`[set-api-base] (dry-run) 将写入 .env：CLIENT_API_BASE_URL=${url}`);
         return;
     }
-    fs.writeFileSync(cfgPath, next);
-    console.log(`[set-api-base] 已写入 ${path.relative(repoRoot, cfgPath)}：API_BASE_URL = '${url}'`);
+    const source = fs.readFileSync(envPath, 'utf8');
+    fs.writeFileSync(envPath, setEnvValues(source, { CLIENT_API_BASE_URL: url }));
+    const { changed } = syncClientConfig({ repoRoot });
+    console.log(`[set-api-base] 已更新根目录 .env，并同步 ${changed.length ? changed.join(', ') : '客户端配置'}`);
     console.log('[set-api-base] ⚠ 需要在 Cocos Creator 重新构建后才生效（构建后记得跑 postbuild_subpackage.mjs）');
 }
 

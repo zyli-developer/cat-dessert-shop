@@ -18,7 +18,9 @@ interface ApiResponse<T> {
   message?: string;
 }
 
-function request<T>(path: string, method: string = 'GET', body?: unknown): Promise<T> {
+type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
+
+function request<T>(path: string, method: HttpMethod = 'GET', body?: unknown): Promise<T> {
   const accessToken = ApiClient.getAccessToken();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -62,7 +64,7 @@ function request<T>(path: string, method: string = 'GET', body?: unknown): Promi
         console.log(`[ApiClient][${reqId}] transport=tt.request`);
         ttApi.request({
           url,
-          method: method as 'GET' | 'POST',
+          method,
           data: body,
           header: headers,
           timeout: TIMEOUT,
@@ -275,7 +277,7 @@ export class ApiClient {
     return request<UserProfile>('/api/user/profile');
   }
 
-  /** 上报抖音昵称/头像（登录授权后调用）。服务端对空值不覆盖。 */
+  /** 上报公开昵称/头像；只能从用户主动触发的授权入口调用。服务端对空值不覆盖。 */
   static updateProfile(info: { nickname?: string; avatar?: string }): Promise<{ openId: string; nickname: string; avatar: string }> {
     if (this.isOfflineMode()) {
       return Promise.resolve({
@@ -285,6 +287,14 @@ export class ApiClient {
       });
     }
     return request('/api/user/profile', 'POST', info);
+  }
+
+  /** 用户在设置页明确确认后，永久删除云端账号数据。 */
+  static deleteAccount(): Promise<{ deleted: boolean }> {
+    if (this.isOfflineMode() || !this._accessToken) {
+      return Promise.resolve({ deleted: true });
+    }
+    return request('/api/user/account', 'DELETE');
   }
 
   static updateProgress(round: number, score: number, stars: number): Promise<any> {

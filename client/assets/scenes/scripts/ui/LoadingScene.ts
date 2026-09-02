@@ -9,6 +9,10 @@ import { GlobalFontManager } from './GlobalFontManager';
 import { TOKENS, applyInkOutline } from './DesignTokens';
 import { AudioManager } from '../utils/AudioManager';
 import { drawRoundedRect, makeJellyButton, makeLabel } from './popups/PopupUIHelper';
+import {
+    acceptPrivacyConsent, hasPrivacyConsent, revokePrivacyConsent,
+    showPrivacyPolicy, showUserAgreement,
+} from './PrivacyPolicy';
 const { ccclass, property } = _decorator;
 
 /** 加载时轮播的游戏小知识（mockup loading.html 文案轮播）。 */
@@ -51,10 +55,12 @@ export class LoadingScene extends Component {
     private navigated = false;
     private destroyed = false;
     private loginInProgress = false;
+    private resourcesReady = false;
 
     onLoad(): void {
         macro.CLEANUP_IMAGE_CACHE = false;
         console.log('[LoadingScene] CLEANUP_IMAGE_CACHE disabled');
+        DouyinSDK.initializeShareMenu();
         // 进游戏第一时间 dump，提前暴露 IDE 加载到的 AppID / SDK / Host 信息
         DouyinSDK.dumpEnvironment('boot');
     }
@@ -79,7 +85,116 @@ export class LoadingScene extends Component {
         // 全局音频（常驻，跨场景不中断；受设置开关控制）
         AudioManager.instance.init(this.node);
 
+        // 最后创建，确保公告覆盖进度条、小知识和状态文字。
+        this.createComplianceNotice();
+
         this.doLoad();
+    }
+
+    /** 上线合规首屏：进入游戏前展示完整健康忠告与软件著作权登记号。 */
+    private createComplianceNotice(): void {
+        if (this.node.getChildByName('ComplianceNotice')) return;
+
+        const overlay = new Node('ComplianceNotice');
+        overlay.layer = Layers.Enum.UI_2D;
+        overlay.parent = this.node;
+        overlay.addComponent(UITransform).setContentSize(720, 1280);
+        overlay.addComponent(BlockInputEvents);
+        const background = overlay.addComponent(Graphics);
+        background.fillColor = TOKENS.paper;
+        background.rect(-360, -640, 720, 1280);
+        background.fill();
+        overlay.setSiblingIndex(this.node.children.length - 1);
+
+        // 与游戏内弹窗一致：暖纸底、柔描边卡片、草莓粉标题与果冻色提示。
+        const topGlow = new Node('TopDecoration');
+        topGlow.layer = Layers.Enum.UI_2D;
+        topGlow.parent = overlay;
+        topGlow.setPosition(0, 490, 0);
+        topGlow.addComponent(UITransform).setContentSize(720, 300);
+        drawRoundedRect(topGlow, 720, 300, TOKENS.pinkSf, TOKENS.line2, 3, 52);
+        const shopName = makeLabel(topGlow, '一起开猫店', 35, 36, TOKENS.pinkDp);
+        shopName.node.name = 'ShopName';
+        shopName.isBold = true;
+        makeLabel(topGlow, 'CAT BAKERY', -18, 20, TOKENS.inkSoft).node.name = 'ShopNameEnglish';
+
+        const cardShadow = new Node('CardShadow');
+        cardShadow.layer = Layers.Enum.UI_2D;
+        cardShadow.parent = overlay;
+        cardShadow.setPosition(0, -44, 0);
+        cardShadow.addComponent(UITransform).setContentSize(630, 740);
+        drawRoundedRect(cardShadow, 630, 740, TOKENS.sand2, undefined, 0, 38);
+
+        const card = new Node('NoticeCard');
+        card.layer = Layers.Enum.UI_2D;
+        card.parent = overlay;
+        card.setPosition(0, -32, 0);
+        card.addComponent(UITransform).setContentSize(630, 740);
+        drawRoundedRect(card, 630, 740, TOKENS.sand, TOKENS.line2, 4, 38);
+
+        const titleChip = new Node('TitleChip');
+        titleChip.layer = Layers.Enum.UI_2D;
+        titleChip.parent = card;
+        titleChip.setPosition(0, 300, 0);
+        titleChip.addComponent(UITransform).setContentSize(430, 86);
+        drawRoundedRect(titleChip, 430, 86, TOKENS.pink, undefined, 0, 28);
+        const title = makeLabel(titleChip, '健康游戏忠告', 0, 42, TOKENS.white);
+        title.node.name = 'NoticeTitle';
+        title.isBold = true;
+        applyInkOutline(title, 150, 2);
+
+        const brand = makeLabel(card, '给每一位小店长的温馨提示', 238, 22, TOKENS.pinkDp);
+        brand.node.name = 'NoticeBrand';
+
+        const contentPanel = new Node('NoticeContentPanel');
+        contentPanel.layer = Layers.Enum.UI_2D;
+        contentPanel.parent = card;
+        contentPanel.setPosition(0, 72, 0);
+        contentPanel.addComponent(UITransform).setContentSize(560, 270);
+        drawRoundedRect(contentPanel, 560, 270, TOKENS.paper2, TOKENS.line, 2, 26);
+
+        const notice = makeLabel(
+            contentPanel,
+            '抵制不良游戏，拒绝盗版游戏。\n注意自我保护，谨防受骗上当。\n适度游戏益脑，沉迷游戏伤身。\n合理安排时间，享受健康生活。',
+            0,
+            28,
+            TOKENS.ink,
+        );
+        notice.node.name = 'NoticeContent';
+        notice.lineHeight = 49;
+        notice.horizontalAlign = Label.HorizontalAlign.CENTER;
+        notice.overflow = Label.Overflow.RESIZE_HEIGHT;
+        notice.node.getComponent(UITransform)?.setContentSize(570, 260);
+
+        const copyrightPanel = new Node('CopyrightPanel');
+        copyrightPanel.layer = Layers.Enum.UI_2D;
+        copyrightPanel.parent = card;
+        copyrightPanel.setPosition(0, -118, 0);
+        copyrightPanel.addComponent(UITransform).setContentSize(560, 66);
+        drawRoundedRect(copyrightPanel, 560, 66, TOKENS.butterHi, TOKENS.butter, 2, 20);
+        const copyright = makeLabel(
+            copyrightPanel,
+            '计算机软件著作权登记号：2026SR0863954',
+            0,
+            22,
+            TOKENS.inkSoft,
+        );
+        copyright.node.name = 'CopyrightNumber';
+
+        const countdownChip = new Node('CountdownChip');
+        countdownChip.layer = Layers.Enum.UI_2D;
+        countdownChip.parent = card;
+        countdownChip.setPosition(0, -244, 0);
+        countdownChip.addComponent(UITransform).setContentSize(420, 70);
+        drawRoundedRect(countdownChip, 420, 70, TOKENS.mint, undefined, 0, 28);
+        const countdown = makeLabel(countdownChip, '3 秒后自动进入登录页', 0, 24, TOKENS.mintText);
+        countdown.node.name = 'CountdownText';
+        countdown.isBold = true;
+
+        this.scheduleOnce(() => {
+            if (overlay.isValid) overlay.destroy();
+            this.showPrivacyConsentIfReady();
+        }, 3);
     }
 
     private createTipLabel(): void {
@@ -154,8 +269,9 @@ export class LoadingScene extends Component {
             this.setProgress(1.0);
             this.setStatus('加载完成，点击登录开始');
 
-            // Show login button
+            this.resourcesReady = true;
             this.createLoginButton();
+            this.showPrivacyConsentIfReady();
 
         } catch (e) {
             if (this.destroyed || !this.node?.isValid || this.navigated) return;
@@ -240,9 +356,6 @@ export class LoadingScene extends Component {
                 console.warn(`[LoadingScene] 仍有 ${pendingSync.remaining} 条进度等待下次同步`);
             }
 
-            // 异步补全抖音昵称/头像（首次会弹授权窗），失败/拒绝不阻塞进游戏
-            this.syncProfileFromDouyin(user.nickname, user.avatar);
-
             console.log('[LoadingScene] [Step 4/4] 跳转 Home 场景');
             this.setStatus('登录成功!');
             this.setProgress(1.0);
@@ -260,35 +373,6 @@ export class LoadingScene extends Component {
             if (this.loginBtn) this.loginBtn.active = false;
             this.showLoginFailDialog();
         }
-    }
-
-    /**
-     * 登录成功后获取抖音昵称/头像并上报服务端（写入 users 表的 nickname/avatar，排行榜展示用）。
-     * tt.getUserInfo 首次调用会弹授权窗；用户拒绝或环境不支持时静默放弃，绝不阻塞登录流程。
-     */
-    private syncProfileFromDouyin(serverNickname: string, serverAvatar: string): void {
-        DouyinSDK.getUserInfo()
-            .then((info) => {
-                const nickname = info.nickName?.trim() ?? '';
-                const avatar = info.avatarUrl ?? '';
-                if (!nickname) return;
-                if (nickname === serverNickname && avatar === serverAvatar) {
-                    console.log('[LoadingScene] 抖音昵称与服务端一致，无需上报');
-                    return;
-                }
-                return ApiClient.updateProfile({ nickname, avatar }).then((updated) => {
-                    const profile = GameState.instance.userProfile;
-                    if (profile) {
-                        profile.nickname = updated.nickname;
-                        profile.avatar = updated.avatar;
-                    }
-                    console.log(`[LoadingScene] 抖音昵称已同步到服务端: ${updated.nickname}`);
-                });
-            })
-            .catch((e) => {
-                console.warn('[LoadingScene] 获取/同步抖音昵称失败（用户拒绝授权或环境不支持），跳过:',
-                    (e as { errMsg?: string })?.errMsg ?? e);
-            });
     }
 
     /** 登录失败 / 授权拒绝弹窗（states.html D4）：探头猫 + 重新登录 / 先用离线模式。 */
@@ -367,11 +451,12 @@ export class LoadingScene extends Component {
 
     private createLoginButton(): void {
         if (this.loginBtn) {
-            this.loginBtn.active = true;
+            this.loginBtn.active = this.canShowLoginButton();
             return;
         }
         const btn = new Node('LoginButton');
         btn.parent = this.node;
+        btn.active = false;
         const btnUt = btn.addComponent(UITransform);
         btnUt.setContentSize(280, 72);
         btn.setPosition(0, -300, 0);
@@ -393,7 +478,90 @@ export class LoadingScene extends Component {
 
     private onLoginClicked(): void {
         if (this.loginInProgress) return;
+        if (!hasPrivacyConsent()) {
+            this.showPrivacyConsentIfReady();
+            return;
+        }
         void this.doLogin();
+    }
+
+    private canShowLoginButton(): boolean {
+        return this.resourcesReady &&
+            !this.node.getChildByName('ComplianceNotice') &&
+            !this.node.getChildByName('PrivacyConsentDialog') &&
+            hasPrivacyConsent();
+    }
+
+    /**
+     * 健康忠告结束且资源加载完成后才展示协议选择。
+     * 用户同意前不会调用 tt.login；拒绝后直接进入纯本地离线模式。
+     */
+    private showPrivacyConsentIfReady(): void {
+        if (!this.resourcesReady || this.destroyed || this.navigated) return;
+        if (this.node.getChildByName('ComplianceNotice')) return;
+
+        if (hasPrivacyConsent()) {
+            if (this.loginBtn?.isValid) this.loginBtn.active = true;
+            return;
+        }
+        if (this.node.getChildByName('PrivacyConsentDialog')) return;
+        if (this.loginBtn?.isValid) this.loginBtn.active = false;
+
+        const dim = new Node('PrivacyConsentDialog');
+        dim.layer = Layers.Enum.UI_2D;
+        dim.parent = this.node;
+        dim.addComponent(UITransform).setContentSize(1600, 2800);
+        dim.addComponent(BlockInputEvents);
+        const mask = dim.addComponent(Graphics);
+        mask.fillColor = new Color(74, 55, 40, 150);
+        mask.rect(-800, -1400, 1600, 2800);
+        mask.fill();
+        dim.setSiblingIndex(this.node.children.length - 1);
+
+        const card = new Node('Card');
+        card.layer = Layers.Enum.UI_2D;
+        card.parent = dim;
+        card.addComponent(UITransform).setContentSize(620, 700);
+        drawRoundedRect(card, 620, 700, TOKENS.paper2, TOKENS.line2, 4, 34);
+
+        const title = makeLabel(card, '隐私保护提示', 272, 42, TOKENS.pinkDp);
+        title.isBold = true;
+        const summary = makeLabel(
+            card,
+            '联网登录会使用抖音账号标识，用于云端存档、\n排行榜和防止奖励重复领取。\n我们不会主动获取你的昵称、头像或其他非必要信息。',
+            145,
+            24,
+            TOKENS.ink,
+        );
+        summary.lineHeight = 39;
+        summary.overflow = Label.Overflow.RESIZE_HEIGHT;
+        summary.node.getComponent(UITransform)?.setContentSize(540, 150);
+
+        const privacy = makeJellyButton(card, '查看隐私政策', 24, 'ghost', 250, 74);
+        privacy.setPosition(-137, 24, 0);
+        privacy.on(Node.EventType.TOUCH_END, () => showPrivacyPolicy(dim), this);
+        const agreement = makeJellyButton(card, '查看用户协议', 24, 'ghost', 250, 74);
+        agreement.setPosition(137, 24, 0);
+        agreement.on(Node.EventType.TOUCH_END, () => showUserAgreement(dim), this);
+
+        const accept = makeJellyButton(card, '同意并登录', -92, 'primary', 500, 88);
+        accept.on(Node.EventType.TOUCH_END, () => {
+            acceptPrivacyConsent();
+            if (dim.isValid) dim.destroy();
+            void this.doLogin();
+        }, this);
+
+        const reject = makeJellyButton(card, '不同意，使用离线模式', -208, 'ghost', 500, 82);
+        reject.on(Node.EventType.TOUCH_END, () => {
+            revokePrivacyConsent();
+            ApiClient.clearSession();
+            GameState.instance.clearPersonalData();
+            if (dim.isValid) dim.destroy();
+            this.onOfflineClicked();
+        }, this);
+
+        const foot = makeLabel(card, '离线模式不会上传存档，可稍后重新选择联网登录。', -292, 20, TOKENS.inkSoft);
+        foot.node.getComponent(UITransform)?.setContentSize(540, 34);
     }
 
     private createOfflineButton(): void {

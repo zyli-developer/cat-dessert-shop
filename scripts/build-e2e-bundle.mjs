@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 import { execSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from 'node:fs';
+import {
+  cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync,
+} from 'node:fs';
 import { join, relative } from 'node:path';
 
 const ROOT = process.cwd();
@@ -56,7 +58,9 @@ function build() {
   if (!existsSync(cocosOut)) {
     throw new Error(`Cocos output not found at ${cocosOut}`);
   }
-  execSync(`rm -rf "${OUTDIR}" && mkdir -p "${OUTDIR}" && cp -R "${cocosOut}/"* "${OUTDIR}/"`, { stdio: 'inherit' });
+  rmSync(OUTDIR, { recursive: true, force: true });
+  mkdirSync(OUTDIR, { recursive: true });
+  cpSync(cocosOut, OUTDIR, { recursive: true });
   writeFileSync(join(OUTDIR, '__asset-hash'), hash + '\n');
   console.log(`Bundle written to ${OUTDIR}`);
 }
