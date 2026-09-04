@@ -378,10 +378,13 @@ export class WinPopup extends Component {
 
     private async onShareClicked(): Promise<void> {
         const { round, stars } = this.data;
-        await DouyinSDK.share(
-            `我在「一起开猫店」第 ${round} 关获得了 ${'⭐'.repeat(stars)}，快来挑战！`,
-            '',
-            `round=${round}&stars=${stars}`,
-        );
+        const result = await DouyinSDK.share({
+            title: `我在「一起开猫店」第 ${round} 关获得了 ${'⭐'.repeat(stars)}！`,
+            desc: '合成甜品招待猫客，快来挑战我的成绩~',
+            query: `from=win_share&round=${round}&stars=${stars}`,
+        });
+        if (result.status === 'success') Toast.show('战绩分享成功~');
+        else if (result.status === 'cancelled') Toast.show('已取消分享');
+        else if (result.status !== 'busy') Toast.show('分享暂时不可用，请稍后再试~', true);
     }
 }

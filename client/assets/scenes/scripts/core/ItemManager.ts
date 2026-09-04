@@ -193,7 +193,7 @@ export class ItemManager extends Component {
         }
 
         // 价格挂签
-        const priceLabel = this.ensureChildLabel(btn, 'PriceChip', -2, 18);
+        const priceLabel = this.ensureChildLabel(btn, 'PriceChip', -2, 22);
         priceLabel.string = `${cost}`;
         priceLabel.color = afford ? TOKENS.butterDp : TOKENS.pinkDp;
         priceLabel.node.setPosition(0, -38, 0);

@@ -8,6 +8,7 @@ import { TOKENS } from '../DesignTokens';
 import { drawRoundedRect, makeJellyButton, makeLabel, POPUP_COLORS } from './PopupUIHelper';
 import { GlobalFontManager } from '../GlobalFontManager';
 import { DouyinSDK } from '../../platform/DouyinSDK';
+import { Toast } from '../../utils/Toast';
 const { ccclass } = _decorator;
 
 type Board = 'friends' | 'global';
@@ -172,10 +173,20 @@ export class RankPopup extends Component {
 
         if (friends) {
             const invite = makeJellyButton(box, '邀请好友', -160, 'primary', 320, 84);
-            invite.on(Node.EventType.TOUCH_END, () => {
-                void DouyinSDK.share('一起来开猫店吧，比比谁的猫客更多！', '', 'from=rank_invite');
-            }, this);
+            invite.on(Node.EventType.TOUCH_END, this.onInviteClicked, this);
         }
+    }
+
+    private async onInviteClicked(): Promise<void> {
+        const result = await DouyinSDK.share({
+            channel: 'invite',
+            title: '一起来开猫店吧！',
+            desc: '比比谁招待的猫咪客人更多~',
+            query: 'from=rank_invite',
+        });
+        if (result.status === 'success') Toast.show('邀请已发送~');
+        else if (result.status === 'cancelled') Toast.show('已取消邀请');
+        else if (result.status !== 'busy') Toast.show('邀请暂时不可用，请稍后再试~', true);
     }
 
     /** 左上角猫币芯片（象牙底 + 金币图标 + 余额）。 */

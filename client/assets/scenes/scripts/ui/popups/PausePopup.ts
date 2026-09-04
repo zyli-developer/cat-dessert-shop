@@ -29,36 +29,37 @@ export class PausePopup extends Component {
         // 卡片
         drawRoundedRect(this.node, 560, 480, POPUP_COLORS.bg, POPUP_COLORS.bgBorder, 4, 30);
 
-        // 探头猫（白猫）+ 标题
-        this.makeSprite(this.node, 'textures/character/cat_white_idle', 0, 240, 150);
-        makeLabel(this.node, '休息一下~', 196, 38, POPUP_COLORS.textGold);
+        // 探头猫与标题分栏，避免角色插画压住标题。
+        this.makeSprite(this.node, 'textures/character/cat_white_idle', -188, 202, 118);
+        const title = makeLabel(this.node, '休息一下~', 196, 38, POPUP_COLORS.textGold);
+        title.node.setPosition(46, 196, 0);
 
         // 音乐 / 音效 开关
-        this.buildToggleRow('音乐', 'icon_music', 124,
+        this.buildToggleRow('音乐', 'icon_music', 108,
             () => AudioManager.instance.isBGMEnabled(),
             (on) => AudioManager.instance.setBGMEnabled(on));
-        this.buildToggleRow('音效', 'icon_sound', 52,
+        this.buildToggleRow('音效', 'icon_sound', 36,
             () => AudioManager.instance.isSFXEnabled(),
             (on) => AudioManager.instance.setSFXEnabled(on));
 
         // 继续游戏（主按钮）
-        const resume = makeJellyButton(this.node, '继续游戏', -48, 'primary', 480, 84);
+        const resume = makeJellyButton(this.node, '继续游戏', -68, 'primary', 480, 84);
         resume.on(Node.EventType.TOUCH_END, () => {
             PopupManager.close();
             this.data?.onResume();
         }, this);
 
         // 重新开始 / 主页（幽灵两连）
-        const restart = makeJellyButton(this.node, '重新开始', -160, 'ghost', 240, 78);
-        restart.setPosition(-128, -160, 0);
+        const restart = makeJellyButton(this.node, '重新开始', -176, 'ghost', 240, 78);
+        restart.setPosition(-128, -176, 0);
         this.addBtnIcon(restart, 'icon_restart', -82);
         restart.on(Node.EventType.TOUCH_END, () => {
             PopupManager.closeImmediate();
             director.loadScene('Game');
         }, this);
 
-        const home = makeJellyButton(this.node, '主页', -160, 'ghost', 240, 78);
-        home.setPosition(128, -160, 0);
+        const home = makeJellyButton(this.node, '主页', -176, 'ghost', 240, 78);
+        home.setPosition(128, -176, 0);
         this.addBtnIcon(home, 'icon_home', -64);
         home.on(Node.EventType.TOUCH_END, () => {
             PopupManager.closeImmediate();

@@ -78,6 +78,12 @@ export class LoadingScene extends Component {
         if (this.statusLabel) {
             this.statusLabel.node.setPosition(0, -535, 0);
             this.statusLabel.horizontalAlign = Label.HorizontalAlign.CENTER;
+            // 插画背景明暗变化很大：状态文字使用深色正文 + 暖纸描边，避免完成态沉进背景。
+            this.statusLabel.color = TOKENS.ink;
+            this.statusLabel.isBold = true;
+            this.statusLabel.enableOutline = true;
+            this.statusLabel.outlineColor = TOKENS.paper2;
+            this.statusLabel.outlineWidth = 3;
         }
         this.createTipLabel();
         this.schedule(this.nextTip, 3.0);
@@ -192,7 +198,12 @@ export class LoadingScene extends Component {
         countdown.isBold = true;
 
         this.scheduleOnce(() => {
-            if (overlay.isValid) overlay.destroy();
+            // Node.destroy() 到帧末才真正从树上移除；先同步脱离父节点，
+            // 否则下面的协议检查仍会找到 ComplianceNotice 并永久跳过登录入口。
+            if (overlay.isValid) {
+                overlay.removeFromParent();
+                overlay.destroy();
+            }
             this.showPrivacyConsentIfReady();
         }, 3);
     }
@@ -211,7 +222,11 @@ export class LoadingScene extends Component {
         l.verticalAlign = Label.VerticalAlign.CENTER;
         l.overflow = Label.Overflow.RESIZE_HEIGHT;
         l.enableWrapText = true;
-        l.color = TOKENS.inkSoft;
+        l.color = TOKENS.ink;
+        l.isBold = true;
+        l.enableOutline = true;
+        l.outlineColor = TOKENS.paper2;
+        l.outlineWidth = 3;
         GlobalFontManager.applyFont(node);
         this.tipLabel = l;
     }
@@ -454,23 +469,9 @@ export class LoadingScene extends Component {
             this.loginBtn.active = this.canShowLoginButton();
             return;
         }
-        const btn = new Node('LoginButton');
-        btn.parent = this.node;
+        const btn = makeJellyButton(this.node, '登  录', -300, 'primary', 280, 72);
+        btn.name = 'LoginButton';
         btn.active = false;
-        const btnUt = btn.addComponent(UITransform);
-        btnUt.setContentSize(280, 72);
-        btn.setPosition(0, -300, 0);
-
-        const label = btn.addComponent(Label);
-        label.string = '登  录';
-        label.fontSize = 36;
-        label.lineHeight = 42;
-        label.horizontalAlign = Label.HorizontalAlign.CENTER;
-        label.verticalAlign = Label.VerticalAlign.CENTER;
-        label.color = TOKENS.white;
-        applyInkOutline(label, 220, 3);
-
-        GlobalFontManager.applyFont(btn);
 
         btn.on(Node.EventType.TOUCH_END, this.onLoginClicked, this);
         this.loginBtn = btn;

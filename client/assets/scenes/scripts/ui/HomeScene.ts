@@ -78,6 +78,7 @@ export class HomeScene extends Component {
         });
         this.setupLevelCard();
         this.applySafeArea();
+        this.tuneHomeHierarchy();
 
         const state = GameState.instance;
         this.viewingRound = state.currentRound;
@@ -143,6 +144,53 @@ export class HomeScene extends Component {
         if (left < -(limit - margin)) dx = -(limit - margin) - left;
         else if (rightEdge > limit - margin) dx = (limit - margin) - rightEdge;
         if (dx !== 0) for (const n of nodes) n.setPosition(n.position.x + dx, n.position.y, 0);
+    }
+
+    /**
+     * 首页视觉层级微调：主视觉只保留 Logo + 中文标题，弱化未开放功能，
+     * 并把底部装饰猫收进移动端安全区，避免看起来像被屏幕意外裁切。
+     */
+    private tuneHomeHierarchy(): void {
+        const logo = this.findNode('CatLogo');
+        logo?.setPosition(0, 414, 0);
+        logo?.setScale(0.88, 0.88, 1);
+
+        const title = this.findLabel('Title');
+        if (title) {
+            title.node.setPosition(0, 300, 0);
+            title.fontSize = 64;
+            title.lineHeight = 72;
+            title.enableOutline = false;
+            title.enableShadow = false;
+        }
+
+        const subtitle = this.findNode('Subtitle');
+        if (subtitle) subtitle.active = false;
+
+        const homeland = this.findNode('BtnHomeland');
+        homeland?.setPosition(0, 158, 0);
+        homeland?.setScale(0.88, 0.88, 1);
+
+        // 关卡选择作为首页唯一核心信息组，整体上移并保持原有相对层级。
+        this.findNode('LevelPanel')?.setPosition(0, -42, 0);
+        this.roundLabel?.node.setPosition(0, 27, 0);
+        this.levelNameLabel?.node.setPosition(0, -17, 0);
+        this.starsLabel?.node.setPosition(0, -88, 0);
+        this.btnPrev?.setPosition(-215, -42, 0);
+        this.btnNext?.setPosition(215, -42, 0);
+        this.btnStart?.setPosition(0, -195, 0);
+
+        // 功能入口和装饰角色使用同一条安全带，留出至少 24px 设计边距。
+        this.btnRank?.setPosition(-176, -358, 0);
+        this.btnGift?.setPosition(0, -358, 0);
+        this.btnAdCatCoin?.setPosition(176, -358, 0);
+
+        const catLeft = this.findNode('CatLeft');
+        catLeft?.setPosition(-220, -550, 0);
+        catLeft?.setScale(0.68, 0.68, 1);
+        const catRight = this.findNode('CatRight');
+        catRight?.setPosition(204, -516, 0);
+        catRight?.setScale(0.84, 0.84, 1);
     }
 
     /** 递归查找节点 */
@@ -444,15 +492,26 @@ export class HomeScene extends Component {
      * 让前景 logo/卡片/按钮浮起来，避免背景插画过饱和抢戏。
      */
     private createBgVeil(): void {
-        if (this.node.getChildByName('BgVeil')) return;
-        const veil = new Node('BgVeil');
-        veil.layer = Layers.Enum.UI_2D;
-        veil.parent = this.node;
-        veil.addComponent(UITransform).setContentSize(720, 1280);
-        const g = veil.addComponent(Graphics);
-        g.fillColor = new Color(255, 247, 236, 120);
-        g.rect(-360, -640, 720, 1280);
-        g.fill();
+        let veil = this.node.getChildByName('BgVeil');
+        if (!veil) {
+            veil = new Node('BgVeil');
+            veil.layer = Layers.Enum.UI_2D;
+            veil.parent = this.node;
+        }
+        const ut = veil.getComponent(UITransform) ?? veil.addComponent(UITransform);
+        ut.setContentSize(720, 1280);
+        const veilColor = new Color(255, 247, 236, 92);
+        const sprite = veil.getComponent(Sprite);
+        if (sprite) {
+            // 场景已烘焙 Sprite 时直接调色；同一节点不能再添加另一个 Renderable2D（Graphics）。
+            sprite.color = veilColor;
+        } else {
+            const g = veil.getComponent(Graphics) ?? veil.addComponent(Graphics);
+            g.clear();
+            g.fillColor = veilColor;
+            g.rect(-360, -640, 720, 1280);
+            g.fill();
+        }
         veil.setSiblingIndex(1); // 紧贴 Background(0) 之上、所有前景内容之下
     }
 

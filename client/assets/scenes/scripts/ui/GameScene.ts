@@ -1,6 +1,7 @@
 import { _decorator, Component, Label, Node, director, Vec3, tween,
          RigidBody2D, ERigidBody2DType, Color, Layout, UITransform,
          Sprite, SpriteFrame, resources, Graphics, Layers, Widget } from 'cc';
+import { PREVIEW } from 'cc/env';
 import { TOKENS } from './DesignTokens';
 import { MergeManager } from '../core/MergeManager';
 import { DropController } from '../core/DropController';
@@ -9,6 +10,7 @@ import { CustomerManager } from '../core/CustomerManager';
 import { ItemManager } from '../core/ItemManager';
 import { Dessert } from '../core/Dessert';
 import { GameState } from '../data/GameState';
+import type { CustomerData } from '../data/GameTypes';
 import { CUSTOMER_SERVE_SCORE } from '../data/DessertConfig';
 import { ApiClient } from '../net/ApiClient';
 import { AudioManager } from '../utils/AudioManager';
@@ -17,6 +19,15 @@ import { PopupManager } from './PopupManager';
 import { GlobalFontManager } from './GlobalFontManager';
 import { SafeArea } from '../platform/SafeArea';
 const { ccclass, property } = _decorator;
+
+const HUD_ORDER_WIDTH = 296;
+const HUD_ORDER_BAR_WIDTH = 256;
+const PREVIEW_CUSTOMERS: CustomerData[] = [
+    { demands: [{ level: 3, count: 2 }] },
+    { demands: [{ level: 2, count: 4 }] },
+    { demands: [{ level: 3, count: 2 }] },
+    { demands: [{ level: 4, count: 1 }] },
+];
 
 @ccclass('GameScene')
 export class GameScene extends Component {
@@ -104,9 +115,11 @@ export class GameScene extends Component {
         this.state.events.on('score-changed', this.updateHUD, this);
         this.state.events.on('gold-changed', this.updateHUD, this);
 
-        // Init customer queue
-        if (levelData && this.customerManager) {
-            this.customerManager.initRound(levelData.customers);
+        // 单场景预览没有经过 Loading/Home，GameState 尚未载入关卡配置。
+        // 仅在 PREVIEW 下补一组真实结构的示例订单，避免旧占位节点误导 UI 走查；正式包仍严格使用关卡数据。
+        const customers = levelData?.customers ?? (PREVIEW ? PREVIEW_CUSTOMERS : null);
+        if (customers && this.customerManager) {
+            this.customerManager.initRound(customers);
             this.updateOrderProgress();
             this.customerManager.onRoundComplete = () => this.onWin();
             // 所有顾客满足后立即禁用溢出检测和投放，防止动画延迟期间误触发 game over
@@ -114,6 +127,8 @@ export class GameScene extends Component {
                 this.dropController?.setEnabled(false);
                 this.overflowDetector?.setEnabled(false);
             };
+        } else if (this.customerManager) {
+            this.customerManager.node.active = false;
         }
 
         // 顾客槽位创建后，把顶栏 HUD 全部置顶，确保暂停/金币/订单不被任何后建节点遮住
@@ -187,11 +202,13 @@ export class GameScene extends Component {
         const pauseBtn = new Node('PauseBtn');
         pauseBtn.layer = Layers.Enum.UI_2D;
         pauseBtn.parent = this.node;
-        pauseBtn.addComponent(UITransform).setContentSize(62, 62);
-        this.addButtonBg(pauseBtn, 62, 62);
-        this.makeIcon(pauseBtn, 'textures/ui/icon_pause', 0, 0, 34, TOKENS.ink);
+        pauseBtn.addComponent(UITransform).setContentSize(88, 88);
+        // 88×88 负责触摸热区，视觉按钮收在 72×72 并上移 8，和订单卡底边对齐。
+        this.addButtonBg(pauseBtn, 72, 72);
+        pauseBtn.getChildByName('BtnBg')?.setPosition(0, 8, 0);
+        this.makeIcon(pauseBtn, 'textures/ui/icon_pause', 0, 8, 38, TOKENS.ink);
         // 用 hCenter 而非 left：Widget 的 left/right 锚到 720 设计画布边，长屏会被推出屏外（之前暂停只剩一条缝）。
-        this.anchor(pauseBtn, { top: TOP, hCenter: -238 });
+        this.anchor(pauseBtn, { top: TOP, hCenter: -230 });
         this.btnPause = pauseBtn;
 
         // 道具栏 → 底部一行（关 Layout，Widget 改锚到底部中心）
@@ -215,9 +232,9 @@ export class GameScene extends Component {
             this.goldLabel.fontSize = 30;
             this.goldLabel.color = TOKENS.butterText;
             this.goldLabel.horizontalAlign = Label.HorizontalAlign.LEFT;
-            const chip = this.chipContainer(this.goldLabel, 122, 58, 'textures/ui/icon_coin');
-            // 与暂停按钮（62 高）底边对齐：金币芯片 58 高 → 顶部 +4 让底边落在 TOP+62 这条线上。
-            this.anchor(chip, { top: TOP + 4, hCenter: 228 });
+            const chip = this.chipContainer(this.goldLabel, 118, 58, 'textures/ui/icon_coin');
+            // 金币是只读信息，保持紧凑并向安全区内收，避免贴住异形屏边缘。
+            this.anchor(chip, { top: TOP + 4, hCenter: 225 });
             this.goldChip = chip;
         }
 
@@ -227,15 +244,15 @@ export class GameScene extends Component {
             const panel = new Node('OrderPanel');
             panel.layer = Layers.Enum.UI_2D;
             panel.parent = this.node;
-            panel.addComponent(UITransform).setContentSize(320, 72);
-            this.wrapChip(panel, 320, 72);
+            panel.addComponent(UITransform).setContentSize(HUD_ORDER_WIDTH, 72);
+            this.wrapChip(panel, HUD_ORDER_WIDTH, 72);
 
             // 关卡名（左，anchorX=0 钉左缘避免居中文字溢出）
             const rl = this.roundLabel;
             rl.node.parent = panel;
             rl.node.getComponent(UITransform)?.setAnchorPoint(0, 0.5);
-            rl.node.getComponent(UITransform)?.setContentSize(110, 28);
-            rl.node.setPosition(-155, 16, 0);
+            rl.node.getComponent(UITransform)?.setContentSize(96, 28);
+            rl.node.setPosition(-143, 16, 0);
             rl.fontSize = 22;
             rl.color = TOKENS.inkSoft;
             rl.horizontalAlign = Label.HorizontalAlign.LEFT;
@@ -244,16 +261,16 @@ export class GameScene extends Component {
             if (this.scoreLabel) {
                 const sc = this.scoreLabel.node;
                 sc.parent = panel;
-                sc.getComponent(UITransform)?.setContentSize(140, 28);
-                sc.setPosition(6, 16, 0);
+                sc.getComponent(UITransform)?.setContentSize(120, 28);
+                sc.setPosition(0, 16, 0);
                 this.scoreLabel.fontSize = 24;
                 this.scoreLabel.color = TOKENS.ink;
                 this.scoreLabel.horizontalAlign = Label.HorizontalAlign.CENTER;
-                this.makeIcon(sc, 'textures/ui/icon_star', -40, 0, 22, TOKENS.star);
+                this.makeIcon(sc, 'textures/ui/icon_star', -36, 0, 22, TOKENS.star);
             }
 
             // 订单进度计数（右，anchorX=1 钉右缘）
-            this.orderProgressLabel = this.makeOrderCount(panel, 155, 16);
+            this.orderProgressLabel = this.makeOrderCount(panel, 143, 16);
             this.orderProgressLabel.node.getComponent(UITransform)?.setAnchorPoint(1, 0.5);
 
             // 进度条（底）
@@ -276,7 +293,7 @@ export class GameScene extends Component {
             next.parent = panel;
             next.setPosition(0, -12, 0);
             // 再往右靠（仍留余量不被裁），落在容器右上角外侧、基本不压容器。
-            this.anchor(panel, { top: TOP + 234, hCenter: 244 });
+            this.anchor(panel, { top: TOP + 234, hCenter: 252 });
         }
     }
 
@@ -387,7 +404,7 @@ export class GameScene extends Component {
         bar.layer = Layers.Enum.UI_2D;
         bar.parent = parent;
         bar.setPosition(x, y, 0);
-        bar.addComponent(UITransform).setContentSize(280, 12);
+        bar.addComponent(UITransform).setContentSize(HUD_ORDER_BAR_WIDTH, 12);
         bar.addComponent(Graphics);
         return bar;
     }
@@ -417,7 +434,7 @@ export class GameScene extends Component {
         if (this.orderBar) {
             const g = this.orderBar.getComponent(Graphics);
             if (g) {
-                const W = 280, H = 12, r = p.total > 0 ? p.served / p.total : 0;
+                const W = HUD_ORDER_BAR_WIDTH, H = 12, r = p.total > 0 ? p.served / p.total : 0;
                 g.clear();
                 g.fillColor = TOKENS.sand2;
                 g.roundRect(-W / 2, -H / 2, W, H, H / 2);

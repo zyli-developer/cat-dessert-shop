@@ -9,10 +9,16 @@ import { drawRoundedRect, makeJellyButton, makeLabel, POPUP_COLORS } from './pop
 import { GlobalFontManager } from './GlobalFontManager';
 import { DouyinSDK } from '../platform/DouyinSDK';
 import { SafeArea } from '../platform/SafeArea';
+import { Toast } from '../utils/Toast';
 const { ccclass } = _decorator;
 
 type Board = 'friends' | 'global';
 interface Row { no: number; name: string; score: number; me: boolean }
+
+function compactName(value: string, maxChars: number): string {
+    const chars = Array.from(value.trim() || '玩家');
+    return chars.length > maxChars ? `${chars.slice(0, maxChars).join('')}…` : chars.join('');
+}
 
 /** 领奖台台座色（rank.html：1=焦糖 / 2=天蓝 / 3=蜜桃） */
 const PED_COLORS = [TOKENS.butter, new Color(169, 207, 224, 255), new Color(221, 175, 147, 255)];
@@ -150,7 +156,8 @@ export class RankScene extends Component {
             this.buildListRow(meRow, y);
             y -= 86;
         }
-        for (const r of rest.slice(0, meRow && !meInTop3 ? 4 : 5)) {
+        const visibleRest = meRow && !meInTop3 ? rest.filter(r => r !== meRow) : rest;
+        for (const r of visibleRest.slice(0, meRow && !meInTop3 ? 4 : 5)) {
             this.buildListRow(r, y);
             y -= 86;
         }
@@ -185,10 +192,20 @@ export class RankScene extends Component {
 
         if (friends) {
             const invite = makeJellyButton(box, '邀请好友', -160, 'primary', 320, 92);
-            invite.on(Node.EventType.TOUCH_END, () => {
-                void DouyinSDK.share('一起来开猫店吧，比比谁的猫客更多！', '', 'from=rank_invite');
-            }, this);
+            invite.on(Node.EventType.TOUCH_END, this.onInviteClicked, this);
         }
+    }
+
+    private async onInviteClicked(): Promise<void> {
+        const result = await DouyinSDK.share({
+            channel: 'invite',
+            title: '一起来开猫店吧！',
+            desc: '比比谁招待的猫咪客人更多~',
+            query: 'from=rank_invite',
+        });
+        if (result.status === 'success') Toast.show('邀请已发送~');
+        else if (result.status === 'cancelled') Toast.show('已取消邀请');
+        else if (result.status !== 'busy') Toast.show('邀请暂时不可用，请稍后再试~', true);
     }
 
     // --- 组件 ---
@@ -201,15 +218,20 @@ export class RankScene extends Component {
         col.setPosition(x, 0, 0);
         col.addComponent(UITransform).setContentSize(180, 340);
 
-        const avaSize = elevated ? 124 : 100;
-        const avaY = elevated ? 100 : 80;
+        const avaSize = elevated ? 118 : 96;
+        const avaY = elevated ? 116 : 90;
         this.buildAvatar(col, 0, avaY, avaSize, row.no <= 3 ? PED_COLORS[row.no - 1] : TOKENS.line2);
 
-        const name = makeLabel(col, row.name, avaY - avaSize / 2 - 24, elevated ? 28 : 24, POPUP_COLORS.textLight);
+        const nameY = avaY - avaSize / 2 - 22;
+        const name = makeLabel(col, compactName(row.name, 7), nameY, elevated ? 26 : 22, POPUP_COLORS.textLight);
+        name.node.getComponent(UITransform)?.setContentSize(168, 38);
+        name.overflow = Label.Overflow.SHRINK;
         name.isBold = true;
         name.isSystemFontUsed = true;
 
-        makeLabel(col, `${row.score}`, avaY - avaSize / 2 - 56, elevated ? 28 : 24, POPUP_COLORS.textGold);
+        const score = makeLabel(col, `${row.score}`, nameY - 34, elevated ? 26 : 22, POPUP_COLORS.textGold);
+        score.node.getComponent(UITransform)?.setContentSize(150, 34);
+        score.overflow = Label.Overflow.SHRINK;
 
         const pedH = elevated ? 150 : (row.no === 2 ? 112 : 88);
         const pedY = -96 - (elevated ? 0 : 8);
@@ -234,31 +256,35 @@ export class RankScene extends Component {
         drawRoundedRect(node, 560, 74, row.me ? BUTTER_SF : TOKENS.paper2,
             row.me ? TOKENS.butter : TOKENS.line, 2, 22);
 
-        const no = makeLabel(node, `${row.no}`, 0, 32, row.me ? TOKENS.butterText : TOKENS.inkMute);
-        no.node.setPosition(-238, 0, 0);
-        no.node.getComponent(UITransform)?.setContentSize(54, 50);
+        const no = makeLabel(node, `${row.no}`, 0, 30, row.me ? TOKENS.butterText : TOKENS.inkMute);
+        no.node.setPosition(-246, 0, 0);
+        no.node.getComponent(UITransform)?.setContentSize(42, 50);
 
-        this.buildAvatar(node, -168, 0, 60, row.me ? TOKENS.butter : TOKENS.line2);
+        this.buildAvatar(node, -190, 0, 54, row.me ? TOKENS.butter : TOKENS.line2);
 
-        const name = makeLabel(node, row.me ? '我' : row.name, 0, 30, row.me ? TOKENS.butterText : POPUP_COLORS.textLight);
+        const name = makeLabel(node, row.me ? '我' : compactName(row.name, 12), 0, 28, row.me ? TOKENS.butterText : POPUP_COLORS.textLight);
         name.horizontalAlign = Label.HorizontalAlign.LEFT;
-        name.node.getComponent(UITransform)?.setContentSize(row.me ? 70 : 240, 50);
-        name.node.setPosition(-110, 0, 0);
+        name.node.getComponent(UITransform)?.setAnchorPoint(0, 0.5);
+        name.node.getComponent(UITransform)?.setContentSize(row.me ? 42 : 248, 50);
+        name.node.setPosition(-150, 0, 0);
+        name.overflow = Label.Overflow.SHRINK;
         name.isBold = true;
         name.isSystemFontUsed = true;
 
         if (row.me) {
             const tag = makeLabel(node, '· 本周最佳', 0, 20, TOKENS.butterText);
             tag.horizontalAlign = Label.HorizontalAlign.LEFT;
+            tag.node.getComponent(UITransform)?.setAnchorPoint(0, 0.5);
             tag.node.getComponent(UITransform)?.setContentSize(150, 40);
-            tag.node.setPosition(-30, 0, 0);
+            tag.node.setPosition(-108, 0, 0);
             tag.isSystemFontUsed = true;
         }
 
-        const score = makeLabel(node, `${row.score}`, 0, 32, row.me ? TOKENS.butterText : POPUP_COLORS.textLight);
+        const score = makeLabel(node, `${row.score}`, 0, 30, row.me ? TOKENS.butterText : POPUP_COLORS.textLight);
         score.horizontalAlign = Label.HorizontalAlign.RIGHT;
-        score.node.getComponent(UITransform)?.setContentSize(180, 50);
-        score.node.setPosition(170, 0, 0);
+        score.node.getComponent(UITransform)?.setAnchorPoint(1, 0.5);
+        score.node.getComponent(UITransform)?.setContentSize(110, 50);
+        score.node.setPosition(248, 0, 0);
     }
 
     /** 圆形头像占位（远端抖音头像 URL 在 Cocos 内不便加载，用描边圆底 + 图标占位）。 */

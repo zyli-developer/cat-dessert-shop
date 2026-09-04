@@ -35,8 +35,11 @@ describe('LoadingScene compliance and privacy gate', () => {
     expect(loginButton?.active).toBe(false);
     expect(scene.scheduleOnce).toHaveBeenCalledWith(expect.any(Function), 3);
 
+    // Cocos 的 destroy() 会延迟到帧末；模拟它不立即脱离节点树，确保实现先 removeFromParent()。
+    const destroy = jest.spyOn(complianceNotice!, 'destroy').mockImplementation(() => true);
     const close = (scene.scheduleOnce as jest.Mock).mock.calls[0][0] as () => void;
     close();
+    expect(destroy).toHaveBeenCalledTimes(1);
     expect(scene.node.getChildByName('ComplianceNotice')).toBeNull();
     expect(scene.node.getChildByName('PrivacyConsentDialog')).not.toBeNull();
     expect(loginButton?.active).toBe(false);

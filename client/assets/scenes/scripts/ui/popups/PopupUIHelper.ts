@@ -1,36 +1,15 @@
-import { Node, UITransform, Graphics, Color, Label, Layers, Sprite, SpriteFrame, resources } from 'cc';
+import { Node, UITransform, Graphics, Color, Label, Layers } from 'cc';
 import { GlobalFontManager } from '../GlobalFontManager';
 import {
     TOKENS, JELLY_VARIANTS, JellyVariantName, applyInkOutline,
 } from '../DesignTokens';
 
 /**
- * 果冻按钮贴图缓存 —— 用烘焙好的九宫格 PNG（含渐变面 + 顶高光 + 厚底）替代 Graphics 平涂，
- * 一处加载、所有弹窗按钮共享。未就绪时 buildJelly 自动回退到 Graphics（不阻塞）。
+ * 保留初始化入口以兼容 PopupManager。按钮已经统一改为 Graphics 绘制，
+ * 不再预加载未被消费的九宫格贴图，避免资源管线与实际渲染策略互相矛盾。
  */
-const JELLY_FRAME_PATH: Record<JellyVariantName, string> = {
-    primary: 'textures/ui/jelly_primary/spriteFrame',
-    butter: 'textures/ui/jelly_butter/spriteFrame',
-    mint: 'textures/ui/jelly_mint/spriteFrame',
-    ghost: 'textures/ui/jelly_ghost/spriteFrame',
-};
-const JELLY_FRAMES: Partial<Record<JellyVariantName, SpriteFrame>> = {};
-let _kitLoading: Promise<void> | null = null;
-
-/** 预加载果冻贴图（PopupManager 在 init 前 await）。重复调用复用同一 Promise。 */
 export function ensurePopupKit(): Promise<void> {
-    if (_kitLoading) return _kitLoading;
-    _kitLoading = Promise.all(
-        (Object.keys(JELLY_FRAME_PATH) as JellyVariantName[]).map(
-            (v) => new Promise<void>((resolve) => {
-                resources.load(JELLY_FRAME_PATH[v], SpriteFrame, (err, frame) => {
-                    if (!err && frame) JELLY_FRAMES[v] = frame;
-                    resolve();
-                });
-            }),
-        ),
-    ).then(() => undefined);
-    return _kitLoading;
+    return Promise.resolve();
 }
 
 /**
@@ -119,11 +98,11 @@ function buildJelly(btn: Node, text: string, variant: JellyVariantName, w: numbe
     face.setPosition(0, 0, 0);
     face.addComponent(UITransform).setContentSize(w, h);
 
-    // 厚底（下沉 8px 露出果冻底色）
+    // 厚底收薄，保留按压反馈但降低塑胶感。
     const shadow = new Node('Shadow');
     shadow.layer = Layers.Enum.UI_2D;
     shadow.parent = btn;
-    shadow.setPosition(0, -8, 0);
+    shadow.setPosition(0, -5, 0);
     shadow.setSiblingIndex(0);
     shadow.addComponent(UITransform).setContentSize(w, h);
     drawRoundedRect(shadow, w, h, v.shadow, undefined, 0, radius);
@@ -135,14 +114,14 @@ function buildJelly(btn: Node, text: string, variant: JellyVariantName, w: numbe
         drawRoundedRect(face, w, h, v.face, undefined, 0, radius);
     }
 
-    // 顶部高光条
-    const hiH = Math.max(6, h * 0.40);
+    // 窄而柔的顶部受光区，和手绘纸感背景保持一致。
+    const hiH = Math.max(6, h * 0.24);
     const hi = new Node('TopHi');
     hi.layer = Layers.Enum.UI_2D;
     hi.parent = face;
     hi.addComponent(UITransform).setContentSize(w - 16, hiH);
-    hi.setPosition(0, h / 2 - hiH / 2 - 5, 0);
-    const hiColor = new Color(v.faceHi.r, v.faceHi.g, v.faceHi.b, 150);
+    hi.setPosition(0, h / 2 - hiH / 2 - 7, 0);
+    const hiColor = new Color(v.faceHi.r, v.faceHi.g, v.faceHi.b, 105);
     drawRoundedRect(hi, w - 16, hiH, hiColor, undefined, 0, hiH / 2);
 
     // Label —— 文字（渲染在最上层）；字号随按钮高度走，贴近设计稿的粗体大字
@@ -159,19 +138,16 @@ function buildJelly(btn: Node, text: string, variant: JellyVariantName, w: numbe
     label.verticalAlign = Label.VerticalAlign.CENTER;
     label.color = v.text;
     label.isBold = true;
-    if (variant === 'ghost') {
-        // 幽灵按钮暖棕字 + 砂色描边
-        applyInkOutline(label, 200, 2);
-    }
+    if (variant === 'primary') applyInkOutline(label, 120, 1);
     GlobalFontManager.applyFont(labelNode);
 
     attachJellyPress(btn, face);
 }
 
-/** 按下整体下沉 6px（Face 下移盖住厚底），松开还原 —— 果冻"汁感"。 */
+/** 按下整体下沉 4px（Face 下移盖住厚底），松开还原。 */
 function attachJellyPress(btn: Node, face: Node): void {
     const baseY = face.position.y;
-    const press = () => face.setPosition(0, baseY - 6, 0);
+    const press = () => face.setPosition(0, baseY - 4, 0);
     const release = () => face.setPosition(0, baseY, 0);
     btn.on(Node.EventType.TOUCH_START, press);
     btn.on(Node.EventType.TOUCH_END, release);
@@ -218,8 +194,6 @@ export function makeLabel(
     label.horizontalAlign = Label.HorizontalAlign.CENTER;
     label.verticalAlign = Label.VerticalAlign.CENTER;
     label.color = color;
-    applyInkOutline(label, 100, 2);
-
     // 应用全局字体
     GlobalFontManager.applyFont(node);
 
@@ -245,7 +219,7 @@ export function styleExistingLabel(
     label.lineHeight = fontSize + 8;
     label.color = color;
     label.isBold = true;
-    applyInkOutline(label, 100, 2);
+    label.enableOutline = false;
 
     // 应用全局字体
     GlobalFontManager.applyFont(label.node);

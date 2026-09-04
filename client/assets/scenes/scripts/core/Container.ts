@@ -1,6 +1,7 @@
 import { _decorator, Component, Node, UITransform, RigidBody2D, BoxCollider2D,
          ERigidBody2DType, PhysicsSystem2D, Graphics, Color, Vec2, Label, Sprite, Layers } from 'cc';
 import { GlobalFontManager } from '../ui/GlobalFontManager';
+import { TOKENS } from '../ui/DesignTokens';
 const { ccclass, property } = _decorator;
 
 /** 物理常量 */
@@ -57,20 +58,20 @@ export class Container extends Component {
         const H = this.containerHeight;
         const r = 40;
 
-        // 杯体：半透明乳白
-        g.fillColor = new Color(255, 255, 255, 78);
+        // 杯体：提高乳白底的不透明度，让操作区域在复杂背景上更明确。
+        g.fillColor = new Color(255, 250, 242, 122);
         g.roundRect(-W / 2, -H / 2, W, H, r);
         g.fill();
 
         // 外描边：柔棕 line-2
         g.lineWidth = 6;
-        g.strokeColor = new Color(220, 193, 151, 220);
+        g.strokeColor = new Color(TOKENS.inkSoft.r, TOKENS.inkSoft.g, TOKENS.inkSoft.b, 218);
         g.roundRect(-W / 2, -H / 2, W, H, r);
         g.stroke();
 
         // 内描边：白色杯壁高光
         g.lineWidth = 4;
-        g.strokeColor = new Color(255, 255, 255, 210);
+        g.strokeColor = new Color(255, 255, 255, 190);
         g.roundRect(-W / 2 + 5, -H / 2 + 5, W - 10, H - 10, r - 4);
         g.stroke();
 
@@ -107,8 +108,8 @@ export class Container extends Component {
         gfxNode.parent = this.node;
 
         const gfx = gfxNode.addComponent(Graphics);
-        gfx.strokeColor = new Color(255, 80, 80, 150);
-        gfx.lineWidth = 2;
+        gfx.strokeColor = new Color(TOKENS.pinkDp.r, TOKENS.pinkDp.g, TOKENS.pinkDp.b, 178);
+        gfx.lineWidth = 3;
 
         const halfW = this.containerWidth / 2 - 10;
         const y = this.warningLineY;
@@ -126,7 +127,7 @@ export class Container extends Component {
         tag.setPosition(halfW - 46, y + 16, 0);
         tag.addComponent(UITransform).setContentSize(86, 30);
         const bg = tag.addComponent(Graphics);
-        bg.fillColor = new Color(255, 230, 235, 235); // pink-sf
+        bg.fillColor = new Color(TOKENS.pinkSf.r, TOKENS.pinkSf.g, TOKENS.pinkSf.b, 242);
         bg.roundRect(-43, -15, 86, 30, 15);
         bg.fill();
         const labelNode = new Node('warningTagLabel');
@@ -139,7 +140,7 @@ export class Container extends Component {
         label.lineHeight = 30;
         label.horizontalAlign = Label.HorizontalAlign.CENTER;
         label.verticalAlign = Label.VerticalAlign.CENTER;
-        label.color = new Color(217, 89, 111, 255); // pink-dp
+        label.color = TOKENS.pinkDp;
         label.isBold = true;
         GlobalFontManager.applyFont(labelNode);
     }
