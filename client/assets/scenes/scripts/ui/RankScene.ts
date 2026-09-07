@@ -33,6 +33,11 @@ const BUTTER_SF = new Color(255, 240, 205, 255);
 @ccclass('RankScene')
 export class RankScene extends Component {
     private board: Board = 'friends';
+    private requestVersion = 0;
+    private loadFailed = false;
+    private allRows: Row[] = [];
+    private page = 0;
+    private pager: Node | null = null;
     private tabFriends: Node | null = null;
     private tabGlobal: Node | null = null;
     private podium: Node | null = null;
@@ -43,6 +48,10 @@ export class RankScene extends Component {
     onLoad(): void {
         void GlobalFontManager.applyFontWhenReady(this.node);
         this.build();
+    }
+
+    onDestroy(): void {
+        this.requestVersion++;
     }
 
     private build(): void {
@@ -66,7 +75,7 @@ export class RankScene extends Component {
 
         // 好友榜 / 全国榜 切换
         const tabY = titleY - 96;
-        this.tabFriends = this.buildTab('好友榜', -118, tabY, true);
+        this.tabFriends = this.buildTab('闯关榜', -118, tabY, true);
         this.tabGlobal = this.buildTab('全国榜', 118, tabY, false);
         this.tabFriends.on(Node.EventType.TOUCH_END, () => this.switchBoard('friends'), this);
         this.tabGlobal.on(Node.EventType.TOUCH_END, () => this.switchBoard('global'), this);
@@ -101,16 +110,21 @@ export class RankScene extends Component {
     }
 
     private async loadBoard(): Promise<void> {
-        const myName = GameState.instance.userProfile?.nickname;
+        const version = ++this.requestVersion;
+        const board = this.board;
+        this.loadFailed = false;
+        this.render([]);
+        if (this.emptyNode) this.emptyNode.active = false;
+        if (this.hint) { this.hint.string = '正在加载榜单…'; this.hint.node.active = true; }
         let rows: Row[] = [];
         try {
-            if (this.board === 'friends') {
+            if (board === 'friends') {
                 const res = await ApiClient.getFriendsRank();
-                rows = (res?.list ?? []).map((it: any, i: number) => ({
+                rows = (res?.list ?? []).map((it, i: number) => ({
                     no: i + 1,
                     name: it.nickname || '玩家',
-                    score: it.score ?? it.highScore ?? 0,
-                    me: !!it.isMe || (myName != null && it.nickname === myName),
+                    score: Math.max(0, (it.currentRound ?? 1) - 1),
+                    me: it.isMe === true || res.myRank === i + 1,
                 }));
             } else {
                 const list = await ApiClient.getGlobalRank(50);
@@ -118,15 +132,22 @@ export class RankScene extends Component {
                     no: i + 1,
                     name: it.nickname || '玩家',
                     score: it.score ?? it.highScore ?? 0,
-                    me: myName != null && it.nickname === myName,
+                    me: false,
                 }));
             }
-        } catch { /* 断网/离线：空态 */ }
-
+        } catch {
+            if (version !== this.requestVersion || !this.node?.isValid) return;
+            this.loadFailed = true;
+        }
+        if (version !== this.requestVersion || !this.node?.isValid) return;
+        this.allRows = rows;
+        this.page = 0;
         this.render(rows);
     }
 
     private render(rows: Row[]): void {
+        this.pager?.destroy();
+        this.pager = null;
         this.podium?.removeAllChildren();
         this.list?.removeAllChildren();
         if (this.emptyNode?.isValid) this.emptyNode.destroy();
@@ -157,9 +178,24 @@ export class RankScene extends Component {
             y -= 86;
         }
         const visibleRest = meRow && !meInTop3 ? rest.filter(r => r !== meRow) : rest;
-        for (const r of visibleRest.slice(0, meRow && !meInTop3 ? 4 : 5)) {
+        const pageSize = meRow && !meInTop3 ? 4 : 5;
+        for (const r of visibleRest.slice(this.page * pageSize, (this.page + 1) * pageSize)) {
             this.buildListRow(r, y);
             y -= 86;
+        }
+        const pages = Math.ceil(visibleRest.length / pageSize);
+        if (pages > 1) {
+            const pager = new Node('Pager');
+            pager.layer = Layers.Enum.UI_2D;
+            pager.parent = this.node;
+            this.pager = pager;
+            makeLabel(pager, `${this.page + 1} / ${pages}`, -570, 24, TOKENS.ink);
+            for (const delta of [-1, 1]) {
+                const btn = makeJellyButton(pager, delta < 0 ? '上一页' : '下一页', -570, 'ghost', 160, 64);
+                btn.setPosition(delta * 180, -570, 0);
+                btn.active = this.page + delta >= 0 && this.page + delta < pages;
+                btn.on(Node.EventType.TOUCH_END, () => { this.page += delta; this.render(this.allRows); });
+            }
         }
     }
 
@@ -186,11 +222,14 @@ export class RankScene extends Component {
         });
 
         const friends = this.board === 'friends';
-        makeLabel(box, friends ? '本周还没有好友上榜' : '暂时无法加载榜单', 0, 34, POPUP_COLORS.textLight);
-        makeLabel(box, friends ? '邀请好友一起开猫店，比比谁的猫客更多~' : '网络开小差，请稍后再试',
+        makeLabel(box, this.loadFailed ? '暂时无法加载榜单' : '还没有玩家上榜', 0, 34, POPUP_COLORS.textLight);
+        makeLabel(box, this.loadFailed ? '网络开小差，点击重试' : '完成一局，来争取你的排名吧~',
             -54, 26, POPUP_COLORS.textDim);
 
-        if (friends) {
+        if (this.loadFailed) {
+            const retry = makeJellyButton(box, '重试', -160, 'primary', 320, 92);
+            retry.on(Node.EventType.TOUCH_END, () => { void this.loadBoard(); });
+        } else if (friends) {
             const invite = makeJellyButton(box, '邀请好友', -160, 'primary', 320, 92);
             invite.on(Node.EventType.TOUCH_END, this.onInviteClicked, this);
         }
@@ -223,13 +262,13 @@ export class RankScene extends Component {
         this.buildAvatar(col, 0, avaY, avaSize, row.no <= 3 ? PED_COLORS[row.no - 1] : TOKENS.line2);
 
         const nameY = avaY - avaSize / 2 - 22;
-        const name = makeLabel(col, compactName(row.name, 7), nameY, elevated ? 26 : 22, POPUP_COLORS.textLight);
+        const name = makeLabel(col, row.me ? '我' : compactName(row.name, 7), nameY, elevated ? 26 : 22, POPUP_COLORS.textLight);
         name.node.getComponent(UITransform)?.setContentSize(168, 38);
         name.overflow = Label.Overflow.SHRINK;
         name.isBold = true;
         name.isSystemFontUsed = true;
 
-        const score = makeLabel(col, `${row.score}`, nameY - 34, elevated ? 26 : 22, POPUP_COLORS.textGold);
+        const score = makeLabel(col, this.board === 'friends' ? `${row.score}关` : `${row.score}`, nameY - 34, elevated ? 26 : 22, POPUP_COLORS.textGold);
         score.node.getComponent(UITransform)?.setContentSize(150, 34);
         score.overflow = Label.Overflow.SHRINK;
 
@@ -272,7 +311,7 @@ export class RankScene extends Component {
         name.isSystemFontUsed = true;
 
         if (row.me) {
-            const tag = makeLabel(node, '· 本周最佳', 0, 20, TOKENS.butterText);
+            const tag = makeLabel(node, '· 已通关', 0, 20, TOKENS.butterText);
             tag.horizontalAlign = Label.HorizontalAlign.LEFT;
             tag.node.getComponent(UITransform)?.setAnchorPoint(0, 0.5);
             tag.node.getComponent(UITransform)?.setContentSize(150, 40);
@@ -280,7 +319,7 @@ export class RankScene extends Component {
             tag.isSystemFontUsed = true;
         }
 
-        const score = makeLabel(node, `${row.score}`, 0, 30, row.me ? TOKENS.butterText : POPUP_COLORS.textLight);
+        const score = makeLabel(node, this.board === 'friends' ? `${row.score}关` : `${row.score}`, 0, 30, row.me ? TOKENS.butterText : POPUP_COLORS.textLight);
         score.horizontalAlign = Label.HorizontalAlign.RIGHT;
         score.node.getComponent(UITransform)?.setAnchorPoint(1, 0.5);
         score.node.getComponent(UITransform)?.setContentSize(110, 50);

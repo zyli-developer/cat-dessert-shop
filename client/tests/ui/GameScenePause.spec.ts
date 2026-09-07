@@ -45,8 +45,12 @@ describe('GameScene modal flow', () => {
     expect(drop.setEnabled).toHaveBeenCalledWith(false);
     expect(overflow.setEnabled).toHaveBeenCalledWith(false);
     expect(PopupManager.show).toHaveBeenCalledWith('FailPopup', expect.objectContaining({
+      canRevive: true,
       served: 1,
       total: 4,
     }));
+    (scene as any).hasRevived = true;
+    (scene as any).onLose();
+    expect(PopupManager.show).toHaveBeenLastCalledWith('FailPopup', expect.objectContaining({ canRevive: false }));
   });
 });

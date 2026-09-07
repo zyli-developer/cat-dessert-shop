@@ -163,7 +163,7 @@ export class WinPopup extends Component {
         panel.addComponent(UITransform).setContentSize(540, 188);
         drawRoundedRect(panel, 540, 188, TOKENS.paper, TOKENS.line, 2, 22);
 
-        const title = makeLabel(panel, '本关好友排名', 62, 22, POPUP_COLORS.textDim);
+        const title = makeLabel(panel, '本关排名', 62, 22, POPUP_COLORS.textDim);
         title.horizontalAlign = Label.HorizontalAlign.LEFT;
         title.node.getComponent(UITransform)?.setContentSize(300, 30);
         title.node.setPosition(-190, 62, 0);
@@ -180,7 +180,7 @@ export class WinPopup extends Component {
                     no: i + 1,
                     name: it.nickname || '玩家',
                     score: typeof it.score === 'number' ? it.score : (it.bestScore ?? this.data.score),
-                    me: !!it.isMe || it.nickname === GameState.instance.userProfile?.nickname,
+                    me: it.isMe === true || res.myRank === i + 1,
                 }));
             }
         } catch { /* 离线/无好友：走兜底 */ }
@@ -189,7 +189,8 @@ export class WinPopup extends Component {
 
         // 兜底：无好友数据 → 只显示「你」一行
         if (!rows.length) {
-            rows = [{ no: 1, name: '你', score: this.data.score, me: true }];
+            makeLabel(this.friendPanel, '暂无排名，联网后再查看~', 0, 24, POPUP_COLORS.textDim);
+            return;
         }
         rows.forEach((r, i) => this.makeRankRow(this.friendPanel!, 16 - i * 46, r));
     }
