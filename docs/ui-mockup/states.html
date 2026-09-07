@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>猫咪甜品店 · 状态补充（State UIs）</title>
+<title>一起开猫店 · 状态补充（State UIs）</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/app.css">
@@ -116,7 +116,7 @@
           <div id="hintWrap" style="height:120px;display:grid;place-items:center;width:100%"></div>
           <div class="toolbar" id="demoBar"></div>
         </div>
-        <button class="toggle" onclick="toggleAfford()"><svg style="width:22px;height:22px"><use href="#i-coin"/></svg><span id="toggleLabel">金币：18（够用）→ 点我切到 12（不足）</span></button>
+        <button class="toggle" onclick="toggleAfford()"><svg style="width:22px;height:22px"><use href="#i-coin"/></svg><span id="toggleLabel">金币：15（够用）→ 点我切到 10（不足）</span></button>
         <h3>道具可用 / 不可用</h3>
         <p class="when"><b>可用：</b>金币 ≥ 15，价格币为焦糖色，点击即扣费使用。<br><b>不足：</b>金币 &lt; 15，锤子 / 洗牌整体去色、价格转红、右上角加锁，并弹出深色引导气泡指向脉动的「看广告 +10」按钮——把死路变成一次激励视频。</p>
       </div>
@@ -129,7 +129,7 @@
             <div class="scene">
               <img class="sbg" src="assets/bg/bg_game.png" alt=""><div class="sveil"></div>
               <!-- 容器与甜点（简化）-->
-              <div style="position:absolute;left:167px;top:430px;width:416px;height:560px;border-radius:30px 30px 44px 44px;
+              <div style="position:absolute;left:167px;top:430px;width:416px;height:624px;border-radius:30px 30px 44px 44px;
                 background:linear-gradient(180deg,rgba(255,255,255,.5),rgba(255,247,236,.26));
                 box-shadow:inset 0 0 0 4px rgba(255,255,255,.85),0 0 0 4px var(--line-2);overflow:hidden">
                 <img src="assets/desserts/dessert_lv5_taiyaki.png" style="position:absolute;left:18px;bottom:10px;width:130px">
@@ -163,10 +163,10 @@
     </div>
   </section>
 
-  <!-- ============ B. 容器警戒 ============ -->
+  <!-- ============ B. 容器几何 / 警戒 ============ -->
   <section class="sec">
-    <h2><span class="n">B</span> 容器警戒（PRD §6）</h2>
-    <p class="lead">甜品堆过警戒线后进入 5 秒倒计时，再不消除即溢出判负。</p>
+    <h2><span class="n">B</span> 容器几何 / 警戒（PRD §1 · §6）</h2>
+    <p class="lead">容器严格 2:3 竖高（400×600）。B1 验证超线倒计时；B2 验证甜品直径表——尤其「两个 Lv8 恰好并排填满容器宽」这一核心手感。</p>
     <div class="grid">
       <div class="card">
         <span class="card__tag tag-warn">B1 全屏</span>
@@ -174,7 +174,7 @@
           <div class="frame">
             <div class="scene">
               <img class="sbg" src="assets/bg/bg_game.png" alt=""><div class="sveil"></div>
-              <div style="position:absolute;left:167px;top:300px;width:416px;height:690px;border-radius:30px 30px 44px 44px;
+              <div style="position:absolute;left:167px;top:300px;width:416px;height:624px;border-radius:30px 30px 44px 44px;
                 background:linear-gradient(180deg,rgba(255,255,255,.5),rgba(255,247,236,.26));
                 box-shadow:inset 0 0 0 4px rgba(255,255,255,.85),0 0 0 4px var(--line-2);overflow:hidden">
                 <!-- 警戒线 -->
@@ -188,13 +188,44 @@
                 <img src="assets/desserts/dessert_lv4_dorayaki.png" style="position:absolute;left:230px;top:18px;width:104px">
               </div>
               <div class="danger-vignette"></div>
-              <div class="countdown">3</div>
+              <div class="countdown">5</div>
               <div class="selbar" style="top:auto;bottom:120px;background:var(--pink);color:#fff;box-shadow:var(--shadow-lg),inset 0 0 0 3px rgba(255,255,255,.5)">⚠ 甜品要溢出啦！快合成</div>
             </div>
           </div>
         </div>
         <h3>超线倒计时</h3>
         <p class="when">堆顶越过警戒线即触发：屏幕边缘红光呼吸、中央 <b>5→1</b> 大字倒计时、底部红色警告条。期间合成下降到线下即可解除。</p>
+      </div>
+
+      <!-- M9：双 Lv8 几何验证（甜品直径表 + 两个 Lv8 并排填满容器宽）-->
+      <div class="card">
+        <span class="card__tag tag-info">B2 几何</span>
+        <div class="view">
+          <div class="frame">
+            <div class="scene">
+              <img class="sbg" src="assets/bg/bg_game.png" alt=""><div class="sveil"></div>
+              <!-- 容器 416×624（2:3），内含 Lv1–Lv8 进阶 + 底部两个 Lv8 并排 -->
+              <div style="position:absolute;left:167px;top:300px;width:416px;height:624px;border-radius:30px 30px 44px 44px;
+                background:linear-gradient(180deg,rgba(255,255,255,.5),rgba(255,247,236,.26));
+                box-shadow:inset 0 0 0 4px rgba(255,255,255,.85),0 0 0 4px var(--line-2);overflow:hidden">
+                <!-- 警戒线 -->
+                <div style="position:absolute;left:0;right:0;top:62px;height:2px;background:repeating-linear-gradient(90deg,var(--pink-dp) 0 14px,transparent 14px 26px);opacity:.7"></div>
+                <!-- 底部：两个 Lv8（各 196）并排 = 392 ⊂ 内宽 408 -->
+                <img src="assets/desserts/dessert_lv8_cream_cake.png" style="position:absolute;left:6px;bottom:8px;width:196px" alt="Lv8">
+                <img src="assets/desserts/dessert_lv8_cream_cake.png" style="position:absolute;right:6px;bottom:8px;width:196px" alt="Lv8">
+                <!-- 上方进阶：Lv7 / Lv6 / Lv5 落在缝隙，体现严格递增 -->
+                <img src="assets/desserts/dessert_lv7_cakeroll.png" style="position:absolute;left:124px;bottom:188px;width:167px" alt="Lv7">
+                <img src="assets/desserts/dessert_lv5_taiyaki.png" style="position:absolute;left:36px;bottom:200px;width:116px" alt="Lv5">
+                <img src="assets/desserts/dessert_lv3_puff.png" style="position:absolute;right:44px;bottom:208px;width:75px" alt="Lv3">
+                <!-- 宽度标注 -->
+                <div style="position:absolute;left:6px;right:6px;bottom:120px;height:2px;background:var(--pink-dp);opacity:.85"></div>
+                <span style="position:absolute;left:50%;transform:translateX(-50%);bottom:128px;font-family:var(--font-display);font-weight:800;font-size:22px;color:#fff;background:var(--pink-dp);padding:3px 14px;border-radius:999px;box-shadow:0 2px 6px rgba(120,80,40,.35)">2 × Lv8 = 392 ⊂ 416</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <h3>甜品直径表 · 双 Lv8</h3>
+        <p class="when">直径严格递增（Lv1=40…<b>Lv8=196</b>，约每级 ×1.25）。两个 Lv8 并排恰好填满容器内宽——这是合成顶端的核心手感，圆形刚体 <code>radius = 直径/2</code>。值见 <code>cocos-mapping.md §4</code>。</p>
       </div>
     </div>
   </section>
@@ -253,7 +284,7 @@
               <img class="sbg" src="assets/bg/bg_home.png" alt=""><div class="sveil"></div>
               <div class="safe-top">
                 <div class="row between">
-                  <button class="iconbtn"><svg><use href="#i-close"/></svg></button>
+                  <button class="iconbtn" aria-label="返回"><svg><use href="#i-home"/></svg></button>
                   <span class="title-lg">排行榜</span>
                   <span style="width:66px"></span>
                 </div>
@@ -282,6 +313,40 @@
         <p class="when">登录、上传分数、看广告失败时顶部 Toast 提示并自动重试；<b>不阻断当前对局</b>，本地进度先存，连上再同步。</p>
       </div>
 
+      <!-- D3 广告无填充 / 加载失败（M8）-->
+      <div class="card">
+        <span class="card__tag tag-warn">D3 反馈</span>
+        <div class="view view--mod" style="flex-direction:column;gap:20px">
+          <div class="toast toast--warn"><svg><use href="#i-ad"/></svg>广告君打了个盹，稍后再来～</div>
+          <div class="hint" style="max-width:300px">没看成广告 · <b>金币门槛不扣</b>，可重试或先继续</div>
+        </div>
+        <h3>激励视频 · 无填充 / 失败</h3>
+        <p class="when">抖音常见 no-fill：拉取失败 / 暂无广告时给明确反馈，<b>不消耗道具门槛、不扣奖励</b>，按钮保留可重试。前 1–2 关隐藏所有激励位（见 <code>04-economy §64</code>）。</p>
+      </div>
+
+      <!-- D4 登录失败 / 授权拒绝（M8，与 loading.html 同款）-->
+      <div class="card">
+        <span class="card__tag tag-info">D4 全屏</span>
+        <div class="view">
+          <div class="frame">
+            <div class="scene">
+              <img class="sbg" src="assets/bg/bg_loading.png" alt=""><div class="sveil"></div>
+              <div class="overlay">
+                <div class="dialog pop" style="max-width:580px">
+                  <img class="dialog__cat" src="assets/character/cat_white_idle.png" alt="">
+                  <div class="title-lg" style="font-size:54px;margin-bottom:12px">登录没成功…</div>
+                  <p class="muted" style="font-size:28px;line-height:1.5;font-weight:600;margin-bottom:28px">网络开小差，或暂未授权抖音账号。可重试，也能先用<b style="color:var(--ink)">离线模式</b>逛逛——进度本地保存，联网后自动同步。</p>
+                  <button class="btn btn--primary btn--lg btn--block" style="margin-bottom:16px">重新登录</button>
+                  <button class="btn btn--ghost btn--block" style="height:92px;font-size:30px">先用离线模式</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <h3>登录失败 / 授权拒绝</h3>
+        <p class="when">加载阶段登录失败、用户拒绝授权或 401 需重登（<code>06-backend §168</code>）时弹出：<b>重新登录</b> 为主按钮，<b>离线模式</b> 兜底，不把玩家堵在加载页。</p>
+      </div>
+
     </div>
   </section>
 
@@ -300,7 +365,7 @@
 
 <script>
   // ---- A 组：道具栏「够用 ↔ 不足」可点击切换 ----
-  var afford = true; // true = 18金币够用
+  var afford = true; // true = 15金币够用（B1：与起手金币 15 对齐）
   function tool(kind){
     if(kind==='ad'){
       return '<button class="tool tool--ad pulse" id="adTool"><svg><use href="#i-ad"/></svg>'+
@@ -315,10 +380,10 @@
   function render(){
     document.getElementById('demoBar').innerHTML = tool('hammer')+tool('shuffle')+tool('ad');
     document.getElementById('hintWrap').innerHTML = afford ? '' :
-      '<div class="hint hint--down">金币不足 12 / 15 · <b>看广告 +10</b> 即可使用道具 →</div>';
+      '<div class="hint hint--down">金币不足 10 / 15 · <b>看广告 +10</b> 即可使用道具 →</div>';
     document.getElementById('toggleLabel').textContent = afford
-      ? '金币：18（够用）→ 点我切到 12（不足）'
-      : '金币：12（不足）→ 点我切回 18（够用）';
+      ? '金币：15（够用）→ 点我切到 10（不足）'
+      : '金币：10（不足）→ 点我切回 15（够用）';
     if(!afford){ document.getElementById('adTool').style.boxShadow=''; }
   }
   function toggleAfford(){ afford = !afford; render(); }

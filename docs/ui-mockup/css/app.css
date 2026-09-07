@@ -1,5 +1,5 @@
 /* ============================================================
-   猫咪甜品店 — 统一设计系统 (治愈手绘烘焙风 · 精致化)
+   一起开猫店 — 统一设计系统 (治愈手绘烘焙风 · 精致化)
    只做 UI 外壳：复用现有插画，替换玻璃按钮 / 扁平描边图标
    ============================================================ */
 
@@ -309,3 +309,33 @@ body{
 .switch i{ position:absolute; top:5px; left:5px; width:46px; height:46px; border-radius:50%;
   background:#fff; box-shadow:var(--shadow-sm); transition:left .2s; }
 .switch.on i{ left:47px; }
+
+/* ============================================================
+   加载页 Loading —— 果冻进度条 + 流光 + 进度头骑金币
+   ============================================================ */
+/* 进度槽：内凹砂色，白内圈 + 暖棕柔描边 */
+.load-bar{ position:relative; height:48px; border-radius:var(--r-pill); background:var(--sand-2);
+  box-shadow:inset 0 4px 8px rgba(120,80,40,.22), inset 0 0 0 3px rgba(255,255,255,.7), 0 0 0 3px var(--line-2);
+  overflow:visible; }
+.load-bar__track{ position:absolute; inset:0; border-radius:var(--r-pill); overflow:hidden; }
+/* 填充：草莓粉果冻，顶高光 + 底内阴影 */
+.load-bar__fill{ height:100%; width:0%; border-radius:var(--r-pill);
+  background:linear-gradient(180deg,var(--pink-hi),var(--pink));
+  box-shadow:inset 0 4px 0 rgba(255,255,255,.45), inset 0 -6px 0 rgba(0,0,0,.06);
+  transition:width .3s cubic-bezier(.3,1,.5,1); position:relative; }
+/* 流光扫过 */
+.load-bar__fill::after{ content:''; position:absolute; inset:0; border-radius:inherit;
+  background:linear-gradient(100deg,transparent 32%,rgba(255,255,255,.6) 50%,transparent 68%);
+  background-size:220% 100%; animation:sheen 1.25s linear infinite; }
+@keyframes sheen{ from{ background-position:130% 0; } to{ background-position:-130% 0; } }
+/* 进度头上的爪印金币，随填充走 */
+.load-head{ position:absolute; top:50%; left:0; width:66px; height:66px; transform:translate(-50%,-50%);
+  transition:left .3s cubic-bezier(.3,1,.5,1); filter:drop-shadow(0 5px 7px rgba(120,80,40,.32)); pointer-events:none; }
+.load-head svg{ width:100%; height:100%; }
+/* 加载点 */
+.dots{ display:inline-flex; gap:12px; align-items:flex-end; }
+.dots i{ width:15px; height:15px; border-radius:50%; display:block; animation:dotb 1s ease-in-out infinite; }
+.dots i:nth-child(1){ background:var(--pink); }
+.dots i:nth-child(2){ background:var(--butter); animation-delay:.16s; }
+.dots i:nth-child(3){ background:var(--mint);   animation-delay:.32s; }
+@keyframes dotb{ 0%,100%{ transform:translateY(0); opacity:.55; } 50%{ transform:translateY(-11px); opacity:1; } }

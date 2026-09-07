@@ -1,9 +1,7 @@
-# 猫咪甜品店 · UI 改版稿（使用说明）
+# 一起开猫店 · UI 改版稿（使用说明）
 
 治愈手绘烘焙风的高保真 UI 改版稿。**复用你现有工程的全部插画**（背景 / 猫咪 / 甜点 / Logo），
 只重做了 UI 外壳（按钮、卡片、图标、HUD、各类状态）。画布 **750 × 1334**（抖音竖屏），可点击交互。
-
-> 🛠 **要落回 Cocos？** 三份对照物：① 图标切图 [`icons-export/export.html`](icons-export/export.html)（选尺寸一键下 PNG）② 控件规格 [`prefab-spec.html`](prefab-spec.html) / [`prefab-spec.md`](prefab-spec.md)（果冻按钮 + 道具栏三态）③ 色值/几何/物理 [`cocos-mapping.md`](cocos-mapping.md)（与 `docs/plans/` 的 PRD 对齐）。本文件夹只是设计参考，**不含可运行的 Cocos 代码，不影响现有工程**。
 
 ---
 
@@ -20,7 +18,8 @@
 
 ```
 ui-redesign/
-├── index.html      画廊启动器（6 屏并排 + 设计系统色板 + 进入状态页入口）
+├── index.html      画廊启动器（各屏并排 + 设计系统色板 + 进入状态页入口）
+├── loading.html    加载页：Logo / 橘猫 / 果冻进度条+流光 / 文案轮播 / 百分比计数（会动）
 ├── home.html       首页：关卡选择 / 开始营业 / 猫币 / 排行·礼包·免费猫币入口
 ├── game.html       游戏内：HUD / 顾客订单 / 合成容器 / NEXT / 道具栏（★ 可交互，见下）
 ├── win.html        胜利弹窗：三星 / 得分 / 看广告翻倍 / 下一关
@@ -33,6 +32,8 @@ ui-redesign/
 ├── icons-export/    图标切图导出
 │   ├── export.html  浏览器里选尺寸一键下 PNG（命名对齐 icon_*）
 │   └── svg/         26 枚统一线条图标的矢量源（icon_*.svg）
+├── cat-breeds.html  猫咪顾客品种目录：全球最受欢迎 30 品种规划（标注已有 3 / 待生成 27）
+├── cat-asset-prompts.md  30 品种×3 表情=90 条生成 prompt（沿用 09-assets.md 风格，喂出图管线）
 ├── css/app.css     设计系统（颜色/字号/间距 token + 果冻按钮·卡片·HUD·全部状态组件）
 ├── js/stage.js     舞台等比缩放（把 750×1334 适配到任意视口）
 └── assets/         插画资源（全部来自你现有 Cocos 工程，原样复用）

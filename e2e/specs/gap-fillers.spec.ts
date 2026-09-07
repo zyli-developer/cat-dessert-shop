@@ -24,7 +24,7 @@ test.describe('gap-fillers', () => {
           body: JSON.stringify({ code: 'test-code-e2e' }),
         }).then((r) => r.json());
       const results = await Promise.all([login(), login(), login(), login(), login()]);
-      return results.map((r: any) => r.data.openId);
+      return results.map((r: any) => r.data.user.openId);
     }, API_BASE);
     // All 5 parallel logins should succeed and return the same openId (upsert guard)
     expect(new Set(openIds).size).toBe(1);

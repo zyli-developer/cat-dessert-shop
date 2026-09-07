@@ -14,7 +14,7 @@
  *   - Public methods: login, getProfile, updateProgress, getGlobalRank,
  *     getFriendsRank. Offline mode (openId === 'dev-offline') shortcircuits
  *     a few of them with canned responses.
- *   - NO 401 auto-clear-token logic exists today.
+ *   - A 401 response clears the in-memory authentication session.
  *
  * TC mapping:
  *   - TC-API-CLIENT-001 happy path ✔ (login POST and getGlobalRank GET)
@@ -24,9 +24,7 @@
  *     production fetch branch ignores HTTP statusCode and only reads `code`,
  *     so "5xx" is modeled as the body shape the server sends on 5xx:
  *     { code: 500, message: 'server error' }).
- *   - TC-API-CLIENT-004 401 auto-clear-token → SKIPPED (product gap: no
- *     such logic). Still asserts the current behavior: 401-shaped error
- *     body rejects and openId is preserved.
+ *   - TC-API-CLIENT-004 401 auto-clear-token ✔
  */
 
 import { ApiClient, setFetchImpl } from '../../assets/scenes/scripts/net/ApiClient';
@@ -41,7 +39,7 @@ describe('ApiClient (T2-12)', () => {
     // Restore real fetch between tests.
     setFetchImpl(((input: RequestInfo, init?: RequestInit) =>
       fetch(input as any, init)) as typeof fetch);
-    ApiClient.setOpenId('');
+    ApiClient.clearSession();
     jest.useRealTimers();
   });
 
@@ -50,15 +48,19 @@ describe('ApiClient (T2-12)', () => {
     const fake = jest.fn().mockResolvedValue(jsonResponse({
       code: 0,
       data: {
-        openId: 'o1', nickname: 'n', avatar: '',
-        catCoins: 0, currentRound: 1, highScore: 0,
-        stars: {}, roundScores: {},
+        accessToken: 'signed-token',
+        user: {
+          openId: 'o1', nickname: 'n', avatar: '',
+          catCoins: 0, currentRound: 1, highScore: 0,
+          stars: {}, roundScores: {},
+        },
       },
     }));
     ApiClient.setFetch(fake as unknown as typeof fetch);
 
-    const profile = await ApiClient.login({ code: 'c' });
-    expect(profile.openId).toBe('o1');
+    const session = await ApiClient.login({ code: 'c' });
+    expect(session.user.openId).toBe('o1');
+    expect(session.accessToken).toBe('signed-token');
     expect(fake).toHaveBeenCalledTimes(1);
     const [url, init] = fake.mock.calls[0];
     expect(String(url)).toContain('/api/auth/login');
@@ -82,14 +84,15 @@ describe('ApiClient (T2-12)', () => {
     expect(init?.method).toBe('GET');
   });
 
-  it('TC-API-CLIENT-001c X-Open-Id header is sent when openId is set', async () => {
-    ApiClient.setOpenId('open-xyz');
+  it('TC-API-CLIENT-001c Bearer token is sent for an authenticated session', async () => {
+    ApiClient.setSession('open-xyz', 'signed-token');
     const fake = jest.fn().mockResolvedValue(jsonResponse({ code: 0, data: [] }));
     ApiClient.setFetch(fake as unknown as typeof fetch);
 
     await ApiClient.getGlobalRank(10);
     const [, init] = fake.mock.calls[0];
-    expect((init?.headers as any)['X-Open-Id']).toBe('open-xyz');
+    expect((init?.headers as any).Authorization).toBe('Bearer signed-token');
+    expect((init?.headers as any)['X-Open-Id']).toBeUndefined();
   });
 
   // ----- TC-API-CLIENT-002 -----
@@ -138,21 +141,16 @@ describe('ApiClient (T2-12)', () => {
   });
 
   // ----- TC-API-CLIENT-004 -----
-  // SKIP-REASON: FU-T2-03 — ApiClient has no 401 auto-clear branch yet.
-  it.skip('TC-API-CLIENT-004 401 auto-clears token (product gap: not implemented)', () => {
-    // ApiClient has no 401-handling branch today. Unskip once implemented.
-  });
-
-  it('TC-API-CLIENT-004 current behavior: 401-shaped body rejects; openId preserved', async () => {
-    ApiClient.setOpenId('will-stay');
+  it('TC-API-CLIENT-004 401 auto-clears the local session', async () => {
+    ApiClient.setSession('will-clear', 'expired-token');
     const fake = jest.fn().mockResolvedValue(jsonResponse({
       code: 401, message: 'unauthorized',
     }));
     ApiClient.setFetch(fake as unknown as typeof fetch);
 
     await expect(ApiClient.getGlobalRank(10)).rejects.toThrow(/code=401/);
-    // No auto-clear today — documents current contract.
-    expect(ApiClient.getOpenId()).toBe('will-stay');
+    expect(ApiClient.getOpenId()).toBe('');
+    expect(ApiClient.getAccessToken()).toBe('');
   });
 
   // ----- TC-API-ERR-003 (integration-api.md §错误路径) -----
@@ -190,9 +188,51 @@ describe('ApiClient (T2-12)', () => {
     const fake = jest.fn();
     ApiClient.setFetch(fake as unknown as typeof fetch);
 
-    const resp = await ApiClient.updateProgress(2, 500, 3, 20);
+    const resp = await ApiClient.updateProgress(2, 500, 3);
     expect(resp.offline).toBe(true);
     expect(resp.currentRound).toBe(2);
     expect(fake).not.toHaveBeenCalled();
   });
+
+  it('claimReward sends only the server-controlled kind, claim id, and round', async () => {
+    ApiClient.setSession('open-xyz', 'signed-token');
+    const fake = jest.fn().mockResolvedValue(jsonResponse({
+      code: 0,
+      data: {
+        openId: 'open-xyz', nickname: '', avatar: '', catCoins: 20,
+        currentRound: 2, highScore: 1000, stars: { '1': 3 },
+        roundScores: { '1': 1000 }, awarded: 20, alreadyClaimed: false,
+      },
+    }));
+    ApiClient.setFetch(fake as unknown as typeof fetch);
+
+    await ApiClient.claimReward('win_double', 'win_double_1', 1);
+    const [, init] = fake.mock.calls[0];
+    expect(JSON.parse(String(init?.body))).toEqual({
+      kind: 'win_double', claimId: 'win_double_1', round: 1,
+    });
+  });
+
+  it('deleteAccount uses the authenticated DELETE endpoint', async () => {
+    ApiClient.setSession('open-xyz', 'signed-token');
+    const fake = jest.fn().mockResolvedValue(jsonResponse({ code: 0, data: { deleted: true } }));
+    ApiClient.setFetch(fake as unknown as typeof fetch);
+
+    await expect(ApiClient.deleteAccount()).resolves.toEqual({ deleted: true });
+    const [url, init] = fake.mock.calls[0];
+    expect(String(url)).toContain('/api/user/account');
+    expect(init?.method).toBe('DELETE');
+    expect((init?.headers as any).Authorization).toBe('Bearer signed-token');
+  });
+
+  it('uses stable daily and round claim ids so a lost response can be replayed', () => {
+    const beforeCstMidnight = Date.UTC(2026, 7, 28, 15, 59, 59);
+    const afterCstMidnight = Date.UTC(2026, 7, 28, 16, 0, 1);
+
+    expect(ApiClient.createDailyClaimId('gift', beforeCstMidnight)).toBe('gift_20260828');
+    expect(ApiClient.createDailyClaimId('gift', beforeCstMidnight)).toBe('gift_20260828');
+    expect(ApiClient.createDailyClaimId('gift', afterCstMidnight)).toBe('gift_20260829');
+    expect(ApiClient.createRoundClaimId(1)).toBe('win_double_1');
+  });
+
 });

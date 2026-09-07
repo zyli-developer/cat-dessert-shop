@@ -90,15 +90,6 @@ def main() -> None:
         after = p.stat().st_size
         print(f"[ui] btn_rank.png: {before // 1024} KB -> {after // 1024} KB")
 
-    p = ui_dir / "buttons-sheet.png"
-    if p.is_file():
-        before = p.stat().st_size
-        im = Image.open(p)
-        im = fit_max_width(im, 1536)
-        save_png_optimized(p, im)
-        after = p.stat().st_size
-        print(f"[ui] buttons-sheet.png: {before // 1024} KB -> {after // 1024} KB")
-
     print("Done.")
 
 

@@ -25,11 +25,13 @@ function addDessert(container: Node, y: number, opts: { merging?: boolean; dropp
   return d;
 }
 
-function makeDetector(countdownTime = 2, warningLineY = 100) {
+function makeDetector(countdownTime = 2, warningLineY = 100, overflowGrace = 0) {
   const det = new OverflowDetector();
   (det as any).node = new Node();
   det.countdownTime = countdownTime;
   det.warningLineY = warningLineY;
+  // 计时类用例默认关掉超线宽限（grace），保持倒计时算术直观；宽限行为单独有用例覆盖。
+  det.overflowGrace = overflowGrace;
   det.containerNode = new Node();
   // Label is optional — provide one to exercise the string/color update branch.
   const labelNode = new Node();
@@ -100,6 +102,33 @@ describe('OverflowDetector', () => {
     // We assert the strict invariant the TC specifies: no immediate re-fire.
     det.update(0.016);
     expect(onGameOver).toHaveBeenCalledTimes(1);
+  });
+
+  it('overflow shorter than overflowGrace does not even arm the countdown (falling pass-through)', () => {
+    const det = makeDetector(2, 100, 0.6);
+    const dessert = addDessert(det.containerNode!, 200); // above the line
+
+    const onGameOver = jest.fn();
+    det.onGameOver = onGameOver;
+
+    // Above the line for only 0.4s (< 0.6 grace) — e.g. a dessert falling past it.
+    det.update(0.2);
+    det.update(0.2);
+    expect(det.countdownLabel!.node.active).toBe(false); // not armed
+
+    // Drops back below the line: grace timer resets.
+    dessert.node.setPosition(0, 50, 0);
+    det.update(0.5);
+
+    // Crosses again but still never sustains past the grace window.
+    dessert.node.setPosition(0, 200, 0);
+    det.update(0.5);
+    expect(det.countdownLabel!.node.active).toBe(false);
+    expect(onGameOver).not.toHaveBeenCalled();
+
+    // Sustains past the grace window → countdown arms.
+    det.update(0.2);
+    expect(det.countdownLabel!.node.active).toBe(true);
   });
 
   it('ignores desserts that are merging or still dropping when scanning overflow', () => {

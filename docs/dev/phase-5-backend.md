@@ -12,6 +12,8 @@
 
 **内容**：
 - 新增 `roundScores` 字段：`Record<string, number>`，存储每关最高分
+- 新增 `weeklyHighScore`（number）+ `weekKey`（string）字段（M6 周榜，跨自然周惰性重置）
+- 新增 `lastDailyGiftDate` + `lastDailyGiftDoubleDate`（string）字段（M3 每日礼包，按 CST 判定）
 - 预留 v2.0 字段（暂不实现）：`homeItems`、`cats`、`skins`
 
 **验收标准**：
@@ -52,15 +54,18 @@
 - `server/src/rank/rank.controller.ts`
 
 **内容**：
-- `GET /api/rank/friends?round=N`
-  - 不传 round：按 currentRound 排名（总排行）
+- `GET /api/rank/friends?round=N&by=score|round`
+  - 不传 round：好友总排行，**默认按最高分数**；`by=round` 切换为按最高关卡数（M6）
   - 传 round：按 `roundScores[round]` 排名（本关排名）
-- 返回好友列表 + 自己的排名
+- `GET /api/rank/weekly`：好友周榜，按 `weeklyHighScore` 排序，返回 `weekKey`；跨自然周惰性重置（M6）
+- `GET /api/rank/global?limit=100`：全国榜按最高分数取 Top 100
+- 返回好友列表 + 自己的排名（myRank）
 - MVP 阶段好友关系模拟：返回全部用户作为"好友"（正式上线再接抖音关系链）
 
 **验收标准**：
 - [ ] 传 round 参数时按本关分数排序
-- [ ] 不传时按最高关卡排序
+- [ ] 好友总榜默认按分数排序，`by=round` 可切换为最高关卡
+- [ ] 周榜按周内最高分排序，跨周自动重置（weekKey 边界）
 - [ ] 自己的排名 myRank 正确
 
 ---
@@ -103,3 +108,20 @@
 **验收标准**：
 - [ ] 所有测试通过
 - [ ] 覆盖核心业务逻辑的边界情况
+
+---
+
+## Task 5-6：每日礼包接口（M3）
+
+**修改文件**：`server/src/user/*`（schema / service / controller / dto）
+
+**内容**：
+- profile 回包加 `dailyGiftAvailable` / `dailyGiftDoubleAvailable`
+- `POST /api/user/daily-gift/claim`：当日未领 → `catCoins += 20` + 写 `lastDailyGiftDate`(CST)；幂等
+- `POST /api/user/daily-gift/double`：当日已领 && 未翻倍 && `currentRound>2` → `catCoins += 20` + 写 `lastDailyGiftDoubleDate`；幂等
+- 日期一律服务端按 Asia/Shanghai 计算（改客户端时钟无效）
+
+**验收标准**：
+- [ ] 同日重复 claim/double 不重复加币
+- [ ] 跨日恢复可领；改客户端时钟无效
+- [ ] double 需满足「已领 + 未翻倍 + 通关第 2 关后」

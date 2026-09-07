@@ -1,50 +1,31 @@
 /**
- * Unit tests for CustomerManager (TC-CUST-001..005).
+ * Unit tests for CustomerManager (TC-CUST-001..005) — 3-simultaneous-customer model.
  *
- * Real API shape (from scenes/scripts/core/CustomerManager.ts):
- * - Cocos @ccclass Component. Customers are INJECTED via `initRound(customers)` —
- *   the manager does not generate orders from a level config itself. Any
- *   level→customer mapping happens upstream in the scene controller.
- * - Public API:
- *     initRound(customers: CustomerData[]): void
- *     onDessertMerged(level: number): boolean   // true if the dessert was needed
- *     getCurrentDemands(): Map<number, number>
- *     reset(): void
- *     setRng(fn: () => number): void            // T2-03 RNG seam
- *     getCatWorldPosition(): Vec3
- *   Callbacks (set by owner):
- *     onRoundComplete, onCustomerServed, onAllCustomersDone
- * - There is NO timeout/onCustomerTimeout mechanism in the implementation.
- *   TC-CUST-004 is adapted to cover the actual behavior exposed by T2-03's
- *   RNG seam (deterministic cat-type rotation) and is called out as such.
- * - There is NO direct score/bonus coupling — MergeManager owns score addition
- *   when a dessert is spawned. TC-CUST-002 is narrowed to the contract that
- *   CustomerManager actually fulfills: a matching merge is acknowledged and
- *   drives the onCustomerServed / progress transition.
- * - Cat transition uses scheduleOnce (stubbed as jest.fn() in cc.ts). We install
- *   a synchronous shim so the multi-step transition runs to completion inline.
+ * CustomerManager now shows up to 3 active customers at once (game.html top row).
+ * It builds 3 slots at runtime under its own node. A merged dessert is matched to
+ * the first active slot that needs it; when a slot's demands are cleared the
+ * customer leaves and the slot refills from the queue.
+ *
+ * Public contract exercised here:
+ *   initRound(customers)            // fills up to 3 slots from the queue
+ *   onDessertMerged(level): boolean // true if some active customer needed it
+ *   getCurrentDemands(): Map        // union of all active slots' remaining demands
+ *   onCustomerServed / onAllCustomersDone / onRoundComplete callbacks
+ *   setRng(fn)                      // deterministic cat-type picks
+ *   reset()
+ *
+ * Slot refill + round-completion run on scheduleOnce (shimmed synchronous below)
+ * so the multi-step flow resolves inline; tween is visual-only.
  */
 
-import { CustomerManager } from '../../assets/scenes/scripts/core/CustomerManager';
+import { CustomerManager, CAT_TYPES } from '../../assets/scenes/scripts/core/CustomerManager';
 import { CustomerData } from '../../assets/scenes/scripts/data/GameTypes';
-import { Node, Label, Sprite } from 'cc';
+import { Label, resources } from 'cc';
 
 function makeManager(): CustomerManager {
   const cm = new CustomerManager();
-  const catNode = new Node('cat');
-  const catSprite = new Node('cat-sprite').addComponent(Sprite);
-  const bubbleNode = new Node('bubble');
-  const demandContainer = new Node('demands');
-  const progressNode = new Node('progress');
-  const progressLabel = progressNode.addComponent(Label);
-
-  cm.catNode = catNode;
-  cm.catSprite = catSprite;
-  cm.bubbleNode = bubbleNode;
-  cm.demandContainer = demandContainer;
-  cm.progressLabel = progressLabel;
-
-  // Fire scheduleOnce synchronously so customer transitions run inline.
+  cm.progressLabel = new Label();
+  // Refill / round-complete timing runs synchronously so the flow resolves inline.
   (cm as any).scheduleOnce = (fn: Function, _d?: number) => fn();
   return cm;
 }
@@ -53,85 +34,64 @@ function customer(...demands: Array<[number, number]>): CustomerData {
   return { demands: demands.map(([level, count]) => ({ level, count })) };
 }
 
-describe('CustomerManager', () => {
-  it('TC-CUST-001 initRound registers demands from provided customer list', () => {
+function slotsOf(cm: CustomerManager): any[] {
+  return (cm as any).slots;
+}
+
+describe('CustomerManager (3-customer model)', () => {
+  it('TC-CUST-001 initRound fills up to 3 slots; demands are the union of active customers', () => {
     const cm = makeManager();
     cm.initRound([customer([2, 2], [3, 1]), customer([4, 1])]);
 
     const demands = cm.getCurrentDemands();
-    // First customer's demands are active immediately.
     expect(demands.get(2)).toBe(2);
     expect(demands.get(3)).toBe(1);
-    expect(demands.size).toBe(2);
-    // Progress label reflects "0/total" prior to any service.
+    expect(demands.get(4)).toBe(1);
+    // 2 customers in the queue → 2 active slots, third empty.
+    expect(slotsOf(cm).filter(s => s.active).length).toBe(2);
     expect(cm.progressLabel!.string).toBe('0/2');
   });
 
-  it('TC-CUST-002 correct dessert delivery is accepted and advances the customer', () => {
+  it('TC-CUST-002 a needed dessert is accepted and clears that customer', () => {
     const cm = makeManager();
     const served = jest.fn();
     cm.onCustomerServed = served;
     cm.initRound([customer([2, 1]), customer([3, 1])]);
 
-    // Matching level — returns true, current demand cleared, customer satisfied,
-    // onCustomerServed fires, next customer shown.
-    const accepted = cm.onDessertMerged(2);
+    const accepted = cm.onDessertMerged(2); // matches the [2,1] customer → satisfied
     expect(accepted).toBe(true);
     expect(served).toHaveBeenCalledTimes(1);
-    // After transition, the second customer's demands are active.
+    // queue exhausted at init (2 customers, 2 slots) → that slot empties on refill.
     const demands = cm.getCurrentDemands();
-    expect(demands.get(3)).toBe(1);
     expect(demands.has(2)).toBe(false);
+    expect(demands.get(3)).toBe(1);
     expect(cm.progressLabel!.string).toBe('1/2');
   });
 
-  it('TC-CUST-003 wrong dessert level is rejected and state is unchanged', () => {
+  it('TC-CUST-003 a dessert no active customer needs is rejected, state unchanged', () => {
     const cm = makeManager();
     const served = jest.fn();
     cm.onCustomerServed = served;
     cm.initRound([customer([4, 2])]);
 
-    const accepted = cm.onDessertMerged(7); // not in demands
+    const accepted = cm.onDessertMerged(7); // nobody needs Lv7
     expect(accepted).toBe(false);
     expect(served).not.toHaveBeenCalled();
-    // Demand count untouched.
     expect(cm.getCurrentDemands().get(4)).toBe(2);
   });
 
-  it('TC-CUST-004 setRng produces deterministic non-repeating cat types (no timeout API exists)', () => {
-    // NOTE: the original TC template asks for onCustomerTimeout. The real
-    // implementation has no timeout mechanism — demands are open-ended until
-    // satisfied. We repurpose this TC to cover the T2-03 deterministic-RNG
-    // seam, which IS the randomness surface the class actually exposes.
+  it('TC-CUST-004 the 3 on-screen customers have distinct cat breeds', () => {
     const cm = makeManager();
-
-    // rng sequence chosen to force picks 0, 1, 0, 1... against the
-    // "available" slice (which always excludes lastCatType, so size == 2 after
-    // the first pick). First call has size 3, we pick index 0.
-    const seq = [0.0, 0.0, 0.99, 0.0, 0.99];
     let i = 0;
-    cm.setRng(() => seq[i++]);
+    const seq = [0.0, 0.3, 0.6, 0.9, 0.2];
+    cm.setRng(() => seq[i++ % seq.length]);
 
-    cm.initRound([
-      customer([2, 1]),
-      customer([2, 1]),
-      customer([2, 1]),
-      customer([2, 1]),
-    ]);
+    cm.initRound([customer([2, 1]), customer([2, 1]), customer([2, 1])]);
 
-    const picks: string[] = [(cm as any).lastCatType];
-    for (let k = 0; k < 3; k++) {
-      cm.onDessertMerged(2);
-      picks.push((cm as any).lastCatType);
-    }
-
-    // No two consecutive picks are equal — the "no-repeat" invariant holds
-    // regardless of seed because lastCatType is filtered out before sampling.
-    for (let k = 1; k < picks.length; k++) {
-      expect(picks[k]).not.toBe(picks[k - 1]);
-    }
-    // And picks are drawn from the canonical CAT_TYPES set.
-    for (const p of picks) expect(['orange', 'blue', 'white']).toContain(p);
+    const types = slotsOf(cm).filter(s => s.active).map(s => s.catType);
+    expect(types.length).toBe(3);
+    expect(new Set(types).size).toBe(3); // no same-screen repeat
+    for (const t of types) expect(CAT_TYPES as readonly string[]).toContain(t);
   });
 
   it('TC-CUST-005 satisfying the final customer fires onAllCustomersDone then onRoundComplete', () => {
@@ -145,26 +105,49 @@ describe('CustomerManager', () => {
 
     cm.initRound([customer([2, 1]), customer([3, 1])]);
 
-    cm.onDessertMerged(2); // customer 1 done
+    cm.onDessertMerged(2); // first customer done (1/2)
     expect(allDone).not.toHaveBeenCalled();
     expect(roundComplete).not.toHaveBeenCalled();
 
-    cm.onDessertMerged(3); // customer 2 (final) done
+    cm.onDessertMerged(3); // final customer done
     expect(served).toHaveBeenCalledTimes(2);
     expect(allDone).toHaveBeenCalledTimes(1);
     expect(roundComplete).toHaveBeenCalledTimes(1);
-    // Ordering: allDone fires before roundComplete so overflow detection is
-    // disabled prior to the completion handler.
+    // onAllCustomersDone fires before onRoundComplete (overflow disabled first).
     const allDoneOrder = allDone.mock.invocationCallOrder[0];
     const roundOrder = roundComplete.mock.invocationCallOrder[0];
     expect(allDoneOrder).toBeLessThan(roundOrder);
     expect(cm.progressLabel!.string).toBe('2/2');
   });
 
-  it('reset() clears customers and demand state', () => {
+  it('reset() clears all active customers', () => {
     const cm = makeManager();
     cm.initRound([customer([2, 1])]);
     cm.reset();
     expect(cm.getCurrentDemands().size).toBe(0);
+  });
+
+  it('ignores an older cat-expression load that finishes after a newer one', () => {
+    const pending: Array<{ path: string; cb: Function }> = [];
+    (resources.load as jest.Mock).mockImplementation((path: string, _type: unknown, cb: Function) => {
+      pending.push({ path, cb });
+    });
+
+    const cm = makeManager();
+    cm.initRound([customer([2, 2])]);
+    const slot = slotsOf(cm)[0];
+    slot.catSprite.isValid = true; // Cocos Component has isValid; the lightweight test shim does not.
+    pending.length = 0;
+
+    (cm as any).loadCatExpr(slot, 'happy');
+    (cm as any).loadCatExpr(slot, 'bye');
+    const happy = pending.find(item => item.path.includes('_happy/'))!;
+    const bye = pending.find(item => item.path.includes('_bye/'))!;
+    const happyFrame = { name: 'happy' };
+    const byeFrame = { name: 'bye' };
+
+    bye.cb(null, byeFrame);
+    happy.cb(null, happyFrame);
+    expect(slot.catSprite.spriteFrame).toBe(byeFrame);
   });
 });

@@ -1,5 +1,7 @@
 import { _decorator, Component, Node, UITransform, RigidBody2D, BoxCollider2D,
-         ERigidBody2DType, PhysicsSystem2D, Graphics, Color, Vec2 } from 'cc';
+         ERigidBody2DType, PhysicsSystem2D, Graphics, Color, Vec2, Label, Sprite, Layers } from 'cc';
+import { GlobalFontManager } from '../ui/GlobalFontManager';
+import { TOKENS } from '../ui/DesignTokens';
 const { ccclass, property } = _decorator;
 
 /** 物理常量 */
@@ -34,8 +36,51 @@ export class Container extends Component {
         this.createWall('left', -this.containerWidth / 2 - this.wallThickness / 2, 0, this.wallThickness, this.containerHeight);
         this.createWall('right', this.containerWidth / 2 + this.wallThickness / 2, 0, this.wallThickness, this.containerHeight);
 
-        // 绘制警戒线
+        // 杯型容器（替换旧的蓝瓶贴图）+ 警戒线
+        this.drawCup();
         this.drawWarningLine();
+    }
+
+    /**
+     * 半透明开口杯型（对齐 docs/ui-mockup/game.html）：圆角杯体 + 暖描边 + 内白高光 + 杯口高光。
+     * 关掉容器节点原来的「蓝瓶」贴图，改用 Graphics 绘制。
+     */
+    private drawCup(): void {
+        const sprite = this.getComponent(Sprite);
+        if (sprite) sprite.enabled = false;
+
+        const cup = new Node('cupBody');
+        cup.layer = Layers.Enum.UI_2D;
+        cup.parent = this.node;
+
+        const g = cup.addComponent(Graphics);
+        const W = this.containerWidth;
+        const H = this.containerHeight;
+        const r = 40;
+
+        // 杯体：提高乳白底的不透明度，让操作区域在复杂背景上更明确。
+        g.fillColor = new Color(255, 250, 242, 122);
+        g.roundRect(-W / 2, -H / 2, W, H, r);
+        g.fill();
+
+        // 外描边：柔棕 line-2
+        g.lineWidth = 6;
+        g.strokeColor = new Color(TOKENS.inkSoft.r, TOKENS.inkSoft.g, TOKENS.inkSoft.b, 218);
+        g.roundRect(-W / 2, -H / 2, W, H, r);
+        g.stroke();
+
+        // 内描边：白色杯壁高光
+        g.lineWidth = 4;
+        g.strokeColor = new Color(255, 255, 255, 190);
+        g.roundRect(-W / 2 + 5, -H / 2 + 5, W - 10, H - 10, r - 4);
+        g.stroke();
+
+        // 杯口高光（顶部一条）
+        g.fillColor = new Color(255, 255, 255, 95);
+        g.roundRect(-W / 2 + 10, H / 2 - 50, W - 20, 42, 20);
+        g.fill();
+
+        cup.setSiblingIndex(0); // 杯体在最底，甜点/警戒线在其上
     }
 
     private createWall(name: string, x: number, y: number, w: number, h: number): void {
@@ -59,11 +104,12 @@ export class Container extends Component {
 
     private drawWarningLine(): void {
         const gfxNode = new Node('warningLine');
+        gfxNode.layer = Layers.Enum.UI_2D;
         gfxNode.parent = this.node;
 
         const gfx = gfxNode.addComponent(Graphics);
-        gfx.strokeColor = new Color(255, 80, 80, 150);
-        gfx.lineWidth = 2;
+        gfx.strokeColor = new Color(TOKENS.pinkDp.r, TOKENS.pinkDp.g, TOKENS.pinkDp.b, 178);
+        gfx.lineWidth = 3;
 
         const halfW = this.containerWidth / 2 - 10;
         const y = this.warningLineY;
@@ -73,6 +119,30 @@ export class Container extends Component {
             gfx.lineTo(Math.min(x + 12, halfW), y);
         }
         gfx.stroke();
+
+        // 「警戒线」标签（粉色胶囊，贴在警戒线右端上方，对齐 game.html）
+        const tag = new Node('warningTag');
+        tag.layer = Layers.Enum.UI_2D;
+        tag.parent = this.node;
+        tag.setPosition(halfW - 46, y + 16, 0);
+        tag.addComponent(UITransform).setContentSize(86, 30);
+        const bg = tag.addComponent(Graphics);
+        bg.fillColor = new Color(TOKENS.pinkSf.r, TOKENS.pinkSf.g, TOKENS.pinkSf.b, 242);
+        bg.roundRect(-43, -15, 86, 30, 15);
+        bg.fill();
+        const labelNode = new Node('warningTagLabel');
+        labelNode.layer = Layers.Enum.UI_2D;
+        labelNode.parent = tag;
+        labelNode.addComponent(UITransform).setContentSize(86, 30);
+        const label = labelNode.addComponent(Label);
+        label.string = '警戒线';
+        label.fontSize = 20;
+        label.lineHeight = 30;
+        label.horizontalAlign = Label.HorizontalAlign.CENTER;
+        label.verticalAlign = Label.VerticalAlign.CENTER;
+        label.color = TOKENS.pinkDp;
+        label.isBold = true;
+        GlobalFontManager.applyFont(labelNode);
     }
 
     getLeftBound(): number {

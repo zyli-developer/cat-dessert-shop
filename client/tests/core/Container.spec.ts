@@ -60,12 +60,13 @@ describe('Container', () => {
     c.onLoad();
 
     const names = c.node.children.map(n => n.name).sort();
-    // Three static walls + warning line node.
-    expect(names).toEqual(['bottom', 'left', 'right', 'warningLine']);
+    // Cup body + three static walls + warning line + its「警戒线」tag.
+    expect(names).toEqual(['bottom', 'cupBody', 'left', 'right', 'warningLine', 'warningTag']);
 
     // Container is "clear" to start: no dessert child is present (MergeManager
     // is responsible for adding them later).
-    const dessertChildren = c.node.children.filter(n => !['bottom', 'left', 'right', 'warningLine'].includes(n.name));
+    const staticChildren = ['bottom', 'cupBody', 'left', 'right', 'warningLine', 'warningTag'];
+    const dessertChildren = c.node.children.filter(n => !staticChildren.includes(n.name));
     expect(dessertChildren).toHaveLength(0);
 
     // Physics params exposed by the static accessor are stable.

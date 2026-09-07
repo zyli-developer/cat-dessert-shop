@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="144" height="144">
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="0.35" y2="1">
+      <stop offset="0" stop-color="#FFD84A"/>
+      <stop offset="0.45" stop-color="#F7B500"/>
+      <stop offset="1" stop-color="#E08E02"/>
+    </linearGradient>
+  </defs>
+  <!-- 主星体：金色渐变 + 深橙描边，round join 出圆润角 -->
+  <path d="M12 3.2l2.6 5.4 5.9.8-4.3 4.1 1.1 5.9L12 16.7 6.7 19.4l1.1-5.9L3.5 9.4l5.9-.8z"
+        fill="url(#gold)" stroke="#D28503" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- 内缩小星高光（左上偏移，玻璃质感） -->
+  <path d="M12 3.2l2.6 5.4 5.9.8-4.3 4.1 1.1 5.9L12 16.7 6.7 19.4l1.1-5.9L3.5 9.4l5.9-.8z"
+        fill="#FFE07A" opacity="0.65"
+        transform="translate(11.6 10.9) scale(0.55) translate(-12 -12)"/>
+  <!-- 白色小星芒（左上） -->
+  <path d="M7.6 3.9q0.5 1.6 2.1 2.1q-1.6 0.5-2.1 2.1q-0.5-1.6-2.1-2.1q1.6-0.5 2.1-2.1z" fill="#FFFFFF"/>
+</svg>

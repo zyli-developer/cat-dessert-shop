@@ -40,15 +40,38 @@ describe('RankService', () => {
 
       const result = await service.getGlobalRank(10);
 
-      expect(result).toEqual(rankData);
+      expect(result).toEqual([
+        { nickname: '猫店玩家', avatar: '', highScore: 300, currentRound: 1 },
+        { nickname: '猫店玩家', avatar: '', highScore: 200, currentRound: 1 },
+      ]);
       expect(mockQuery.sort).toHaveBeenCalledWith({ highScore: -1 });
       expect(mockQuery.limit).toHaveBeenCalledWith(10);
+      expect(mockQuery.select).toHaveBeenCalledWith('-_id highScore currentRound');
     });
 
     it('should default to limit 100', async () => {
       mockQuery.lean.mockResolvedValue([]);
       await service.getGlobalRank();
       expect(mockQuery.limit).toHaveBeenCalledWith(100);
+    });
+
+    it('never exposes legacy nickname, avatar, openId or Mongo _id', async () => {
+      mockQuery.lean.mockResolvedValue([
+        {
+          nickname: '加微信abc',
+          avatar: 'https://evil.example/a.jpg',
+          openId: 'private-open-id',
+          _id: 'private-mongo-id',
+          highScore: 10,
+        },
+      ]);
+
+      const [result] = await service.getGlobalRank();
+
+      expect(result.nickname).toBe('猫店玩家');
+      expect(result.avatar).toBe('');
+      expect(result).not.toHaveProperty('openId');
+      expect(result).not.toHaveProperty('_id');
     });
   });
 
@@ -63,17 +86,28 @@ describe('RankService', () => {
 
       const result = await service.getFriendsRank('b', 3);
 
-      expect(result.list[0].nickname).toBe('B');
       expect(result.list[0].score).toBe(800);
-      expect(result.list[1].nickname).toBe('A');
-      expect(result.list[2].nickname).toBe('C');
+      expect(result.list.every((item) => item.nickname === '猫店玩家')).toBe(true);
+      expect(result.list.every((item) => item.avatar === '')).toBe(true);
       expect(result.myRank).toBe(1);
     });
 
     it('should rank by currentRound when no round param', async () => {
       const users = [
-        { nickname: 'A', avatar: '', openId: 'a', currentRound: 5, highScore: 200 },
-        { nickname: 'B', avatar: '', openId: 'b', currentRound: 8, highScore: 500 },
+        {
+          nickname: 'A',
+          avatar: '',
+          openId: 'a',
+          currentRound: 5,
+          highScore: 200,
+        },
+        {
+          nickname: 'B',
+          avatar: '',
+          openId: 'b',
+          currentRound: 8,
+          highScore: 500,
+        },
       ];
       mockQuery.lean.mockResolvedValue(users);
 

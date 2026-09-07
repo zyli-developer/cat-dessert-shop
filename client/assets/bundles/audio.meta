@@ -1,0 +1,17 @@
+{
+  "ver": "1.2.0",
+  "importer": "directory",
+  "imported": true,
+  "uuid": "2d5c8044-e1c1-4792-a963-ab9c90235ddb",
+  "files": [],
+  "subMetas": {},
+  "userData": {
+    "isBundle": true,
+    "priority": 1,
+    "compressionType": {
+      "bytedance-mini-game": "subpackage",
+      "miniGame": "subpackage"
+    },
+    "isRemoteBundle": {}
+  }
+}

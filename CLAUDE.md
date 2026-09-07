@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-**Cat Bakery / 猫咪甜品店** — a Douyin (TikTok China) mini-game. Merge-style gameplay: players drop and combine desserts in a container to fulfill customer orders. Full-stack: Cocos Creator client + NestJS/MongoDB server.
+**Cat Bakery / 一起开猫店** — a Douyin (TikTok China) mini-game. Merge-style gameplay: players drop and combine desserts in a container to fulfill customer orders. Full-stack: Cocos Creator client + NestJS/MongoDB server.
 
 The authoritative platform research (package size limits, `tt` API, IAA monetization) lives in `TikTok小游戏调研报告.md`. `GEMINI.md` contains an older architecture summary; prefer this file when they disagree.
 

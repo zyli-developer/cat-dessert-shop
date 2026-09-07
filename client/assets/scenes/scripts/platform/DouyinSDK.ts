@@ -1,4 +1,45 @@
 import { sys } from 'cc';
+import { isConfiguredAdUnitId, MOCK_REWARDED_ADS } from './AdConfig';
+
+export type ShareChannel = 'invite' | 'video' | 'picture' | 'article';
+
+export interface DouyinShareOptions {
+    title: string;
+    desc?: string;
+    imageUrl?: string;
+    query?: string;
+    templateId?: string;
+    channel?: ShareChannel;
+    extra?: Record<string, unknown>;
+}
+
+export type ShareStatus = 'success' | 'cancelled' | 'failed' | 'unavailable' | 'busy';
+
+export interface DouyinShareResult {
+    status: ShareStatus;
+    data?: unknown;
+    error?: unknown;
+}
+
+export interface PlatformActionResult {
+    ok: boolean;
+    reason?: 'unavailable' | 'unsupported' | 'failed';
+    error?: unknown;
+}
+
+export interface DouyinLaunchOptions {
+    scene?: string | number;
+    query?: Record<string, string>;
+    launch_from?: string;
+    location?: string;
+    [key: string]: unknown;
+}
+
+const DEFAULT_SHARE_OPTIONS: DouyinShareOptions = {
+    title: '一起开猫店',
+    desc: '合成甜品，招待可爱的猫咪客人，一起来经营猫店吧！',
+    query: 'from=system_share',
+};
 
 /**
  * 解析抖音宿主提供的 tt 对象。
@@ -53,8 +94,28 @@ function normalizeLoginResult(res: any): { code?: string; anonymousCode?: string
     return { code, anonymousCode, isLogin };
 }
 
+function buildSharePayload(options: DouyinShareOptions): Record<string, unknown> {
+    const payload: Record<string, unknown> = { title: options.title };
+    if (options.desc) payload.desc = options.desc;
+    if (options.imageUrl) payload.imageUrl = options.imageUrl;
+    if (options.query) payload.query = options.query;
+    if (options.templateId) payload.templateId = options.templateId;
+    if (options.channel) payload.channel = options.channel;
+    if (options.extra) payload.extra = options.extra;
+    return payload;
+}
+
+function isShareCancelled(err: any): boolean {
+    const no = err?.errNo ?? err?.errno;
+    const message = String(err?.errMsg ?? err ?? '').toLowerCase();
+    return no === 10502 || message.includes('cancel');
+}
+
 export class DouyinSDK {
     private static adInstances: Map<string, any> = new Map();
+    private static adInFlight = false;
+    private static shareInFlight = false;
+    private static shareMenuInitialized = false;
 
     /** 供 ApiClient 等使用，与 resolveTT 一致 */
     static getTT(): any {
@@ -168,6 +229,26 @@ export class DouyinSDK {
         // 真机/工具在个别版本下，sys.platform 可能未正确映射；
         // 以宿主 tt 能力为准更稳妥。
         return !!(ttApi?.login || ttApi?.request);
+    }
+
+    /** 注册右上角系统菜单的被动分享内容。整个游戏生命周期只注册一次。 */
+    static initializeShareMenu(options: DouyinShareOptions = DEFAULT_SHARE_OPTIONS): void {
+        if (this.shareMenuInitialized || !this.isDouyinMiniGameRuntime()) return;
+        const ttApi = resolveTT();
+
+        if (typeof ttApi?.onShareAppMessage === 'function') {
+            const payload = buildSharePayload(options);
+            ttApi.onShareAppMessage(() => ({ ...payload }));
+            this.shareMenuInitialized = true;
+        }
+
+        if (typeof ttApi?.showShareMenu === 'function') {
+            ttApi.showShareMenu({
+                fail: (err: any) => {
+                    console.warn('[DouyinSDK] showShareMenu fail:', err?.errMsg ?? err);
+                },
+            });
+        }
     }
 
     /**
@@ -352,7 +433,19 @@ export class DouyinSDK {
      * @param adId 广告位标识（用于缓存实例）
      * @returns true=观看完成，false=关闭/失败
      */
-    static showRewardedAd(adId: string): Promise<boolean> {
+    static async showRewardedAd(adId: string): Promise<boolean> {
+        // 抖音激励视频是全局单例；任一入口展示期间都拒绝新的请求，
+        // 防止快速连点或两个弹窗重叠时重复展示、重复发奖。
+        if (this.adInFlight) return false;
+        this.adInFlight = true;
+        try {
+            return await this.showRewardedAdOnce(adId);
+        } finally {
+            this.adInFlight = false;
+        }
+    }
+
+    private static showRewardedAdOnce(adId: string): Promise<boolean> {
         return new Promise((resolve) => {
             if (!this.isDouyinMiniGameRuntime()) {
                 console.log(`[DouyinSDK] Dev mode: rewarded ad "${adId}" → simulated success`);
@@ -361,60 +454,134 @@ export class DouyinSDK {
             }
             const ttApi = resolveTT();
 
+            // 测试期模拟广告（见 AdConfig.MOCK_REWARDED_ADS 注释；上线前必须关闭）
+            if (MOCK_REWARDED_ADS) {
+                console.warn(`[DouyinSDK] ⚠ MOCK_REWARDED_ADS=true，模拟激励视频 "${adId}"（上线前在 AdConfig.ts 改回 false）`);
+                if (typeof ttApi?.showModal === 'function') {
+                    ttApi.showModal({
+                        title: '模拟广告（测试）',
+                        content: `广告位: ${adId}\n「确定」= 看完发奖\n「取消」= 中途关闭`,
+                        success: (res: any) => resolve(!!res?.confirm),
+                        fail: () => resolve(true),
+                    });
+                } else {
+                    resolve(true);
+                }
+                return;
+            }
+
+            if (!isConfiguredAdUnitId(adId)) {
+                console.error(
+                    `[DouyinSDK] 激励视频广告位 "${adId}" 仍是开发占位值；` +
+                    '请在 AdConfig.ts 配置抖音开放平台创建的真实广告位 ID。',
+                );
+                resolve(false);
+                return;
+            }
+
+            if (typeof ttApi?.createRewardedVideoAd !== 'function') {
+                console.warn('[DouyinSDK] 当前抖音宿主不支持 tt.createRewardedVideoAd');
+                resolve(false);
+                return;
+            }
+
             let ad = this.adInstances.get(adId);
             if (!ad) {
                 ad = ttApi.createRewardedVideoAd({ adUnitId: adId });
+                // 真机排查唯一线索：广告位 ID 无效、无填充（errCode 1004）等都只从这里报出来
+                ad.onError((err: any) => {
+                    console.warn(`[DouyinSDK] rewarded ad "${adId}" onError: errCode=${err?.errCode}, ${err?.errMsg ?? err}`);
+                });
                 this.adInstances.set(adId, ad);
             }
 
             const onClose = (res: any) => {
                 ad.offClose(onClose);
+                console.log(`[DouyinSDK] rewarded ad "${adId}" closed, isEnded=${res?.isEnded}`);
                 resolve(res?.isEnded ?? false);
             };
 
             ad.onClose(onClose);
-            ad.show().catch(() => {
+            ad.show().catch((err: any) => {
+                console.warn(`[DouyinSDK] rewarded ad "${adId}" show() fail, retrying via load():`, err?.errMsg ?? err);
                 ad.load()
                     .then(() => ad.show())
-                    .catch(() => resolve(false));
+                    .catch((err2: any) => {
+                        console.warn(`[DouyinSDK] rewarded ad "${adId}" load/show retry fail:`, err2?.errMsg ?? err2);
+                        ad.offClose(onClose);
+                        resolve(false);
+                    });
             });
         });
     }
 
-    /**
-     * 跳转抖音宿主特定场景。审核「侧边栏复访」必须 bundle 里存在 tt.navigateToScene 调用。
-     * 常用 scene 值：
-     *   - 'sidebar'         添加到「我的小游戏」侧边栏（满足复访审核）
-     *   - 'feedback'        意见反馈
-     *   - 'customerService' 客服
-     */
-    static navigateToScene(scene: string): Promise<void> {
+    /** 检查当前宿主是否支持指定场景；旧基础库无 checkScene 时按接口存在性回落。 */
+    static checkScene(scene: 'sidebar'): Promise<boolean> {
+        if (!this.isDouyinMiniGameRuntime()) return Promise.resolve(false);
+        const ttApi = resolveTT();
+        if (typeof ttApi?.navigateToScene !== 'function') return Promise.resolve(false);
+        if (typeof ttApi?.checkScene !== 'function') return Promise.resolve(true);
+
         return new Promise((resolve) => {
-            if (!this.isDouyinMiniGameRuntime()) {
-                console.log(`[DouyinSDK] Dev mode: navigateToScene("${scene}") → noop`);
-                resolve();
-                return;
-            }
-            const ttApi = resolveTT();
-            if (typeof ttApi.navigateToScene !== 'function') {
-                console.warn('[DouyinSDK] tt.navigateToScene 在当前宿主不可用');
-                resolve();
-                return;
-            }
-            ttApi.navigateToScene({
+            ttApi.checkScene({
                 scene,
-                success: () => resolve(),
+                success: (res: { isExist?: boolean }) => resolve(res?.isExist === true),
                 fail: (err: any) => {
-                    console.warn('[DouyinSDK] navigateToScene fail:', err?.errMsg ?? err);
-                    resolve();
+                    console.warn('[DouyinSDK] checkScene fail:', err?.errMsg ?? err);
+                    resolve(false);
                 },
             });
         });
     }
 
-    /** 引导用户把小游戏加到侧边栏（满足平台「侧边栏复访」审核硬指标） */
-    static navigateToSidebar(): Promise<void> {
+    /** 跳转抖音首页侧边栏。tt.navigateToScene 当前仅支持 sidebar。 */
+    static navigateToScene(scene: 'sidebar'): Promise<PlatformActionResult> {
+        return new Promise((resolve) => {
+            if (!this.isDouyinMiniGameRuntime()) {
+                console.log(`[DouyinSDK] Dev mode: navigateToScene("${scene}") → noop`);
+                resolve({ ok: false, reason: 'unavailable' });
+                return;
+            }
+            const ttApi = resolveTT();
+            if (typeof ttApi.navigateToScene !== 'function') {
+                console.warn('[DouyinSDK] tt.navigateToScene 在当前宿主不可用');
+                resolve({ ok: false, reason: 'unsupported' });
+                return;
+            }
+            ttApi.navigateToScene({
+                scene,
+                success: () => resolve({ ok: true }),
+                fail: (err: any) => {
+                    console.warn('[DouyinSDK] navigateToScene fail:', err?.errMsg ?? err);
+                    resolve({ ok: false, reason: 'failed', error: err });
+                },
+            });
+        });
+    }
+
+    /** 引导用户前往抖音首页侧边栏（满足平台「侧边栏复访」审核硬指标） */
+    static navigateToSidebar(): Promise<PlatformActionResult> {
         return this.navigateToScene('sidebar');
+    }
+
+    /** 判断冷启动/热启动是否来自抖音首页侧边栏。 */
+    static isSidebarLaunch(options: DouyinLaunchOptions | undefined): boolean {
+        if (!options) return false;
+        const scene = String(options.scene ?? '');
+        return (
+            scene === '021036' ||
+            (options.launch_from === 'homepage' && options.location === 'sidebar_card')
+        );
+    }
+
+    /** 监听宿主重新显示，返回清理函数以便 Cocos 组件销毁时解绑。 */
+    static onShow(callback: (options: DouyinLaunchOptions) => void): () => void {
+        const ttApi = resolveTT();
+        if (typeof ttApi?.onShow !== 'function') return () => {};
+        ttApi.onShow(callback);
+        return () => {
+            if (typeof ttApi?.offShow === 'function') ttApi.offShow(callback);
+        };
     }
 
     static showInterstitialAd(adUnitId: string): void {
@@ -425,23 +592,44 @@ export class DouyinSDK {
     }
 
     /**
-     * 分享到抖音
+     * 主动分享到抖音。必须由用户点击回调同步调用本方法，避免宿主返回 21102。
+     * 调用方可据 status 区分成功、取消、失败和能力不可用，禁止静默吞掉失败。
      */
-    static share(title: string, imageUrl?: string, query?: string): Promise<void> {
+    static share(options: DouyinShareOptions): Promise<DouyinShareResult> {
+        if (this.shareInFlight) return Promise.resolve({ status: 'busy' });
+        if (!this.isDouyinMiniGameRuntime()) {
+            console.log(`[DouyinSDK] Dev mode: share → title="${options.title}", query="${options.query}"`);
+            return Promise.resolve({ status: 'unavailable' });
+        }
+
+        const ttApi = resolveTT();
+        if (typeof ttApi?.shareAppMessage !== 'function') {
+            console.warn('[DouyinSDK] tt.shareAppMessage 在当前宿主不可用');
+            return Promise.resolve({ status: 'unavailable' });
+        }
+
+        this.shareInFlight = true;
         return new Promise((resolve) => {
-            if (!this.isDouyinMiniGameRuntime()) {
-                console.log(`[DouyinSDK] Dev mode: share → title="${title}", query="${query}"`);
-                resolve();
-                return;
+            const finish = (result: DouyinShareResult): void => {
+                this.shareInFlight = false;
+                resolve(result);
+            };
+
+            try {
+                ttApi.shareAppMessage({
+                    ...buildSharePayload(options),
+                    success: (data: unknown) => finish({ status: 'success', data }),
+                    fail: (err: unknown) => {
+                        finish({
+                            status: isShareCancelled(err) ? 'cancelled' : 'failed',
+                            error: err,
+                        });
+                    },
+                });
+            } catch (error) {
+                console.warn('[DouyinSDK] shareAppMessage threw:', error);
+                finish({ status: 'failed', error });
             }
-            const ttApi = resolveTT();
-            ttApi.shareAppMessage({
-                title,
-                imageUrl: imageUrl || '',
-                query: query || '',
-                success: () => resolve(),
-                fail: () => resolve(),
-            });
         });
     }
 }

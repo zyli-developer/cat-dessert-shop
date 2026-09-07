@@ -1,6 +1,7 @@
-import { UserProfile, RankItem } from './ApiTypes';
+import { UserProfile, RankItem, AuthSession, RewardClaimResult, RewardKind } from './ApiTypes';
 import { DouyinSDK } from '../platform/DouyinSDK';
 import { API_BASE_URL } from './ApiConfig';
+import { GameState } from '../data/GameState';
 
 const TIMEOUT = 8000;
 
@@ -17,13 +18,15 @@ interface ApiResponse<T> {
   message?: string;
 }
 
-function request<T>(path: string, method: string = 'GET', body?: unknown): Promise<T> {
-  const openId = ApiClient.getOpenId();
+type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
+
+function request<T>(path: string, method: HttpMethod = 'GET', body?: unknown): Promise<T> {
+  const accessToken = ApiClient.getAccessToken();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
-  if (openId) {
-    headers['X-Open-Id'] = openId;
+  if (accessToken) {
+    headers.Authorization = `Bearer ${accessToken}`;
   }
 
   const base = API_BASE_URL.replace(/\/$/, '');
@@ -32,11 +35,12 @@ function request<T>(path: string, method: string = 'GET', body?: unknown): Promi
 
   const reqId = Math.random().toString(36).slice(2, 8);
   const startedAt = Date.now();
-  // body 可能含 code/anonymousCode 等敏感串，截断展示防止 console 刷屏
-  const bodyPreview = body === undefined ? '<none>' : JSON.stringify(body).slice(0, 200);
+  const bodyPreview = path === '/api/auth/login'
+    ? '<login-credentials-redacted>'
+    : body === undefined ? '<none>' : JSON.stringify(body).slice(0, 200);
   console.log(
     `[ApiClient][${reqId}] → ${method} ${url}` +
-    `  openId=${openId || '<none>'}  body=${bodyPreview}`
+    `  authenticated=${!!accessToken}  body=${bodyPreview}`
   );
 
   return new Promise<T>((resolve, reject) => {
@@ -60,7 +64,7 @@ function request<T>(path: string, method: string = 'GET', body?: unknown): Promi
         console.log(`[ApiClient][${reqId}] transport=tt.request`);
         ttApi.request({
           url,
-          method: method as 'GET' | 'POST',
+          method,
           data: body,
           header: headers,
           timeout: TIMEOUT,
@@ -194,6 +198,7 @@ function request<T>(path: string, method: string = 'GET', body?: unknown): Promi
     (err) => {
       const dur = Date.now() - startedAt;
       const msg = err instanceof Error ? err.message : String((err as any)?.errMsg ?? err);
+      if (/\b(?:status|code)=401\b/.test(msg)) ApiClient.clearSession();
       console.warn(`[ApiClient][${reqId}] ✗ ${method} ${path} ${dur}ms: ${msg}`);
       throw err;
     }
@@ -202,10 +207,41 @@ function request<T>(path: string, method: string = 'GET', body?: unknown): Promi
 
 export class ApiClient {
   private static _openId: string = '';
+  private static _accessToken: string = '';
   private static readonly OFFLINE_OPEN_ID = 'dev-offline';
 
   static setOpenId(id: string): void {
     this._openId = id;
+    // An openId without a freshly issued matching token is never authenticated.
+    this._accessToken = '';
+  }
+
+  static setSession(openId: string, accessToken: string): void {
+    this._openId = openId;
+    this._accessToken = accessToken;
+  }
+
+  static getAccessToken(): string {
+    return this._accessToken;
+  }
+
+  static clearSession(): void {
+    this._openId = '';
+    this._accessToken = '';
+  }
+
+  static createClaimId(scope: string): string {
+    const random = Math.random().toString(36).slice(2, 12);
+    return `${scope}_${Date.now().toString(36)}_${random}`.slice(0, 64);
+  }
+
+  static createDailyClaimId(scope: 'gift' | 'gift2', now = Date.now()): string {
+    const utc8 = new Date(now + 8 * 60 * 60 * 1000).toISOString().slice(0, 10).replace(/-/g, '');
+    return `${scope}_${utc8}`;
+  }
+
+  static createRoundClaimId(round: number): string {
+    return `win_double_${round}`;
   }
 
   /** Injectable fetch seam (test-only). Forwards to module-level `setFetchImpl`. */
@@ -221,8 +257,8 @@ export class ApiClient {
     return this._openId === this.OFFLINE_OPEN_ID;
   }
 
-  static login(credentials: { code?: string; anonymousCode?: string }): Promise<UserProfile> {
-    return request<UserProfile>('/api/auth/login', 'POST', credentials);
+  static login(credentials: { code?: string; anonymousCode?: string }): Promise<AuthSession> {
+    return request<AuthSession>('/api/auth/login', 'POST', credentials);
   }
 
   static getProfile(): Promise<UserProfile> {
@@ -241,7 +277,27 @@ export class ApiClient {
     return request<UserProfile>('/api/user/profile');
   }
 
-  static updateProgress(round: number, score: number, stars: number, catCoinsEarned?: number): Promise<any> {
+  /** 上报公开昵称/头像；只能从用户主动触发的授权入口调用。服务端对空值不覆盖。 */
+  static updateProfile(info: { nickname?: string; avatar?: string }): Promise<{ openId: string; nickname: string; avatar: string }> {
+    if (this.isOfflineMode()) {
+      return Promise.resolve({
+        openId: this.OFFLINE_OPEN_ID,
+        nickname: info.nickname ?? '离线玩家',
+        avatar: info.avatar ?? '',
+      });
+    }
+    return request('/api/user/profile', 'POST', info);
+  }
+
+  /** 用户在设置页明确确认后，永久删除云端账号数据。 */
+  static deleteAccount(): Promise<{ deleted: boolean }> {
+    if (this.isOfflineMode() || !this._accessToken) {
+      return Promise.resolve({ deleted: true });
+    }
+    return request('/api/user/account', 'DELETE');
+  }
+
+  static updateProgress(round: number, score: number, stars: number): Promise<any> {
     if (this.isOfflineMode()) {
       return Promise.resolve({
         catCoins: 0,
@@ -257,7 +313,40 @@ export class ApiClient {
       round,
       score,
       stars,
-      catCoinsEarned,
+    });
+  }
+
+  /** Replay durable progress in round order, re-reading after every acknowledgement. */
+  static async syncPendingProgress(): Promise<{ synced: number; remaining: number }> {
+    const openId = this._openId;
+    const state = GameState.instance;
+    if (!openId || this.isOfflineMode() || !this._accessToken) {
+      return { synced: 0, remaining: openId ? state.getPendingProgress(openId).length : 0 };
+    }
+
+    let synced = 0;
+    const maxBatch = 120;
+    for (let attempt = 0; attempt < maxBatch; attempt++) {
+      const entry = state.getPendingProgress(openId)[0];
+      if (!entry) break;
+      try {
+        const result = await this.updateProgress(entry.round, entry.score, entry.stars);
+        state.acknowledgePendingProgress(entry);
+        state.applyProgressFromApi(result);
+        synced++;
+      } catch (error) {
+        console.warn(`[ApiClient] pending progress sync stopped at round ${entry.round}`, error);
+        break;
+      }
+    }
+    return { synced, remaining: state.getPendingProgress(openId).length };
+  }
+
+  static claimReward(kind: RewardKind, claimId: string, round?: number): Promise<RewardClaimResult> {
+    return request<RewardClaimResult>('/api/user/rewards/claim', 'POST', {
+      kind,
+      claimId,
+      ...(round === undefined ? {} : { round }),
     });
   }
 

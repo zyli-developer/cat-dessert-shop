@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>猫咪顾客品种目录 · 30 种 | 一起开猫店</title>
+<link rel="stylesheet" href="css/app.css">
+<style>
+  /* ===== 品种目录（参考页，滚动式，复用 app.css token）===== */
+  body{ background:var(--paper); padding:0; margin:0; }
+  .cb-wrap{ max-width:1180px; margin:0 auto; padding:34px 20px 80px; }
+
+  /* 顶部 */
+  .cb-head{ text-align:center; margin-bottom:18px; }
+  .cb-kicker{ font:600 13px/1 var(--font-body); letter-spacing:.18em; color:var(--ink-mute);
+    text-transform:uppercase; }
+  .cb-title{ font:700 clamp(30px,5vw,46px)/1.05 var(--font-display); color:var(--ink); margin:10px 0 6px;
+    -webkit-text-stroke:0; }
+  .cb-sub{ font:400 16px/1.6 var(--font-body); color:var(--ink-soft); max-width:680px; margin:0 auto; }
+
+  /* 数据条 */
+  .cb-stats{ display:flex; flex-wrap:wrap; gap:12px; justify-content:center; margin:22px 0 8px; }
+  .cb-stat{ background:var(--paper-2); border:1.5px solid var(--line-2); border-radius:var(--r-md);
+    padding:14px 22px; text-align:center; box-shadow:var(--shadow-sm); min-width:120px; }
+  .cb-stat b{ display:block; font:700 30px/1 var(--font-display); color:var(--pink-dp); }
+  .cb-stat span{ font:500 13px/1.4 var(--font-body); color:var(--ink-soft); }
+  .cb-src{ text-align:center; font:400 12px/1.6 var(--font-body); color:var(--ink-mute); margin:6px 0 26px; }
+  .cb-src a{ color:var(--ink-mute); }
+
+  /* MVP 推荐横幅 */
+  .cb-rec{ background:linear-gradient(180deg,var(--mint-sf),var(--paper-2));
+    border:1.5px solid var(--mint); border-radius:var(--r-lg); padding:18px 22px; margin-bottom:26px;
+    box-shadow:var(--shadow-sm); }
+  .cb-rec h2{ font:700 18px/1.3 var(--font-display); color:var(--mint-dp); margin:0 0 6px; }
+  .cb-rec p{ font:400 14px/1.7 var(--font-body); color:var(--ink-soft); margin:0; }
+  .cb-rec b{ color:var(--ink); }
+
+  /* 图例 */
+  .cb-legend{ display:flex; flex-wrap:wrap; gap:8px 16px; justify-content:center; margin-bottom:24px;
+    font:500 13px/1 var(--font-body); color:var(--ink-soft); }
+  .cb-legend i{ font-style:normal; display:inline-flex; align-items:center; gap:6px; }
+  .dot{ width:11px; height:11px; border-radius:50%; display:inline-block; }
+
+  /* 网格 */
+  .cb-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(248px,1fr)); gap:16px; }
+
+  .cb-card{ position:relative; background:var(--paper-2); border:1.5px solid var(--line-2);
+    border-radius:var(--r-lg); padding:16px 16px 18px; box-shadow:var(--shadow-sm);
+    display:flex; flex-direction:column; gap:10px; }
+  .cb-card.is-have{ border-color:var(--mint); }
+
+  .cb-no{ position:absolute; top:12px; left:12px; width:30px; height:30px; border-radius:50%;
+    display:grid; place-items:center; font:700 13px/1 var(--font-display); color:#fff;
+    background:var(--ink-soft); box-shadow:var(--shadow-sm); }
+  .cb-card.is-have .cb-no{ background:var(--mint-dp); }
+  .cb-status{ position:absolute; top:14px; right:14px; font:600 11px/1 var(--font-body);
+    padding:5px 9px; border-radius:var(--r-pill); }
+  .st-todo{ background:var(--sand); color:var(--ink-soft); }
+  .st-have{ background:var(--mint-sf); color:var(--mint-dp); }
+
+  /* 头像区：已有→真实 PNG；待生成→毛色占位 token（抽象色块，非成品插画）*/
+  .cb-port{ height:140px; border-radius:var(--r-md); display:grid; place-items:center; overflow:hidden;
+    background:radial-gradient(120% 100% at 50% 18%, var(--paper) 0%, var(--sand) 120%);
+    border:1px dashed var(--line-2); position:relative; }
+  .cb-card.is-have .cb-port{ border-style:solid; border-color:var(--line); }
+  .cb-port img{ height:128px; width:auto; object-fit:contain; filter:drop-shadow(0 6px 10px rgba(120,80,40,.18)); }
+  /* 抽象毛色占位：双耳圆头剪影，仅用毛色，明确标注占位 */
+  .cb-token{ position:relative; width:96px; height:96px; }
+  .cb-token .face{ position:absolute; inset:14px 0 0; border-radius:50% 50% 48% 48%; }
+  .cb-token .ear{ position:absolute; top:2px; width:34px; height:34px; border-radius:60% 8% 60% 8%; }
+  .cb-token .ear.l{ left:6px;  transform:rotate(-18deg); }
+  .cb-token .ear.r{ right:6px; transform:rotate(18deg) scaleX(-1); }
+  .cb-token.fold .ear{ top:20px; height:20px; border-radius:60% 60% 8% 8%; } /* 折耳 */
+  .cb-token.bigear .ear{ width:40px; height:46px; top:-6px; }                /* 大耳 */
+  .cb-tokenlabel{ position:absolute; bottom:8px; left:0; right:0; text-align:center;
+    font:600 10px/1 var(--font-body); color:var(--ink-mute); letter-spacing:.04em; }
+
+  .cb-name{ display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
+  .cb-name b{ font:700 18px/1.2 var(--font-display); color:var(--ink); }
+  .cb-name span{ font:500 12px/1.2 var(--font-body); color:var(--ink-mute); }
+
+  .cb-tags{ display:flex; flex-wrap:wrap; gap:6px; }
+  .cb-tag{ font:600 11px/1 var(--font-body); padding:5px 8px; border-radius:var(--r-pill); }
+  .tag-cfa{ background:var(--pink-sf); color:var(--pink-dp); }
+  .tag-cn{ background:var(--butter-sf); color:var(--butter-dp); }
+  .tag-pop{ background:var(--sand); color:var(--ink-soft); }
+
+  .cb-trait{ font:500 13px/1.5 var(--font-body); color:var(--ink); margin:0; }
+  .cb-sw{ display:flex; gap:6px; align-items:center; }
+  .cb-sw i{ width:22px; height:22px; border-radius:7px; border:1px solid rgba(90,70,54,.16); }
+  .cb-meta{ font:400 12.5px/1.55 var(--font-body); color:var(--ink-soft); margin:0; }
+  .cb-meta b{ color:var(--ink); font-weight:600; }
+  .pat{ display:inline-block; font:600 11px/1 var(--font-body); padding:4px 8px; border-radius:var(--r-pill);
+    margin-left:2px; }
+  .pat-calm{ background:var(--mint-sf); color:var(--mint-dp); }
+  .pat-norm{ background:var(--sand); color:var(--ink-soft); }
+  .pat-rush{ background:var(--pink-sf); color:var(--pink-dp); }
+
+  /* 底部说明 */
+  .cb-foot{ margin-top:30px; background:var(--paper-2); border:1.5px solid var(--line-2);
+    border-radius:var(--r-lg); padding:20px 24px; box-shadow:var(--shadow-sm); }
+  .cb-foot h2{ font:700 17px/1.3 var(--font-display); color:var(--ink); margin:0 0 10px; }
+  .cb-foot p{ font:400 14px/1.7 var(--font-body); color:var(--ink-soft); margin:6px 0; }
+  .cb-foot code{ font-family:ui-monospace,Menlo,monospace; font-size:12.5px; background:var(--sand);
+    padding:2px 7px; border-radius:6px; color:var(--ink); }
+  .cb-foot b{ color:var(--ink); }
+
+  .cb-back{ display:inline-flex; align-items:center; gap:6px; margin-bottom:18px;
+    font:600 14px/1 var(--font-body); color:var(--pink-dp); text-decoration:none; }
+</style>
+</head>
+<body>
+<div class="cb-wrap">
+
+  <a class="cb-back" href="index.html">← 返回画廊</a>
+
+  <header class="cb-head">
+    <div class="cb-kicker">CAT CUSTOMER LIBRARY</div>
+    <h1 class="cb-title">猫咪顾客品种目录 · 30 种</h1>
+    <p class="cb-sub">全球最受欢迎的 30 个猫品种，作为甜品店顾客角色的资产规划。每只标注毛色、特征、甜品店服饰、性格 → 顾客耐心，并标明哪 3 只已有资产、哪 27 只待生成。</p>
+  </header>
+
+  <div class="cb-stats">
+    <div class="cb-stat"><b>73</b><span>TICA 认证品种</span></div>
+    <div class="cb-stat"><b>50</b><span>FIFe 认证品种</span></div>
+    <div class="cb-stat"><b>45</b><span>CFA 认证品种</span></div>
+    <div class="cb-stat"><b>~70</b><span>全球去重纯种</span></div>
+  </div>
+  <p class="cb-src">数据：CFA 2025 官方人气榜（按 2024 注册量）· TICA / FIFe / CFA 各机构认证数 · 去重后全球约 70 余种纯种猫（田园猫/未认证另计）</p>
+
+  <div class="cb-rec">
+    <h2>🎯 MVP 建议：先做这 10 只「一眼可辨」的</h2>
+    <p>30 只全做需 <b>30×3=90 张</b>新图，对 4MB 主包是压力，且部分品种在 Q 版小尺寸下会"撞脸"（见下）。若先验证留存，建议先做视觉最不重复的 10 只：<b>缅因猫✓ · 布偶猫✓ · 波斯猫✓ · 英短✓ · 无毛猫✓ · 折耳猫✓ · 暹罗猫✓ · 孟加拉豹猫✓ · 曼基康矮脚✓ · 大橘✓</b>（这 10 只已全部出图，余 20 只待生成）。</p>
+  </div>
+
+  <div class="cb-legend">
+    <i><span class="dot" style="background:var(--mint-dp)"></span>已有资产（复用你工程现成 PNG）</i>
+    <i><span class="dot" style="background:var(--ink-soft)"></span>待生成（用 prompt 走出图管线）</i>
+    <i><span class="pat pat-calm">耐心</span> / <span class="pat pat-norm">普通</span> / <span class="pat pat-rush">急躁</span> → 顾客耐心环速度</i>
+  </div>
+
+  <div class="cb-grid" id="grid"></div>
+
+  <div class="cb-foot">
+    <h2>怎么把这份目录变成真正的资产</h2>
+    <p>1️⃣ 配套文件 <code>cat-asset-prompts.md</code> 里有全部 <b>30 品种 × 3 表情 = 90 条生成 prompt</b>，严格沿用你 <code>docs/plans/09-assets.md</code> 的 Style Base 写法（chibi 拟人 + 同会话连续生成保证同一只猫三表情一致）。</p>
+    <p>2️⃣ 把 prompt 喂给你们现用的<b>出图管线</b>产出 200×200 PNG，抠白底，按 <code>cat_&lt;breed&gt;_{idle,happy,bye}.png</code> 命名放进 <code>resources/textures/character/</code>。</p>
+    <p>3️⃣ <b>撞脸提醒</b>（Q 版小图下需靠服饰 + 瞳色 + 体型区分）：灰猫组（俄蓝/英短/沙特尔）、重点色组（布偶/暹罗/伯曼/喜马拉雅/东奇尼）、扁脸组（波斯/异国/喜马拉雅）。这也是建议先做 MVP 10 只的原因。</p>
+    <p>⚠️ 我无法直接画出与现有水彩风一致的 PNG 成品——上面"待生成"卡里的色块只是<b>毛色占位</b>，最终成品由 prompt 走你们的图像生成那一步产出。</p>
+  </div>
+
+</div>
+
+<script>
+/* 30 品种数据 —— have:已有真实PNG | cfa:官方排名 | pat:顾客耐心 | shape:占位耳型 */
+const BREEDS = [
+  {n:1, zh:'缅因猫', en:'Maine Coon', cfa:1, have:'cat_maine_coon_idle', coat:['#8B5A2B','#E8C9A0'], trait:'巨型体型 · 耳尖毛簇 · 蓬松长尾', acc:'松饼厨师帽', pers:'温和巨人，慢条斯理', pat:'calm', shape:'bigear'},
+  {n:2, zh:'布偶猫', en:'Ragdoll', cfa:2, have:'cat_white_idle', coat:['#F3E9DD','#A87E5C'], trait:'重点色长毛 · 蓝眼 · 软糯', acc:'厨师帽（现有）', pers:'软糯黏人，超有耐心', pat:'calm'},
+  {n:3, zh:'波斯猫', en:'Persian', cfa:3, have:'cat_persian_idle', coat:['#EDEDE6','#C9C4B8'], trait:'扁脸 · 长毛 · 圆脸贵气', acc:'蕾丝蝴蝶结', pers:'慵懒高贵，慢悠悠', pat:'calm'},
+  {n:4, zh:'异国短毛（加菲）', en:'Exotic SH', cfa:4, coat:['#E8A65C','#F2D9B0'], trait:'扁脸短毛 · 表情包脸', acc:'草莓领巾', pers:'憨态可掬', pat:'norm'},
+  {n:5, zh:'德文卷毛猫', en:'Devon Rex', cfa:5, coat:['#B9A89A','#6E5E50'], trait:'大耳 · 波浪短毛 · 精灵脸', acc:'贝雷帽', pers:'顽皮精灵，坐不住', pat:'rush', shape:'bigear'},
+  {n:6, zh:'阿比西尼亚', en:'Abyssinian', cfa:6, coat:['#B5703C','#8A4F26'], trait:'细砂纹毛 · 大耳 · 修长', acc:'小铃铛项圈', pers:'好奇活泼，性子急', pat:'rush', shape:'bigear'},
+  {n:7, zh:'英国短毛', en:'British SH', cfa:7, have:'cat_blue_idle', coat:['#7E8B96','#B0584C'], trait:'蓝灰短毛 · 铜眼 · 圆胖', acc:'粉色领结（现有）', pers:'沉稳憨厚，有耐心', pat:'calm'},
+  {n:8, zh:'西伯利亚', en:'Siberian', cfa:8, coat:['#9C7B52','#D9C3A0'], trait:'半长毛 · 厚围脖 · 强壮', acc:'格子围巾', pers:'强壮温厚', pat:'calm'},
+  {n:9, zh:'斯芬克斯无毛猫', en:'Sphynx', cfa:9, have:'cat_sphynx_idle', coat:['#F2C6BE','#D99A8E'], trait:'无毛 · 皱皮 · 大耳', acc:'针织小毛衣（怕冷）', pers:'黏人爱撒娇', pat:'rush', shape:'bigear'},
+  {n:10, zh:'俄罗斯蓝猫', en:'Russian Blue', cfa:10, coat:['#8FA0AE','#6E8190'], trait:'银蓝短毛 · 绿眼 · 修长', acc:'银色领结', pers:'安静优雅', pat:'norm'},
+  {n:11, zh:'苏格兰折耳', en:'Scottish Fold', have:'cat_scottish_fold_idle', coat:['#C9BBA6','#8FA0AE'], trait:'折耳 · 圆脸 · 圆眼', acc:'草莓贝雷帽', pers:'圆嘟嘟超萌', pat:'norm', shape:'fold'},
+  {n:12, zh:'美国短毛', en:'American SH', coat:['#9AA7B0','#5E6B73'], trait:'经典银虎斑 · 健壮', acc:'条纹围裙', pers:'健壮亲人', pat:'norm'},
+  {n:13, zh:'暹罗猫', en:'Siamese', have:'cat_siamese_idle', coat:['#E7DDCB','#5A4636'], trait:'重点色 · 蓝杏眼 · 修长', acc:'丝绒小斗篷', pers:'话痨黏人', pat:'norm'},
+  {n:14, zh:'孟加拉豹猫', en:'Bengal', have:'cat_bengal_idle', coat:['#C9923E','#4A3320'], trait:'玫瑰豹纹 · 金底 · 野性', acc:'探险家帽', pers:'活泼好动，性子急', pat:'rush'},
+  {n:15, zh:'挪威森林猫', en:'Norwegian Forest', coat:['#8A6A45','#EDE6DA'], trait:'厚长毛 · 耳尖毛 · 大块头', acc:'毛线围巾', pers:'大块头温柔', pat:'calm', shape:'bigear'},
+  {n:16, zh:'伯曼猫', en:'Birman', coat:['#EFE4D2','#6E5746'], trait:'重点色 · 四只白手套 · 蓝眼', acc:'珍珠项链', pers:'优雅温柔', pat:'calm'},
+  {n:17, zh:'曼基康（矮脚）', en:'Munchkin', have:'cat_munchkin_idle', coat:['#C9C4B8','#E8C9A0'], trait:'小短腿 · 圆身 · 多色', acc:'杯子蛋糕帽', pers:'小短腿萌翻', pat:'calm'},
+  {n:18, zh:'东方短毛', en:'Oriental SH', coat:['#6E5E50','#B9A89A'], trait:'大耳 · 纯色 · 极修长', acc:'金属圆框眼镜', pers:'优雅好动', pat:'rush', shape:'bigear'},
+  {n:19, zh:'缅甸猫', en:'Burmese', coat:['#6B4A33','#8A6448'], trait:'貂褐短毛 · 圆金眼', acc:'焦糖色领结', pers:'黏人甜美', pat:'calm'},
+  {n:20, zh:'柯尼斯卷毛', en:'Cornish Rex', coat:['#C9A98F','#E8D6C2'], trait:'波浪卷毛 · 大耳 · 纤细', acc:'波点头巾', pers:'活泼精灵', pat:'rush', shape:'bigear'},
+  {n:21, zh:'土耳其安哥拉', en:'Turkish Angora', coat:['#FBF8F2','#E6DECF'], trait:'丝滑长白毛 · 蓝/异瞳', acc:'蕾丝领', pers:'高贵优雅', pat:'norm'},
+  {n:22, zh:'喜马拉雅猫', en:'Himalayan', coat:['#EFE7D8','#7E8B96'], trait:'扁脸 · 重点色 · 蓝眼', acc:'王冠发饰', pers:'慵懒贵气', pat:'calm'},
+  {n:23, zh:'埃及猫', en:'Egyptian Mau', coat:['#B7BCC0','#4A4F54'], trait:'天然斑点 · 银底 · 绿眼', acc:'黄金项圈', pers:'敏捷机警，性子急', pat:'rush'},
+  {n:24, zh:'曼岛猫', en:'Manx', coat:['#9C8A74','#D9CBB5'], trait:'无尾 · 圆臀 · 憨圆', acc:'三叶草胸针', pers:'圆润憨厚', pat:'calm'},
+  {n:25, zh:'东奇尼猫', en:'Tonkinese', coat:['#B89A7E','#7A5C44'], trait:'貂色重点 · 水绿眼', acc:'薄荷色领结', pers:'活泼亲人', pat:'norm'},
+  {n:26, zh:'塞尔凯克卷毛', en:'Selkirk Rex', coat:['#D8C7B0','#A8917A'], trait:'羊毛卷 · 圆脸 · 软萌', acc:'毛球绒帽', pers:'泰迪猫，软萌', pat:'calm'},
+  {n:27, zh:'新加坡猫', en:'Singapura', coat:['#C9A271','#8A6A45'], trait:'最小品种 · 大眼大耳 · 棕褐', acc:'迷你蝴蝶结', pers:'迷你大眼', pat:'rush', shape:'bigear'},
+  {n:28, zh:'热带草原猫', en:'Savannah', coat:['#C99A4E','#3D2C1A'], trait:'高挑 · 斑点 · 立耳', acc:'豹纹领巾', pers:'高挑野性，性子急', pat:'rush', shape:'bigear'},
+  {n:29, zh:'沙特尔猫', en:'Chartreux', coat:['#8C99A2','#C98B3D'], trait:'蓝灰毛 · 铜橙眼 · 微笑脸', acc:'法式贝雷帽', pers:'微笑蓝猫', pat:'norm'},
+  {n:30, zh:'中华田园·大橘', en:'Domestic Orange', have:'cat_orange_idle', coat:['#E8924A','#F2D2A8'], trait:'橘虎斑 · 接地气 · 国民度高', acc:'白围裙（现有）', pers:'憨憨大橘，超有耐心', pat:'calm'},
+];
+
+const PAT = {calm:['耐心','pat-calm'], norm:['普通','pat-norm'], rush:['急躁','pat-rush']};
+
+function tagsFor(b){
+  let t = '';
+  if(b.cfa) t += `<span class="cb-tag tag-cfa">CFA #${b.cfa}</span>`;
+  if(b.en==='Domestic Orange') t += `<span class="cb-tag tag-cn">中国国民猫</span>`;
+  if(!b.cfa && b.en!=='Domestic Orange') t += `<span class="cb-tag tag-pop">热门品种</span>`;
+  return t;
+}
+
+function portFor(b){
+  if(b.have){
+    return `<img src="assets/character/${b.have}.png" alt="${b.zh}">`;
+  }
+  const shape = b.shape ? ' '+b.shape : '';
+  return `<div class="cb-token${shape}">
+      <span class="ear l" style="background:${b.coat[0]}"></span>
+      <span class="ear r" style="background:${b.coat[0]}"></span>
+      <span class="face" style="background:linear-gradient(160deg,${b.coat[0]},${b.coat[1]})"></span>
+      <span class="cb-tokenlabel">毛色占位</span>
+    </div>`;
+}
+
+document.getElementById('grid').innerHTML = BREEDS.map(b=>{
+  const [pl,pc] = PAT[b.pat];
+  return `<article class="cb-card${b.have?' is-have':''}">
+    <div class="cb-no">${b.have?'✓':b.n}</div>
+    <div class="cb-status ${b.have?'st-have':'st-todo'}">${b.have?'已有':'待生成'}</div>
+    <div class="cb-port">${portFor(b)}</div>
+    <div class="cb-name"><b>${b.zh}</b><span>${b.en}</span></div>
+    <div class="cb-tags">${tagsFor(b)}</div>
+    <p class="cb-trait">${b.trait}</p>
+    <div class="cb-sw">
+      <i style="background:${b.coat[0]}"></i>
+      <i style="background:${b.coat[1]}"></i>
+    </div>
+    <p class="cb-meta"><b>服饰</b>：${b.acc}</p>
+    <p class="cb-meta"><b>性格</b>：${b.pers} <span class="pat ${pc}">${pl}</span></p>
+  </article>`;
+}).join('');
+</script>
+</body>
+</html>

@@ -25,17 +25,18 @@ test.describe('auth-flow', () => {
 
     expect([200, 201]).toContain(result.status);
     expect(result.body.code).toBe(0);
-    expect(result.body.data.openId).toBeTruthy();
-    expect(typeof result.body.data.openId).toBe('string');
+    expect(result.body.data.user.openId).toBeTruthy();
+    expect(typeof result.body.data.user.openId).toBe('string');
+    expect(typeof result.body.data.accessToken).toBe('string');
 
     // Stash openId on window for the idempotency assertion below. The
     // Cocos bundle doesn't expose a token cache for e2e yet (X3).
     await page.evaluate((openId) => {
       (window as any).__e2e_openId = openId;
-    }, result.body.data.openId);
+    }, result.body.data.user.openId);
 
     const stored = await page.evaluate(() => (window as any).__e2e_openId);
-    expect(stored).toBe(result.body.data.openId);
+    expect(stored).toBe(result.body.data.user.openId);
   });
 
   test('TC-API-AUTH-002: login is idempotent — same code returns same openId', async ({
@@ -58,7 +59,7 @@ test.describe('auth-flow', () => {
 
     expect(first.code).toBe(0);
     expect(second.code).toBe(0);
-    expect(first.data.openId).toBeTruthy();
-    expect(second.data.openId).toBe(first.data.openId);
+    expect(first.data.user.openId).toBeTruthy();
+    expect(second.data.user.openId).toBe(first.data.user.openId);
   });
 });

@@ -8,6 +8,7 @@
     "test:headed": "playwright test --headed",
     "build:client": "node scripts/build-web-mobile.mjs",
     "build:tt": "node scripts/build-bytedance.mjs",
+    "build:tt:release": "node scripts/build-bytedance.mjs --release",
     "preview:tt": "node scripts/preview-tt.mjs",
     "upload:tt": "node scripts/upload-tt.mjs"
   },

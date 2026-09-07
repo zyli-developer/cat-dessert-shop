@@ -8,20 +8,35 @@ client/local/
 client/temp/
 client/build/
 client/profiles/
+# Cocos asset metadata stores stable UUIDs and must be versioned with source assets.
 *.meta
+!client/assets/*.meta
+!client/assets/**/*.meta
 
 # IDE
 .idea/
 .vscode/
 *.iml
+.codex/
 
 # OS
 .DS_Store
 Thumbs.db
 
+# Local recovery and generated helper files
+.git-repair-backup-*.zip
+__pycache__/
+*.py[cod]
+/bundle-config.d.ts
+/bundle-utils.ccc
+
 # Env
 .env
 .env.local
+.env.production
+*.env.production
+!*.env.production.example
+!**/*.env.production.example
 
 # 抖音开发者工具（构建产物）
 **/bytedance-mini-game/

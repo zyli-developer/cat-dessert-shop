@@ -21,7 +21,8 @@ describe('Auth (e2e)', () => {
     // Controller wraps response as { code: 0, data: User }
     expect(res.body).toHaveProperty('code', 0);
     expect(res.body).toHaveProperty('data');
-    expect(res.body.data).toHaveProperty('openId', 'openid-1');
+    expect(res.body.data.user).toHaveProperty('openId', 'openid-1');
+    expect(res.body.data.accessToken).toEqual(expect.any(String));
   });
 
   it('POST /api/auth/login with invalid code returns 401 (TC-SEC-001)', async () => {
@@ -40,8 +41,15 @@ describe('Auth (e2e)', () => {
     expect(res.status).toBe(401);
   });
 
-  it('GET /api/user/profile without X-Open-Id header returns 401 (TC-SEC-001)', async () => {
+  it('GET /api/user/profile without a Bearer token returns 401 (TC-SEC-001)', async () => {
     const res = await request(app.getHttpServer()).get('/api/user/profile');
+    expect(res.status).toBe(401);
+  });
+
+  it('does not accept a forged X-Open-Id header as authentication', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/api/user/profile')
+      .set('X-Open-Id', 'openid-1');
     expect(res.status).toBe(401);
   });
 

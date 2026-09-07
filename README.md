@@ -1,4 +1,4 @@
-# 猫咪甜品店 / Cat Bakery
+# 一起开猫店 / Cat Bakery
 
 抖音小游戏 — 合成类玩法（拖放/合并甜品以满足顾客订单）。全栈项目：Cocos Creator 客户端 + NestJS / MongoDB 服务端。
 
@@ -65,6 +65,33 @@ docker-compose up
 | `npm run coverage:merge` | 合并各 workspace 覆盖率为统一报告 |
 | `npm run build:e2e-bundle` | 构建 e2e 测试用 bundle |
 | `npm run lint:skips` | 校验 test.skip 是否携带原因 |
+| `npm run config:init` | 在根目录 `.env` 补齐缺少的配置键 |
+| `npm run config:sync` | 将 `.env` 中允许公开的配置同步到客户端 |
+
+## 抖音正式配置与发布门禁
+
+本地配置统一放在仓库根目录 `.env`。先复制 `.env.example`，填写服务端密钥、API 地址和
+真实激励视频广告位 ID，再把允许公开的三项配置同步进 Cocos 客户端：
+
+```bash
+cp .env.example .env
+npm run config:sync
+npm run config:check:release
+npm --workspace e2e run build:tt:release
+```
+
+`DOUYIN_APP_SECRET`、`AUTH_TOKEN_SECRET`、`MONGODB_URI` 等服务端私密值只由 NestJS 读取，
+不会被同步到客户端。生产 Docker 继续使用服务器上的 `deploy/.env.production` 注入私密值。
+`server/` 下不再维护第二份 `.env`，避免配置来源冲突。
+`config:check:release` 会拒绝 HTTP、localhost、私网/临时隧道、模拟广告及广告占位值。
+正式构建还会校验产物是否包含当前配置、客户端 App ID 是否与后端配置一致，防止上传缓存旧包。
+`npm --workspace e2e run upload:tt -- <version> "<changelog>"` 默认只上传已在开发者工具中测试过的
+`client/build/bytedance-mini-game`；检查失败时不会调用 `tmg upload`。
+
+`build:tt`（包括命中缓存时）会自动把 `audio`、`main` Bundle 整理为抖音分包；
+后处理检测到主包仍超过 4 MB 时会立即失败，禁止继续预览或上传。
+执行 `FORCE=1` 无头重建前请关闭同一项目的 Creator；脚本检测到 MCP 端口 `3334`
+已被 GUI 占用时会提前退出，避免第二个 Editor 损坏项目缓存。
 
 `server/`：
 
@@ -94,6 +121,16 @@ docker-compose up
 - Phase 5 后端（与 1 可并行）→ Phase 6 变现/社交 → Phase 7 集成测试
 
 里程碑：M1 可玩原型 → M2 功能完整 → M3 变现就绪 → M4 提审版本。
+
+---
+
+## 2026-08-28 Review 修复记录
+
+- API 改为服务端签名 Bearer 会话；401 清理客户端会话，生产环境必须配置 `AUTH_TOKEN_SECRET`。
+- 奖励改为服务端固定金额、原子幂等和频率限制；稳定 claim ID 支持丢失回包后的安全重试。
+- 进度接口拒绝越界、跳关和伪造星级；离线档案及按账号隔离的补传队列可持久恢复。
+- 修复异步资源旧回调、暂停弹窗失败卡死、失败态溢出检测继续运行和构建并发问题。
+- 全量回归通过：server unit 41、server e2e 21、client 132、scripts 43，共 237 条测试。
 
 ---
 

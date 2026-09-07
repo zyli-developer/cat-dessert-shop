@@ -1,6 +1,6 @@
 # 后端架构
 
-> 所属项目：猫咪甜品店
+> 所属项目：一起开猫店
 > 总文档：[README.md](README.md)
 
 ---
@@ -90,7 +90,7 @@ Header: X-Open-Id: <openId>
 
 参数：
   round (可选): 指定关卡号，返回该关的好友分数排名
-  不传 round: 返回按最高关卡数排名的好友总排行
+  不传 round: 返回好友总排行（默认按最高分数；可加 ?by=round 切换为按最高关卡数）
 
 Response:
 {
@@ -120,6 +120,44 @@ Response:
 
 ---
 
+### 2.6 好友周榜（M6）
+
+```
+GET /api/rank/weekly
+Header: X-Open-Id: <openId>
+
+Response:
+{
+  "list": [
+    { "openId": "xxx", "nickname": "小明", "avatar": "url", "weeklyHighScore": 980, "rank": 1 }
+  ],
+  "myRank": 2,
+  "weekKey": "2026-W23"
+}
+```
+
+> 按 `weeklyHighScore` 排序；服务端在写入/读取时校验 `weekKey`，跨自然周则先把 `weeklyHighScore` 清零再比较（惰性重置，每周一 00:00 边界）。
+
+---
+
+### 2.7 每日礼包（M3）
+
+`GET /api/user/profile` 回包附加：`dailyGiftAvailable`（今日是否可领基础奖励）、`dailyGiftDoubleAvailable`（今日是否可看广告翻倍 = 已领 && 未翻倍 && currentRound>2）。
+
+```
+POST /api/user/daily-gift/claim    // 领取当日基础 +20 猫币
+Header: X-Open-Id
+Response: { "catCoins": 168, "claimed": true }   // 今日已领则 claimed:false + 当前 catCoins
+
+POST /api/user/daily-gift/double   // 看广告成功后翻倍，再 +20（当日仅一次）
+Header: X-Open-Id
+Response: { "catCoins": 188, "doubled": true }    // 不满足条件则 doubled:false
+```
+
+> server-authoritative：按 Asia/Shanghai 当日判定，改客户端时钟无效；claim / double 均幂等。double 需满足「当日已 claim 且未 double 且通关第 2 关后」。
+
+---
+
 ## 3. 鉴权机制
 
 - 登录流程：客户端调用 `tt.login` 获取 code → 发送到服务端 → 服务端用 code + AppSecret 调用抖音服务端 API 换取 openId
@@ -141,6 +179,10 @@ User {
   highScore     // 全局最高分
   stars         // 每关星级记录 { "1": 3, "2": 2, ... }
   roundScores   // 每关最高分记录 { "1": 300, "2": 900, ... }（用于本关好友排名）
+  weeklyHighScore // 本自然周最高分（M6 周榜）
+  weekKey       // 周标识，如 "2026-W23"；跨周时惰性重置 weeklyHighScore
+  lastDailyGiftDate       // 每日礼包基础领取日期 "YYYY-MM-DD"(Asia/Shanghai)
+  lastDailyGiftDoubleDate // 每日礼包翻倍日期；防止当日重复翻倍
   createdAt
   updatedAt
 }
@@ -152,9 +194,10 @@ User {
 
 ## 5. 排行榜
 
-- **好友排行**：基于抖音关系链，按最高回合数排名
-- **全局排行**：按最高分数排名，取 Top 100
-- **本关排名**：按 `roundScores[round]` 排名，用于通关结算页好友排名
+- **好友排行（总）**：基于抖音关系链。默认**按最高分数**排名（对应排行榜页"分数"展示）；保留"按最高回合数"作为次选 tab。
+- **好友周榜（M6）**：按「自然周内最高分」排名，每周一 00:00 重置（对应排行榜页"本周最佳"）。需要 `weeklyHighScore` + `weekKey` 字段与定时/惰性重置。
+- **全局排行**：按最高分数排名，取 Top 100。
+- **本关排名**：按 `roundScores[round]` 排名，用于通关结算页好友排名。
 
 ---
 

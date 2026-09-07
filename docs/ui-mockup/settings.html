@@ -3,25 +3,33 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>猫咪甜品店 · 设置</title>
+<title>一起开猫店 · 设置</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/app.css">
 <style>
-  .srow{ display:flex; align-items:center; gap:22px; padding:30px 30px; }
+  .srow{ display:flex; align-items:center; gap:18px; padding:18px 26px; }
   .srow + .srow{ border-top:2px solid var(--line); }
-  .srow .ico{ width:64px; height:64px; flex:none; display:grid; place-items:center; border-radius:20px; background:var(--sand); }
-  .srow .ico svg{ width:36px; height:36px; }
-  .srow .label{ font-family:var(--font-display); font-weight:800; font-size:36px; color:var(--ink); }
-  .srow .sub{ font-size:24px; color:var(--ink-mute); font-weight:600; margin-top:2px; }
+  .srow .ico{ width:54px; height:54px; flex:none; display:grid; place-items:center; border-radius:16px; background:var(--sand); }
+  .srow .ico svg{ width:30px; height:30px; }
+  .srow .label{ font-family:var(--font-display); font-weight:800; font-size:30px; color:var(--ink); line-height:1.15; }
+  .srow .sub{ font-size:21px; color:var(--ink-mute); font-weight:600; margin-top:1px; }
   /* 开关 */
-  .sw{ width:118px; height:64px; border-radius:var(--r-pill); border:none; cursor:pointer; position:relative;
+  .sw{ width:104px; height:56px; border-radius:var(--r-pill); border:none; cursor:pointer; position:relative; flex:none;
     background:var(--sand-2); box-shadow:inset 0 2px 6px rgba(120,80,40,.18); transition:background .2s; }
-  .sw::after{ content:''; position:absolute; top:6px; left:6px; width:52px; height:52px; border-radius:50%;
+  .sw::after{ content:''; position:absolute; top:6px; left:6px; width:44px; height:44px; border-radius:50%;
     background:#fff; box-shadow:0 4px 8px rgba(120,80,40,.25); transition:transform .2s; }
   .sw.on{ background:linear-gradient(180deg,var(--mint-hi),var(--mint)); }
-  .sw.on::after{ transform:translateX(54px); }
-  .chev{ width:18px; height:30px; flex:none; }
+  .sw.on::after{ transform:translateX(48px); }
+  /* 进入按钮：圆形收尾，箭头方形不变形，呼应整页圆形旋钮/图标按钮 */
+  .go{ width:52px; height:52px; flex:none; border-radius:50%; display:grid; place-items:center;
+    background:var(--sand); box-shadow:inset 0 0 0 2px #fff, 0 0 0 2px var(--line-2); transition:transform .08s; }
+  .go svg{ width:24px; height:24px; }
+  .srow:active .go{ transform:translateX(4px); }
+  /* 分区小标题 */
+  .sec{ position:absolute; left:66px; display:flex; align-items:center; gap:12px;
+    font-family:var(--font-display); font-weight:800; font-size:26px; color:var(--ink-soft); letter-spacing:.5px; }
+  .sec::before{ content:''; width:11px; height:11px; border-radius:50%; background:var(--pink); }
 </style>
 </head>
 <body>
@@ -54,7 +62,8 @@
   <img src="assets/character/cat_orange_idle.png" style="position:absolute;right:48px;top:118px;width:170px;filter:drop-shadow(0 8px 10px rgba(120,80,40,.2))" alt="">
 
   <!-- 声音设置 -->
-  <div class="panel" style="position:absolute;left:56px;right:56px;top:330px;padding:8px 4px">
+  <div class="sec" style="top:318px">声音与触感</div>
+  <div class="panel" style="position:absolute;left:56px;right:56px;top:362px;padding:6px 4px">
     <div class="srow">
       <div class="ico"><svg class="ic"><use href="#i-music"/></svg></div>
       <div style="flex:1"><div class="label">背景音乐</div><div class="sub">店内的治愈轻音乐</div></div>
@@ -70,33 +79,31 @@
       <div style="flex:1"><div class="label">震动反馈</div><div class="sub">合成时轻轻一震</div></div>
       <button class="sw" onclick="this.classList.toggle('on')" aria-label="震动"></button>
     </div>
-    <div class="srow">
-      <div class="ico"><svg class="ic"><use href="#i-bell"/></svg></div>
-      <div style="flex:1"><div class="label">营业提醒</div><div class="sub">体力回满时通知我</div></div>
-      <button class="sw on" onclick="this.classList.toggle('on')" aria-label="提醒"></button>
-    </div>
+    <!-- M5：已删除「营业提醒 / 体力回满」开关。PRD 无体力系统，抖音也无通用服务端推送（无 subscribeMessage），
+         该开关控制的是不存在的功能，故移除，避免 UI 承诺空规则。 -->
   </div>
 
   <!-- 功能行 -->
-  <div class="panel" style="position:absolute;left:56px;right:56px;top:790px;padding:8px 4px">
+  <div class="sec" style="top:706px">帮助与反馈</div>
+  <div class="panel" style="position:absolute;left:56px;right:56px;top:750px;padding:6px 4px">
     <div class="srow" style="cursor:pointer">
       <div class="ico"><svg class="ic"><use href="#i-chat"/></svg></div>
-      <div style="flex:1"><div class="label">联系客服</div></div>
-      <svg class="chev ic"><use href="#i-chevR"/></svg>
+      <div style="flex:1"><div class="label">联系客服</div><div class="sub">问题反馈与游戏帮助</div></div>
+      <span class="go"><svg class="ic"><use href="#i-chevR"/></svg></span>
     </div>
     <div class="srow" style="cursor:pointer">
       <div class="ico"><svg style="color:var(--star)"><use href="#i-star"/></svg></div>
       <div style="flex:1"><div class="label">给个好评</div><div class="sub">喜欢的话鼓励一下~</div></div>
-      <svg class="chev ic"><use href="#i-chevR"/></svg>
+      <span class="go"><svg class="ic"><use href="#i-chevR"/></svg></span>
     </div>
     <div class="srow" style="cursor:pointer">
       <div class="ico"><svg class="ic"><use href="#i-info"/></svg></div>
-      <div style="flex:1"><div class="label">隐私政策</div></div>
-      <svg class="chev ic"><use href="#i-chevR"/></svg>
+      <div style="flex:1"><div class="label">隐私政策</div><div class="sub">数据使用与权限说明</div></div>
+      <span class="go"><svg class="ic"><use href="#i-chevR"/></svg></span>
     </div>
   </div>
 
-  <div class="mute2" style="position:absolute;left:0;right:0;bottom:42px;text-align:center;font-size:24px;font-weight:600">猫咪甜品店 · v1.0.0</div>
+  <div class="mute2" style="position:absolute;left:0;right:0;bottom:42px;text-align:center;font-size:24px;font-weight:600">一起开猫店 · v1.0.0</div>
 </div>
 
 <script src="js/stage.js"></script>

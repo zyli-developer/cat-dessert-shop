@@ -45,7 +45,7 @@ describe('AuthService', () => {
           highScore: 0,
         },
       },
-      { upsert: true, new: true, setDefaultsOnInsert: true },
+      { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true },
     );
   });
 
@@ -65,7 +65,7 @@ describe('AuthService', () => {
           highScore: 0,
         },
       },
-      { upsert: true, new: true, setDefaultsOnInsert: true },
+      { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true },
     );
   });
 });

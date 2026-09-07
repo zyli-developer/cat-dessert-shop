@@ -12,16 +12,21 @@ export async function createTestApp(): Promise<INestApplication> {
   return app;
 }
 
-export async function login(app: INestApplication, code: string): Promise<string> {
+export interface TestSession {
+  user: { openId: string };
+  accessToken: string;
+}
+
+export async function login(app: INestApplication, code: string): Promise<TestSession> {
   const res = await request(app.getHttpServer())
     .post('/api/auth/login')
     .send({ code });
   if (res.status >= 400) {
     throw new Error(`login failed for ${code}: ${res.status} ${JSON.stringify(res.body)}`);
   }
-  return res.body.data.openId;
+  return res.body.data as TestSession;
 }
 
-export function authed(req: supertest.Test, openId: string): supertest.Test {
-  return req.set('X-Open-Id', openId);
+export function authed(req: supertest.Test, session: TestSession): supertest.Test {
+  return req.set('Authorization', `Bearer ${session.accessToken}`);
 }

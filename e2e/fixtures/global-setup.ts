@@ -1,27 +1,33 @@
 import { FullConfig } from '@playwright/test';
-import { spawn } from 'node:child_process';
+import { execSync, spawn } from 'node:child_process';
 import http from 'node:http';
 import path from 'node:path';
 import fs from 'node:fs';
+import { MongoMemoryServer } from 'mongodb-memory-server';
 
 export default async function globalSetup(_config: FullConfig): Promise<void> {
-  // 1. Start server on port 4568
+  // 1. Build and start an isolated API + MongoDB for this test run.
   const serverCwd = path.resolve(__dirname, '../../server');
+  execSync('npm run build', { cwd: serverCwd, stdio: 'inherit' });
+  const mongod = await MongoMemoryServer.create();
   const serverProc = spawn(
-    process.platform === 'win32' ? 'npm.cmd' : 'npm',
-    ['run', 'start'],
+    process.execPath,
+    [path.join(serverCwd, 'dist', 'main.js')],
     {
       env: {
         ...process.env,
         PORT: '4568',
         NODE_ENV: 'test',
         AUTH_CODE_EXCHANGER: 'stub',
+        AUTH_TOKEN_SECRET: 'catbakery-e2e-session-secret-32-bytes',
+        MONGODB_URI: mongod.getUri(),
       },
       cwd: serverCwd,
       stdio: 'inherit',
-      shell: true,
     },
   );
+
+  (globalThis as any).__E2E_SERVERS__ = { serverProc, mongod };
 
   // Health poll
   const healthURL = 'http://127.0.0.1:4568/health';
@@ -64,5 +70,5 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
 
   process.env.API_BASE = 'http://127.0.0.1:4568/api';
 
-  (globalThis as any).__E2E_SERVERS__ = { serverProc, staticServer };
+  (globalThis as any).__E2E_SERVERS__.staticServer = staticServer;
 }

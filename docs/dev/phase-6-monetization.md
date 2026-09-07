@@ -1,7 +1,7 @@
 # Phase 6：变现与社交
 
 > 依赖：Phase 4（UI/弹窗就位）
-> 产出：4 个广告位接入 + 分享功能
+> 产出：5 个广告位接入 + 分享功能
 > 参考：[04-economy.md](../plans/04-economy.md)
 
 ---
@@ -22,15 +22,16 @@
 
 ---
 
-## Task 6-2：接入 4 个广告位
+## Task 6-2：接入 5 个广告位
 
 **修改文件**：
 - `client/assets/scripts/ui/GameScene.ts`（道具栏广告）
 - `client/assets/scripts/ui/popups/FailPopup.ts`（复活广告）
 - `client/assets/scripts/ui/HomeScene.ts`（主页猫币广告）
 - `client/assets/scripts/ui/popups/WinPopup.ts`（通关翻倍广告）
+- `client/assets/scripts/ui/popups/DailyGiftPopup.ts`（每日礼包翻倍广告）
 
-**4 个广告位**：
+**5 个广告位**：
 
 | 广告位 | 触发 | 奖励 | 限制 |
 |--------|------|------|------|
@@ -38,12 +39,14 @@
 | 复活 | 点击失败弹窗"看广告复活" | 清除容器上半部分甜品 | 每关 1 次 |
 | 主页猫币 | 点击主页广告按钮 | +10 猫币 | 无限制 |
 | 通关翻倍 | 点击通关弹窗"翻倍" | 猫币奖励 x2 | 每关 1 次 |
+| 每日礼包翻倍 | 点击每日礼包"翻倍" | 当日猫币 ×2（+20→+40）| 每日 1 次，通关第 2 关后开放 |
 
 **验收标准**：
-- [ ] 4 个广告位均可触发（Dev 环境模拟）
+- [ ] 5 个广告位均可触发（Dev 环境模拟）
 - [ ] 奖励正确发放
 - [ ] 限制正确执行（复活和翻倍每关限 1 次）
 - [ ] 前 2 关不显示广告（首次体验保护）
+- [ ] 广告**无填充 / 加载失败**时：不扣道具、不发奖励，顶部 Toast"暂无广告，请稍后再试"，按钮保持可点重试（M8，另见 Phase 4 Task 4-8）
 
 ---
 
@@ -56,7 +59,7 @@
 **内容**：
 - 通关结算页"分享"按钮
 - 调用 `tt.shareAppMessage`：
-  - title："我在猫咪甜品店第 N 关获得了 ⭐⭐⭐，快来挑战！"
+  - title："我在一起开猫店第 N 关获得了 ⭐⭐⭐，快来挑战！"
   - imageUrl：游戏截图或预设分享图
   - query：`round=N&score=XXX`（用于追踪来源）
 - Dev 环境 fallback：console.log 分享内容

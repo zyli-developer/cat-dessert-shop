@@ -2,12 +2,16 @@ import { Controller, Post, Body, Req, Logger } from '@nestjs/common';
 import type { Request } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
+import { SessionTokenService } from './session-token.service';
 
 @Controller('api/auth')
 export class AuthController {
   private readonly logger = new Logger(AuthController.name);
 
-  constructor(private authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly tokens: SessionTokenService,
+  ) {}
 
   @Post('login')
   async login(@Body() dto: LoginDto, @Req() req: Request) {
@@ -27,6 +31,12 @@ export class AuthController {
     const openId = user?.openId ?? '';
     const masked = openId.length > 8 ? `${openId.slice(0, 4)}***${openId.slice(-4)}` : `${openId.slice(0, 2)}***`;
     this.logger.log(`[login] success openId=${masked || 'unknown'}`);
-    return { code: 0, data: user };
+    return {
+      code: 0,
+      data: {
+        user,
+        accessToken: this.tokens.issue(openId),
+      },
+    };
   }
 }

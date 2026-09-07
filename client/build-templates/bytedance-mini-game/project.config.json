@@ -1,12 +1,12 @@
 {
   "setting": {
-    "urlCheck": false,
+    "urlCheck": true,
     "es6": false,
     "postcss": true,
     "minified": true,
     "newFeature": true
   },
-  "appid": "ttf9d78f6a67b1997502",
-  "projectname": "猫猫猫甜品店",
+  "appid": "tt9cb5ea0802d30fc302",
+  "projectname": "一起开猫店",
   "compileType": "miniGame"
 }

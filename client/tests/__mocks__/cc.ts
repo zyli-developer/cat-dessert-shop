@@ -26,6 +26,9 @@ export class Vec3 {
     out.z = a.z + (b.z - a.z) * t;
     return out;
   }
+  static distance(a: Vec3, b: Vec3): number {
+    return Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
+  }
 }
 
 export class Vec2 {
@@ -63,6 +66,12 @@ export class Node {
   active = true;
   position = new Vec3();
   scale = new Vec3(1, 1, 1);
+  eulerAngles = new Vec3();
+  // 真实引擎里 worldPosition≠position（含父级变换），但单测多在原点/无嵌套，
+  // 这里以可赋值字段近似；默认 (0,0,0) 便于无需显式设置。
+  private _worldPosition = new Vec3();
+  get worldPosition(): Vec3 { return this._worldPosition; }
+  set worldPosition(v: Vec3) { this._worldPosition = v instanceof Vec3 ? v.clone() : new Vec3((v as any).x, (v as any).y, (v as any).z); }
   private _parent: Node | null = null;
   get parent(): Node | null { return this._parent; }
   set parent(p: Node | null) {
@@ -104,6 +113,9 @@ export class Node {
     walk(this);
     return out;
   }
+  getComponentInChildren<T>(ctor: new () => T): T | null {
+    return this.getComponentsInChildren(ctor)[0] ?? null;
+  }
   addComponent<T extends Component>(ctor: new () => T): T {
     const c = new ctor();
     (c as any).node = this;
@@ -142,11 +154,22 @@ export class Node {
     else { this.position.set(x, y ?? 0, z ?? 0); }
   }
   getPosition() { return this.position.clone(); }
+  setSiblingIndex(i: number) {
+    const p = this._parent;
+    if (!p) return;
+    p.children = p.children.filter(n => n !== this);
+    p.children.splice(Math.max(0, i), 0, this);
+  }
+  getSiblingIndex() { return this._parent ? this._parent.children.indexOf(this) : 0; }
 }
 
 export class Component {
   node: Node = new Node();
   enabled = true;
+  getComponent<T>(ctor: new () => T): T | null { return this.node.getComponent(ctor); }
+  getComponentInChildren<T>(ctor: new () => T): T | null { return this.node.getComponentsInChildren(ctor)[0] ?? null; }
+  getComponentsInChildren<T>(ctor: new () => T): T[] { return this.node.getComponentsInChildren(ctor); }
+  addComponent<T extends Component>(ctor: new () => T): T { return this.node.addComponent(ctor); }
   schedule = jest.fn();
   unschedule = jest.fn();
   scheduleOnce = jest.fn();
@@ -159,8 +182,23 @@ export class Component {
   onDisable?(): void;
 }
 
-export class Label extends Component { string = ''; fontSize = 20; color = new Color(); font: any = null; }
-export class Sprite extends Component { spriteFrame: any = null; color = new Color(); }
+export class Label extends Component {
+  static HorizontalAlign = { LEFT: 0, CENTER: 1, RIGHT: 2 };
+  static VerticalAlign = { TOP: 0, CENTER: 1, BOTTOM: 2 };
+  static CacheMode = { NONE: 0, BITMAP: 1, CHAR: 2 };
+  static Overflow = { NONE: 0, CLAMP: 1, SHRINK: 2, RESIZE_HEIGHT: 3 };
+  string = ''; fontSize = 20; color = new Color(); font: any = null;
+  lineHeight = 20; horizontalAlign = 0; verticalAlign = 0; overflow = 0; isBold = false;
+}
+export class Sprite extends Component {
+  static Type = { SIMPLE: 0, SLICED: 1, TILED: 2, FILLED: 3 };
+  static SizeMode = { CUSTOM: 0, TRIMMED: 1, RAW: 2 };
+  spriteFrame: any = null;
+  color = new Color();
+  type = 0;
+  sizeMode = 0;
+  trim = true;
+}
 export class UITransform extends Component {
   contentSize = new Size();
   width = 0;
@@ -235,6 +273,7 @@ export class Graphics extends Component {
   moveTo = jest.fn();
   lineTo = jest.fn();
   rect = jest.fn();
+  roundRect = jest.fn();
   circle = jest.fn();
   stroke = jest.fn();
   fill = jest.fn();
@@ -338,6 +377,13 @@ export function tween<T>(_target?: T): TweenChain {
   };
   return chain;
 }
+
+// assetManager: loadBundle 默认失败 → 生产代码走 resources 兜底路径（与编辑器预览一致）
+export const assetManager = {
+  loadBundle: jest.fn((_name: string, cb?: (err: Error | null, bundle: any) => void) => {
+    cb?.(new Error('bundle not available in tests'), null);
+  }),
+};
 
 export const director = {
   getScene: jest.fn(() => new Node()),

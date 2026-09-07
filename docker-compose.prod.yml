@@ -1,0 +1,61 @@
+name: catbakery-prod
+
+services:
+  mongodb:
+    image: mongo:7
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:?Set MONGO_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?Set MONGO_ROOT_PASSWORD}
+    volumes:
+      - mongo-prod-data:/data/db
+    networks:
+      - backend
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          mongosh --quiet --host 127.0.0.1
+          --username "$$MONGO_INITDB_ROOT_USERNAME"
+          --password "$$MONGO_INITDB_ROOT_PASSWORD"
+          --authenticationDatabase admin
+          --eval "quit(db.adminCommand('ping').ok ? 0 : 2)"
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 8099
+      MONGODB_URI: mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@mongodb:27017/catbakery?authSource=admin
+      DOUYIN_APP_ID: ${DOUYIN_APP_ID:?Set DOUYIN_APP_ID}
+      DOUYIN_APP_SECRET: ${DOUYIN_APP_SECRET:?Set DOUYIN_APP_SECRET}
+      AUTH_TOKEN_SECRET: ${AUTH_TOKEN_SECRET:?Set AUTH_TOKEN_SECRET to at least 32 characters}
+      AUTH_TOKEN_TTL_SECONDS: ${AUTH_TOKEN_TTL_SECONDS:-604800}
+    ports:
+      - 127.0.0.1:18099:8099
+    networks:
+      - backend
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD-SHELL, "wget -qO- http://127.0.0.1:8099/health | grep -q '\"status\":\"ok\"'"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+networks:
+  backend:
+    driver: bridge
+
+volumes:
+  mongo-prod-data:

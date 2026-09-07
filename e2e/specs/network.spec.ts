@@ -9,7 +9,7 @@ test.describe('network errors', () => {
   test('TC-API-ERR-002: 5xx response is surfaced as a non-OK status', async ({ page }) => {
     await installTtMock(page);
     await page.goto('/');
-    const openId = await loginViaApi('test-code-4');
+    const session = await loginViaApi('test-code-4');
 
     await page.route('**/api/user/progress', (route) => {
       void route.fulfill({
@@ -20,15 +20,15 @@ test.describe('network errors', () => {
     });
 
     const result = await page.evaluate(
-      async ({ base, openId }) => {
+      async ({ base, accessToken }) => {
         const res = await fetch(`${base}/user/progress`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Open-Id': openId },
-          body: JSON.stringify({ round: 70, stars: 1, score: 100 }),
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+          body: JSON.stringify({ round: 1, stars: 1, score: 100 }),
         });
         return { status: res.status, ok: res.ok };
       },
-      { base: API_BASE, openId },
+      { base: API_BASE, accessToken: session.accessToken },
     );
 
     expect(result.status).toBe(500);
@@ -38,15 +38,15 @@ test.describe('network errors', () => {
 
     // Verify normal operation resumes after unroute.
     const healthy = await page.evaluate(
-      async ({ base, openId }) => {
+      async ({ base, accessToken }) => {
         const res = await fetch(`${base}/user/progress`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Open-Id': openId },
-          body: JSON.stringify({ round: 70, stars: 1, score: 100 }),
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+          body: JSON.stringify({ round: 1, stars: 1, score: 100 }),
         });
         return { status: res.status };
       },
-      { base: API_BASE, openId },
+      { base: API_BASE, accessToken: session.accessToken },
     );
     expect([200, 201]).toContain(healthy.status);
   });
@@ -54,26 +54,26 @@ test.describe('network errors', () => {
   test('TC-API-ERR-001: aborted request (server unreachable) rejects', async ({ page }) => {
     await installTtMock(page);
     await page.goto('/');
-    const openId = await loginViaApi('test-code-5');
+    const session = await loginViaApi('test-code-5');
 
     await page.route('**/api/user/progress', (route) => {
       void route.abort();
     });
 
     const result = await page.evaluate(
-      async ({ base, openId }) => {
+      async ({ base, accessToken }) => {
         try {
           const res = await fetch(`${base}/user/progress`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-Open-Id': openId },
-            body: JSON.stringify({ round: 71, stars: 1, score: 200 }),
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+            body: JSON.stringify({ round: 1, stars: 1, score: 200 }),
           });
           return { threw: false, status: res.status };
         } catch (err: any) {
           return { threw: true, error: String(err?.message || err) };
         }
       },
-      { base: API_BASE, openId },
+      { base: API_BASE, accessToken: session.accessToken },
     );
 
     expect(result.threw).toBe(true);
@@ -83,15 +83,15 @@ test.describe('network errors', () => {
 
     // Recovery check.
     const healthy = await page.evaluate(
-      async ({ base, openId }) => {
+      async ({ base, accessToken }) => {
         const res = await fetch(`${base}/user/progress`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Open-Id': openId },
-          body: JSON.stringify({ round: 71, stars: 1, score: 200 }),
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+          body: JSON.stringify({ round: 1, stars: 1, score: 200 }),
         });
         return { status: res.status };
       },
-      { base: API_BASE, openId },
+      { base: API_BASE, accessToken: session.accessToken },
     );
     expect([200, 201]).toContain(healthy.status);
   });

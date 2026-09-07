@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>猫咪甜品店 · 营业成功</title>
+<title>一起开猫店 · 营业成功</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/app.css">
@@ -14,6 +14,7 @@
 <symbol id="i-close" viewBox="0 0 24 24"><g class="ic" stroke-width="2.8"><path d="M7 7l10 10"/><path d="M17 7L7 17"/></g></symbol>
 <symbol id="i-coin" viewBox="0 0 48 48"><circle cx="24" cy="24" r="21" fill="#F7C156"/><circle cx="24" cy="24" r="21" fill="none" stroke="#DA9B30" stroke-width="3"/><circle cx="24" cy="24" r="15" fill="none" stroke="#FFE7B0" stroke-width="2.5"/><g fill="#fff"><ellipse cx="24" cy="27.5" rx="6.2" ry="5"/><circle cx="18.3" cy="20.5" r="2.5"/><circle cx="24" cy="18.5" r="2.5"/><circle cx="29.7" cy="20.5" r="2.5"/></g></symbol>
 <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 5l13 7-13 7z" fill="currentColor"/></symbol>
+<symbol id="i-share" viewBox="0 0 24 24"><g class="ic"><circle cx="6" cy="12" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="18" cy="18" r="2.4"/><path d="M8.1 10.9l7.8-3.8"/><path d="M8.1 13.1l7.8 3.8"/></g></symbol>
 </defs></svg>
 
 <div class="stage">
@@ -34,24 +35,46 @@
       </div>
 
       <div class="title-lg" style="font-size:62px;color:#E0657C;margin-top:18px">营业成功！</div>
-      <div class="muted" style="font-size:30px;font-weight:600;margin-top:6px">5 位猫客都满意啦~</div>
+      <div class="muted" style="font-size:30px;font-weight:600;margin-top:6px">4 位猫客都满意啦~</div>
 
-      <div class="row" style="justify-content:center;gap:14px;margin:30px 0 8px">
+      <div class="row" style="justify-content:center;gap:14px;margin:24px 0 6px">
         <div class="panel--sand panel" style="flex:1;padding:18px;border-radius:22px">
           <div class="mute2" style="font-size:24px;font-weight:700">本关得分</div>
-          <div class="h-display" style="font-size:46px">12,640</div>
+          <div class="h-display" style="font-size:46px">5,120</div>
         </div>
-        <div class="reward" style="flex:1;justify-content:center"><svg class="coin"><use href="#i-coin"/></svg><b>+120</b></div>
+        <div class="reward" style="flex:1;justify-content:center;gap:6px"><svg class="coin"><use href="#i-coin"/></svg><b>+20</b><span style="font-size:22px;font-weight:700;color:#9A6A1E">猫币</span></div>
       </div>
 
-      <button class="btn btn--butter btn--block" style="margin-top:22px;height:104px">
+      <!-- M7：本关好友排名（top-3，高亮“你”）—— 后端按本关回合数返回 -->
+      <div class="panel" style="padding:12px 16px 14px;border-radius:22px;margin:14px 0 2px;text-align:left">
+        <div class="mute2" style="font-size:22px;font-weight:800;letter-spacing:1px;margin:2px 6px 8px">本关好友排名</div>
+        <div style="display:flex;align-items:center;gap:14px;padding:8px 14px;border-radius:14px">
+          <span class="h-display" style="font-size:26px;color:var(--ink-soft);width:30px">1</span>
+          <span style="flex:1;font-size:26px;font-weight:700;color:var(--ink)">小明</span>
+          <span class="h-display" style="font-size:27px;color:var(--ink)">5,360</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;padding:8px 14px;border-radius:14px;background:var(--butter-sf);box-shadow:inset 0 0 0 2px var(--butter)">
+          <span class="h-display" style="font-size:26px;color:#9A6A1E;width:30px">2</span>
+          <span style="flex:1;font-size:26px;font-weight:800;color:#7A4E16">你</span>
+          <span class="h-display" style="font-size:27px;color:#7A4E16">5,120</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;padding:8px 14px;border-radius:14px">
+          <span class="h-display" style="font-size:26px;color:var(--ink-soft);width:30px">3</span>
+          <span style="flex:1;font-size:26px;font-weight:700;color:var(--ink)">小红</span>
+          <span class="h-display" style="font-size:27px;color:var(--ink)">4,640</span>
+        </div>
+      </div>
+
+      <button class="btn btn--butter btn--block" style="margin-top:16px;height:100px">
         <svg style="width:30px;height:30px;color:#7A4E16"><use href="#i-play"/></svg>看广告，奖励翻倍
         <span class="badge-ad" style="color:#7A4E16">×2</span>
       </button>
 
-      <div class="row" style="gap:18px;margin-top:18px">
-        <button class="btn btn--ghost" style="flex:1;height:96px;font-size:32px" onclick="location.href='home.html'">返回首页</button>
-        <button class="btn btn--primary" style="flex:1.3;height:96px" onclick="location.href='game.html'">下一关</button>
+      <!-- B2：底部三按钮 返回 / 分享炫耀 / 下一关 -->
+      <div class="row" style="gap:14px;margin-top:16px">
+        <button class="btn btn--ghost" style="flex:1;height:96px;font-size:30px" onclick="location.href='home.html'">返回</button>
+        <button class="btn btn--mint" style="flex:1.15;height:96px;font-size:28px" onclick="alert('调用 tt.shareAppMessage，带本关成绩卡')"><svg style="width:32px;height:32px;color:#1F5B41"><use href="#i-share"/></svg>炫耀战绩</button>
+        <button class="btn btn--primary" style="flex:1.25;height:96px;font-size:30px" onclick="location.href='game.html'">下一关</button>
       </div>
     </div>
   </div>

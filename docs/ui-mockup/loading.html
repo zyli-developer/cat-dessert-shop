@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>一起开猫店 · 加载</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+
+<!-- 爪印金币（进度头用）—— 与各屏同一套 -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-coin" viewBox="0 0 48 48"><circle cx="24" cy="24" r="21" fill="#F7C156"/><circle cx="24" cy="24" r="21" fill="none" stroke="#DA9B30" stroke-width="3"/><circle cx="24" cy="24" r="15" fill="none" stroke="#FFE7B0" stroke-width="2.5"/><g fill="#fff"><ellipse cx="24" cy="27.5" rx="6.2" ry="5"/><circle cx="18.3" cy="20.5" r="2.5"/><circle cx="24" cy="18.5" r="2.5"/><circle cx="29.7" cy="20.5" r="2.5"/></g></symbol>
+</defs></svg>
+
+<div class="stage">
+  <img class="stage__bg" src="assets/bg/bg_loading.png" alt="">
+  <div class="stage__veil"></div>
+
+  <!-- 漂浮甜点装饰 -->
+  <img class="float" src="assets/desserts/dessert_lv2_cookie2.png" style="left:70px;top:250px;width:84px;--rot:-10deg" alt="">
+  <img class="float" src="assets/desserts/dessert_lv4_dorayaki.png" style="right:54px;top:300px;width:104px;--rot:12deg;animation-delay:.9s" alt="">
+  <img class="float" src="assets/desserts/dessert_lv3_puff.png" style="right:96px;top:188px;width:72px;--rot:7deg;animation-delay:1.7s" alt="">
+
+  <!-- Logo + 标题 -->
+  <div style="position:absolute;left:0;right:0;top:250px;text-align:center">
+    <img class="pop" src="assets/ui/logo.png" style="width:330px;filter:drop-shadow(0 10px 14px rgba(120,80,40,.20))" alt="一起开猫店">
+    <div class="title-xl" style="margin-top:-4px;font-size:80px;color:#E0657C;text-shadow:0 3px 0 #fff,0 4px 0 rgba(120,80,40,.12)">一起开猫店</div>
+    <div class="muted" style="font-size:30px;margin-top:12px;font-weight:600">香喷喷的甜点正在出炉…</div>
+  </div>
+
+  <!-- 招呼客人的橘猫 -->
+  <img class="pop" src="assets/character/cat_orange_idle.png" style="position:absolute;left:50%;transform:translateX(-50%);bottom:392px;width:300px;filter:drop-shadow(0 12px 14px rgba(120,80,40,.22))" alt="">
+
+  <!-- 进度区 -->
+  <div style="position:absolute;left:80px;right:80px;bottom:188px">
+    <div class="row between" style="margin-bottom:20px;align-items:flex-end">
+      <div class="muted" id="tip" style="font-size:28px;font-weight:600;max-width:440px;line-height:1.3">正在装点橱窗…</div>
+      <div class="h-display" id="pct" style="font-size:50px;color:#E0657C;font-variant-numeric:tabular-nums;text-shadow:0 2px 0 #fff">0%</div>
+    </div>
+    <div class="load-bar">
+      <div class="load-bar__track"><div class="load-bar__fill" id="fill"></div></div>
+      <div class="load-head" id="head"><svg><use href="#i-coin"/></svg></div>
+    </div>
+  </div>
+
+  <!-- 加载点 -->
+  <div style="position:absolute;left:0;right:0;bottom:108px;text-align:center">
+    <span class="dots"><i></i><i></i><i></i></span>
+  </div>
+
+  <!-- 版本 -->
+  <div class="mute2" style="position:absolute;left:0;right:0;bottom:46px;text-align:center;font-size:24px">
+    <span style="font-family:var(--font-display)">一起开猫店</span>　·　v1.0.0
+  </div>
+
+  <!-- ============================================================
+       M8 · 登录失败 / 授权拒绝态（默认隐藏）
+       触发时机：加载阶段抖音登录失败、用户拒绝授权、或 401 需重登（见 06-backend §168）。
+       由 LoadingScene 在登录失败回调里显示；提供「重新登录」与「离线模式」两条出路，
+       离线模式下进度先存本地、联网后自动同步，不把玩家堵在加载页。
+       预览：在地址后加 ?state=login 即可看到此态。
+       ============================================================ -->
+  <div id="loginError" class="overlay" style="display:none;background:rgba(74,55,40,.5);backdrop-filter:blur(3px)">
+    <div class="dialog pop" style="max-width:580px">
+      <img class="dialog__cat" src="assets/character/cat_white_idle.png" alt="">
+      <div class="title-lg" style="font-size:54px;margin-bottom:12px">登录没成功…</div>
+      <p class="muted" style="font-size:28px;line-height:1.5;font-weight:600;margin-bottom:28px">
+        网络开小差，或暂未授权抖音账号。可以重试登录，<br>也能先用<b style="color:var(--ink)">离线模式</b>逛逛——进度会本地保存，联网后自动同步。
+      </p>
+      <button class="btn btn--primary btn--lg btn--block" style="margin-bottom:16px" onclick="location.reload()">重新登录</button>
+      <button class="btn btn--ghost btn--block" style="height:92px;font-size:30px" onclick="location.href='home.html'">先用离线模式</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/stage.js"></script>
+<script>
+(function(){
+  var fill = document.getElementById('fill');
+  var head = document.getElementById('head');
+  var pct  = document.getElementById('pct');
+  var tipEl= document.getElementById('tip');
+  var tips = [
+    '正在装点橱窗…',
+    '小贴士：同款甜点靠近会自动合成',
+    '小贴士：堆到警戒线就会出局，注意留白',
+    '正在请猫客们就座…',
+    '小贴士：金币不够时，看段广告就能再用一次道具',
+    '马上开张啦…'
+  ];
+  var p = 0, ti = 0;
+
+  function setTip(){ tipEl.textContent = tips[ti % tips.length]; ti++; }
+  function paint(){
+    var v = Math.min(100, Math.round(p));
+    fill.style.width = v + '%';
+    head.style.left  = v + '%';
+    pct.textContent  = v + '%';
+  }
+
+  setTip();
+  var tipTimer = setInterval(setTip, 1500);
+
+  function step(){
+    // 拟真：前段快、临近 100 放缓
+    var inc = p < 70 ? (6 + Math.random()*9) : (1.5 + Math.random()*3);
+    p += inc;
+    if (p >= 100){
+      p = 100; paint();
+      // 到顶停顿后循环演示
+      setTimeout(function(){ p = 0; ti = 0; setTip(); paint(); setTimeout(loop, 500); }, 900);
+      return;
+    }
+    paint();
+    setTimeout(step, 240 + Math.random()*220);
+  }
+  function loop(){ step(); }
+  paint();
+  // M8 预览：?state=login 时直接展示登录失败态（不启动进度循环）
+  if (/[?&]state=login/.test(location.search)) {
+    document.getElementById('loginError').style.display = 'grid';
+    clearInterval(tipTimer);
+  } else {
+    setTimeout(loop, 400);
+  }
+})();
+</script>
+</body>
+</html>

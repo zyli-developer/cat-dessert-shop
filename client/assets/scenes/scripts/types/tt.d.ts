@@ -35,14 +35,40 @@ declare namespace tt {
     pixelRatio: number;
     SDKVersion: string;
     appName: string;
+    /** 安全区域（逻辑 px，相对屏幕左上角）。刘海 / 灵动岛 / Home 指示条之外的可用区。 */
+    safeArea?: {
+      top: number;
+      bottom: number;
+      left: number;
+      right: number;
+      width: number;
+      height: number;
+    };
+  };
+
+  /** 抖音右上角系统胶囊菜单的矩形（逻辑 px，相对屏幕左上角）。 */
+  function getMenuButtonBoundingClientRect(): {
+    top: number;
+    right: number;
+    bottom: number;
+    left: number;
+    width: number;
+    height: number;
   };
 
   // --- 生命周期 ---
-  function onShow(callback: (res: { query: Record<string, string> }) => void): void;
+  interface LaunchOptions {
+    scene?: string | number;
+    query?: Record<string, string>;
+    launch_from?: string;
+    location?: string;
+    [key: string]: unknown;
+  }
+  function onShow(callback: (res: LaunchOptions) => void): void;
   function onHide(callback: () => void): void;
   function offShow(callback: Function): void;
   function offHide(callback: Function): void;
-  function getLaunchOptionsSync(): { query: Record<string, string>; scene: string };
+  function getLaunchOptionsSync(): LaunchOptions;
 
   // --- 存储 ---
   function setStorageSync(key: string, data: any): void;
@@ -98,11 +124,33 @@ declare namespace tt {
   }
 
   // --- 分享 ---
-  function shareAppMessage(options: {
+  interface ShareParam {
     title?: string;
     desc?: string;
     imageUrl?: string;
     query?: string;
+    templateId?: string;
+    channel?: 'invite' | 'video' | 'picture' | 'article';
+    extra?: Record<string, unknown>;
+    success?: (res: unknown) => void;
+    fail?: (err: any) => void;
+  }
+  function shareAppMessage(options: ShareParam): void;
+  function showShareMenu(options?: {
+    success?: () => void;
+    fail?: (err: any) => void;
+  }): void;
+  function onShareAppMessage(callback: (options: { channel?: string }) => ShareParam): void;
+  function offShareAppMessage(callback: Function): void;
+
+  // --- 侧边栏 ---
+  function checkScene(options: {
+    scene: 'sidebar';
+    success?: (res: { isExist: boolean }) => void;
+    fail?: (err: any) => void;
+  }): void;
+  function navigateToScene(options: {
+    scene: 'sidebar';
     success?: () => void;
     fail?: (err: any) => void;
   }): void;
