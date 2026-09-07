@@ -17,6 +17,7 @@ export interface FailPopupData {
     served: number;
     /** 本关订单总数 */
     total: number;
+    canRevive: boolean;
     onRevive: () => void;
 }
 
@@ -25,7 +26,7 @@ const HEART_RED = new Color(192, 54, 75, 255);
 
 /**
  * 失败弹窗 —— 对齐 docs/ui-mockup/fail.html「今天先打烊啦」温柔口吻：
- * 探头猫 + 完成订单进度条 + 看广告复活（爱心 + 30s 角标）+ 返回首页 / 再试一次。
+ * 探头猫 + 完成订单进度条 + 看广告复活（爱心 + 视频角标）+ 返回首页 / 再试一次。
  * 运行时组装（隐藏 prefab 空壳子节点），与其余弹窗一致。
  */
 @ccclass('FailPopup')
@@ -36,6 +37,7 @@ export class FailPopup extends Component {
 
     init(data: FailPopupData): void {
         this.data = data;
+        this.hasRevived = !data.canRevive;
 
         for (const child of this.node.children) child.active = false;
 
@@ -61,12 +63,14 @@ export class FailPopup extends Component {
         // 完成订单进度面板
         this.buildProgressPanel(44, served, data.total);
 
-        // 看广告复活（清空上半区）—— mint + 爱心 + 30s 角标
+        // 看广告复活（清空上半区）—— mint + 爱心 + 视频角标
         const btnRevive = makeJellyButton(this.node, '看广告，清空上半区复活', -94, 'mint', 520, 100);
         const reviveLabel = btnRevive.getComponentInChildren(Label);
         if (reviveLabel) reviveLabel.fontSize = 28; // 长文案，缩字号避免与爱心/角标挤压
         this.makeSprite(btnRevive, 'textures/ui/icon_heart', -212, 0, 32, HEART_RED);
         this.buildAdBadge(btnRevive, 208);
+        btnRevive.active = data.canRevive;
+        if (!data.canRevive) makeLabel(this.node, '本局复活已用完，再试一次吧~', -94, 28, TOKENS.inkSoft);
         btnRevive.on(Node.EventType.TOUCH_END, () => this.onReviveClicked(), this);
 
         // 底部：返回首页（幽灵）/ 再试一次（主，更宽 —— fail.html flex 1:1.3，主按钮权重更高）
@@ -123,7 +127,7 @@ export class FailPopup extends Component {
         }
     }
 
-    /** 复活按钮右侧「▶ 30s」浅色角标（对齐 fail.html badge-ad）。 */
+    /** 复活按钮右侧「▶ 视频」浅色角标（对齐 fail.html badge-ad）。 */
     private buildAdBadge(btn: Node, x: number): void {
         const badge = new Node('AdBadge');
         badge.layer = Layers.Enum.UI_2D;
@@ -132,7 +136,7 @@ export class FailPopup extends Component {
         badge.addComponent(UITransform).setContentSize(86, 44);
         drawRoundedRect(badge, 86, 44, new Color(255, 255, 255, 110), undefined, 0, 22);
         this.makeSprite(badge, 'textures/ui/icon_play', -22, 0, 20, TOKENS.mintText);
-        const l = makeLabel(badge, '30s', 0, 22, TOKENS.mintText);
+        const l = makeLabel(badge, '视频', 0, 22, TOKENS.mintText);
         l.node.getComponent(UITransform)?.setContentSize(60, 44);
         l.node.setPosition(12, 0, 0);
     }
@@ -175,23 +179,29 @@ export class FailPopup extends Component {
     private async onReviveClicked(): Promise<void> {
         if (this.hasRevived || this.adInProgress) return;
         this.adInProgress = true;
+        Toast.show('正在加载视频…');
         try {
             const success = await DouyinSDK.showRewardedAd(AD_UNIT_IDS.failRevive);
             if (!success) { Toast.show('广告君打了个盹，稍后再来~', true, 'icon_ad'); return; }
+            if (!this.node?.isValid) return;
             this.hasRevived = true;
             PopupManager.close();
             this.data?.onRevive();
+        } catch {
+            Toast.show('视频暂时不可用，请重试~', true, 'icon_ad');
         } finally {
             this.adInProgress = false;
         }
     }
 
     private onRetry(): void {
+        if (this.adInProgress) return;
         PopupManager.closeImmediate();
         director.loadScene('Game');
     }
 
     private onHome(): void {
+        if (this.adInProgress) return;
         PopupManager.closeImmediate();
         director.loadScene('Home');
     }

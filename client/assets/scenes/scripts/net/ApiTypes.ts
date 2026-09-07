@@ -21,6 +21,14 @@ export interface RewardClaimResult extends UserProfile {
   alreadyClaimed: boolean;
 }
 
+export interface ProgressRankItem {
+  nickname: string;
+  avatar: string;
+  score: number;
+  currentRound?: number;
+  isMe?: boolean;
+}
+
 export interface RankItem {
   nickname: string;
   avatar: string;

@@ -616,6 +616,7 @@ export class GameScene extends Component {
         PopupManager.show('FailPopup', {
             score: this.state.score,
             round: this.state.currentRound,
+            canRevive: !this.hasRevived,
             served: progress.served,
             total: progress.total,
             onRevive: () => this.performRevive(),

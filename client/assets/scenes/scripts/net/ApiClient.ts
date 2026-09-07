@@ -1,3 +1,4 @@
+import type { ProgressRankItem } from './ApiTypes';
 import { UserProfile, RankItem, AuthSession, RewardClaimResult, RewardKind } from './ApiTypes';
 import { DouyinSDK } from '../platform/DouyinSDK';
 import { API_BASE_URL } from './ApiConfig';
@@ -354,7 +355,7 @@ export class ApiClient {
     return request<RankItem[]>(`/api/rank/global?limit=${limit}`);
   }
 
-  static getFriendsRank(round?: number): Promise<{ list: any[]; myRank: number }> {
+  static getFriendsRank(round?: number): Promise<{ list: ProgressRankItem[]; myRank: number }> {
     if (this.isOfflineMode()) {
       return Promise.resolve({ list: [], myRank: 0 });
     }

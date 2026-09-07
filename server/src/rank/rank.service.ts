@@ -89,6 +89,7 @@ export class RankService {
       nickname: user.nickname,
       avatar: user.avatar,
       score: user.score,
+      isMe: user.openId === openId,
       ...(user.currentRound === undefined
         ? {}
         : { currentRound: user.currentRound }),

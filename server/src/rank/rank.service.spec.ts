@@ -90,6 +90,8 @@ describe('RankService', () => {
       expect(result.list.every((item) => item.nickname === '猫店玩家')).toBe(true);
       expect(result.list.every((item) => item.avatar === '')).toBe(true);
       expect(result.myRank).toBe(1);
+      expect(result.list.map(item => item.isMe)).toEqual([true, false, false]);
+      expect(result.list[0]).not.toHaveProperty('openId');
     });
 
     it('should rank by currentRound when no round param', async () => {
